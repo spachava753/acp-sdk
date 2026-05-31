@@ -35,8 +35,6 @@ var (
 	// ErrClientClosing is a dummy error returned for calls initiated while the client is closing.
 	ErrClientClosing = NewError(-32003, "client is closing")
 
-	// The following errors have special semantics for MCP transports
-
 	// ErrRejected may be wrapped to return errors from calls to Writer.Write
 	// that signal that the request was rejected by the transport layer as
 	// invalid.

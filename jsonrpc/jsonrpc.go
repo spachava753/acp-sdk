@@ -2,11 +2,10 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-// Package jsonrpc exposes part of a JSON-RPC v2 implementation
-// for use by mcp transport authors.
+// Package jsonrpc exposes JSON-RPC v2 message helpers for custom ACP transports.
 package jsonrpc
 
-import "github.com/modelcontextprotocol/go-sdk/internal/jsonrpc2"
+import "github.com/spachava753/acp-sdk/internal/jsonrpc2"
 
 type (
 	// ID is a JSON-RPC request ID.
