@@ -14,6 +14,9 @@ type ContentBlock struct {
 	MIMEType    string            `json:"mimeType,omitempty"`
 	URI         string            `json:"uri,omitempty"`
 	Name        string            `json:"name,omitempty"`
+	Title       string            `json:"title,omitempty"`
+	Description string            `json:"description,omitempty"`
+	Size        *int64            `json:"size,omitempty"`
 	Resource    *ResourceContents `json:"resource,omitempty"`
 	Annotations *Annotations      `json:"annotations,omitempty"`
 }

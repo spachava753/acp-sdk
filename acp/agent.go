@@ -120,6 +120,7 @@ func (c *AgentConnection) ReleaseTerminal(ctx context.Context, params *ReleaseTe
 }
 
 func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) (any, error) {
+	jsonrpc2.Async(ctx)
 	if agent == nil {
 		return nil, methodNotFound(req.Method)
 	}

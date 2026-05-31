@@ -7,6 +7,7 @@ package acp
 import (
 	"context"
 
+	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
@@ -101,6 +102,7 @@ func (c *Client) SetSessionConfigOption(ctx context.Context, params *SetSessionC
 }
 
 func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) {
+	jsonrpc2.Async(ctx)
 	if c.handler == nil {
 		return nil, methodNotFound(req.Method)
 	}
