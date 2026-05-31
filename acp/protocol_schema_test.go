@@ -5,12 +5,11 @@
 package acp
 
 import (
-	"bytes"
 	"encoding/json"
 	"os"
 	"testing"
 
-	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/google/jsonschema-go/jsonschema"
 )
 
 func TestProtocolValuesValidateAgainstACPSchema(t *testing.T) {
@@ -232,25 +231,21 @@ func validateACPValue(t *testing.T, typeName string, value any) {
 	}
 }
 
-func acpSchema(t *testing.T, typeName string) *jsonschema.Schema {
+func acpSchema(t *testing.T, typeName string) *jsonschema.Resolved {
 	t.Helper()
 	schemaData, err := os.ReadFile("testdata/schema.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	schemaDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(schemaData))
-	if err != nil {
+	var schemaDoc jsonschema.Schema
+	if err := json.Unmarshal(schemaData, &schemaDoc); err != nil {
 		t.Fatal(err)
 	}
-	compiler := jsonschema.NewCompiler()
-	if err := compiler.AddResource("acp-schema.json", schemaDoc); err != nil {
-		t.Fatal(err)
-	}
-	wrapperName := "acp-schema-" + typeName + ".json"
-	if err := compiler.AddResource(wrapperName, map[string]any{"$ref": "acp-schema.json#/$defs/" + typeName}); err != nil {
-		t.Fatal(err)
-	}
-	schema, err := compiler.Compile(wrapperName)
+	schema, err := (&jsonschema.Schema{
+		Schema: schemaDoc.Schema,
+		Defs:   schemaDoc.Defs,
+		Ref:    "#/$defs/" + typeName,
+	}).Resolve(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
