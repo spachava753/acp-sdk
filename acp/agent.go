@@ -76,7 +76,6 @@ func RunAgent(ctx context.Context, transport Transport, newAgent AgentFactory) e
 			})
 		},
 	})
-	endpoint.conn = rpc
 	return rpc.Wait()
 }
 
@@ -130,19 +129,19 @@ func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) 
 		if err != nil {
 			return nil, err
 		}
-		return agent.Initialize(ctx, params)
+		return rpcResult(agent.Initialize(ctx, params))
 	case MethodSessionNew:
 		params, err := decodeParams[NewSessionRequest](req)
 		if err != nil {
 			return nil, err
 		}
-		return agent.NewSession(ctx, params)
+		return rpcResult(agent.NewSession(ctx, params))
 	case MethodSessionPrompt:
 		params, err := decodeParams[PromptRequest](req)
 		if err != nil {
 			return nil, err
 		}
-		return agent.Prompt(ctx, params)
+		return rpcResult(agent.Prompt(ctx, params))
 	case MethodSessionCancel:
 		params, err := decodeParams[CancelNotification](req)
 		if err != nil {
@@ -158,7 +157,7 @@ func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) 
 		if err != nil {
 			return nil, err
 		}
-		return optional.Authenticate(ctx, params)
+		return rpcResult(optional.Authenticate(ctx, params))
 	case MethodLogout:
 		optional, ok := agent.(LogoutAgent)
 		if !ok {
@@ -168,7 +167,7 @@ func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) 
 		if err != nil {
 			return nil, err
 		}
-		return optional.Logout(ctx, params)
+		return rpcResult(optional.Logout(ctx, params))
 	case MethodSessionLoad:
 		optional, ok := agent.(SessionLoadingAgent)
 		if !ok {
@@ -178,7 +177,7 @@ func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) 
 		if err != nil {
 			return nil, err
 		}
-		return optional.LoadSession(ctx, params)
+		return rpcResult(optional.LoadSession(ctx, params))
 	case MethodSessionResume:
 		optional, ok := agent.(SessionResumingAgent)
 		if !ok {
@@ -188,7 +187,7 @@ func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) 
 		if err != nil {
 			return nil, err
 		}
-		return optional.ResumeSession(ctx, params)
+		return rpcResult(optional.ResumeSession(ctx, params))
 	case MethodSessionList:
 		optional, ok := agent.(SessionListingAgent)
 		if !ok {
@@ -198,7 +197,7 @@ func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) 
 		if err != nil {
 			return nil, err
 		}
-		return optional.ListSessions(ctx, params)
+		return rpcResult(optional.ListSessions(ctx, params))
 	case MethodSessionClose:
 		optional, ok := agent.(SessionClosingAgent)
 		if !ok {
@@ -208,7 +207,7 @@ func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) 
 		if err != nil {
 			return nil, err
 		}
-		return optional.CloseSession(ctx, params)
+		return rpcResult(optional.CloseSession(ctx, params))
 	case MethodSessionSetMode:
 		optional, ok := agent.(ModeSettingAgent)
 		if !ok {
@@ -218,7 +217,7 @@ func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) 
 		if err != nil {
 			return nil, err
 		}
-		return optional.SetSessionMode(ctx, params)
+		return rpcResult(optional.SetSessionMode(ctx, params))
 	case MethodSessionSetConfigOption:
 		optional, ok := agent.(ConfigOptionSettingAgent)
 		if !ok {
@@ -228,7 +227,7 @@ func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) 
 		if err != nil {
 			return nil, err
 		}
-		return optional.SetSessionConfigOption(ctx, params)
+		return rpcResult(optional.SetSessionConfigOption(ctx, params))
 	default:
 		return nil, methodNotFound(req.Method)
 	}

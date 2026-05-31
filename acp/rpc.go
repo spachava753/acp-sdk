@@ -69,6 +69,13 @@ func decodeParams[T any](req *jsonrpc.Request) (*T, error) {
 	return &params, nil
 }
 
+func rpcResult[T any](result *T, err error) (any, error) {
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func methodNotFound(method string) error {
 	return fmt.Errorf("%w: %s", jsonrpc2.ErrMethodNotFound, method)
 }

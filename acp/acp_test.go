@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 )
 
 var errUnexpectedCallbackResult = errors.New("unexpected callback result")
@@ -72,11 +73,15 @@ func (a *testAgent) Prompt(ctx context.Context, req *PromptRequest) (*PromptResp
 func (a *testAgent) Cancel(context.Context, *CancelNotification) error { return nil }
 
 type testClientHandler struct {
-	updates []SessionNotification
+	updates chan SessionNotification
+}
+
+func newTestClientHandler() *testClientHandler {
+	return &testClientHandler{updates: make(chan SessionNotification, 8)}
 }
 
 func (h *testClientHandler) SessionUpdate(_ context.Context, params *SessionNotification) error {
-	h.updates = append(h.updates, *params)
+	h.updates <- *params
 	return nil
 }
 
@@ -123,7 +128,7 @@ func TestClientAgentPrompt(t *testing.T) {
 		})
 	}()
 
-	handler := &testClientHandler{}
+	handler := newTestClientHandler()
 	client, err := Connect(ctx, clientTransport, handler)
 	if err != nil {
 		t.Fatal(err)
@@ -156,8 +161,13 @@ func TestClientAgentPrompt(t *testing.T) {
 	if prompt.StopReason != StopReasonEndTurn {
 		t.Fatalf("stop reason = %q, want %q", prompt.StopReason, StopReasonEndTurn)
 	}
-	if got := len(handler.updates); got != 1 {
-		t.Fatalf("updates = %d, want 1", got)
+	select {
+	case update := <-handler.updates:
+		if update.SessionID != session.SessionID {
+			t.Fatalf("update session ID = %q, want %q", update.SessionID, session.SessionID)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for session update")
 	}
 
 	if err := client.Close(); err != nil {

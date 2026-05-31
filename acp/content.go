@@ -13,6 +13,7 @@ type ContentBlock struct {
 	Data        []byte            `json:"data,omitempty"`
 	MIMEType    string            `json:"mimeType,omitempty"`
 	URI         string            `json:"uri,omitempty"`
+	Name        string            `json:"name,omitempty"`
 	Resource    *ResourceContents `json:"resource,omitempty"`
 	Annotations *Annotations      `json:"annotations,omitempty"`
 }

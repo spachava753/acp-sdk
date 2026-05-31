@@ -120,7 +120,7 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return handler.RequestPermission(ctx, params)
+		return rpcResult(handler.RequestPermission(ctx, params))
 	case MethodReadTextFile:
 		handler, ok := c.handler.(FileSystemHandler)
 		if !ok {
@@ -130,7 +130,7 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return handler.ReadTextFile(ctx, params)
+		return rpcResult(handler.ReadTextFile(ctx, params))
 	case MethodWriteTextFile:
 		handler, ok := c.handler.(FileSystemHandler)
 		if !ok {
@@ -140,7 +140,7 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return handler.WriteTextFile(ctx, params)
+		return rpcResult(handler.WriteTextFile(ctx, params))
 	case MethodCreateTerminal:
 		handler, ok := c.handler.(TerminalHandler)
 		if !ok {
@@ -150,7 +150,7 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return handler.CreateTerminal(ctx, params)
+		return rpcResult(handler.CreateTerminal(ctx, params))
 	case MethodTerminalOutput:
 		handler, ok := c.handler.(TerminalHandler)
 		if !ok {
@@ -160,7 +160,7 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return handler.TerminalOutput(ctx, params)
+		return rpcResult(handler.TerminalOutput(ctx, params))
 	case MethodWaitTerminalExit:
 		handler, ok := c.handler.(TerminalHandler)
 		if !ok {
@@ -170,7 +170,7 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return handler.WaitForTerminalExit(ctx, params)
+		return rpcResult(handler.WaitForTerminalExit(ctx, params))
 	case MethodKillTerminal:
 		handler, ok := c.handler.(TerminalHandler)
 		if !ok {
@@ -180,7 +180,7 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return handler.KillTerminal(ctx, params)
+		return rpcResult(handler.KillTerminal(ctx, params))
 	case MethodReleaseTerminal:
 		handler, ok := c.handler.(TerminalHandler)
 		if !ok {
@@ -190,7 +190,7 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return handler.ReleaseTerminal(ctx, params)
+		return rpcResult(handler.ReleaseTerminal(ctx, params))
 	default:
 		return nil, methodNotFound(req.Method)
 	}

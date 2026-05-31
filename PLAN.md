@@ -270,10 +270,12 @@ Completed:
 - Added ACP examples under `examples/agent` and `examples/client`.
 - Updated repository docs and project instructions for ACP.
 - Verification passes with `go test ./...`, `go vet ./...`, and `staticcheck ./...`.
+- Post-retrofit test expansion added coverage for protocol wire shapes, schema-backed required array serialization, transport framing, command transport, optional method dispatch, missing callback errors, cancellation notifications, multiple in-flight requests, and nested agent-to-client callbacks.
+- Pinned the official ACP JSON schema under `acp/testdata/schema.json` and added representative positive/negative schema validation tests for SDK wire values.
 
 Known follow-up work:
 
-- `acp/protocol.go` is a hand-maintained Go representation of the stable ACP schema. It covers the stable methods and major content/update types, but a future pass should add generated schema-conformance tests or a code generator to prevent drift.
+- `acp/protocol.go` is a hand-maintained Go representation of the stable ACP schema. It covers the stable methods and major content/update types, and schema-backed tests now guard representative wire shapes. A future pass could add broader generated schema-conformance coverage or a code generator to prevent drift across the entire schema.
 - `SessionUpdate.Content` is intentionally `any` because ACP reuses the JSON field name `content` for both `ContentBlock` chunks and `[]ToolCallContent` tool-call payloads. A future ergonomic layer may add typed constructors or discriminated wrapper types.
 - Extension methods beginning with `_` are not exposed through a first-class API yet.
 - Remote HTTP/WebSocket ACP transports are not implemented; only stdio/IO/in-memory/command transports are included.

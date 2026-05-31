@@ -269,14 +269,26 @@ type SessionMode struct {
 }
 
 type SessionConfigOption struct {
-	Meta         Meta                        `json:"_meta,omitzero"`
-	Type         string                      `json:"type"`
-	ID           string                      `json:"id"`
-	Name         string                      `json:"name"`
-	Description  string                      `json:"description,omitempty"`
-	Category     string                      `json:"category,omitempty"`
-	CurrentValue string                      `json:"currentValue,omitempty"`
-	Options      []SessionConfigSelectOption `json:"options,omitzero"`
+	Meta         Meta                       `json:"_meta,omitzero"`
+	Type         string                     `json:"type"`
+	ID           string                     `json:"id"`
+	Name         string                     `json:"name"`
+	Description  string                     `json:"description,omitempty"`
+	Category     string                     `json:"category,omitempty"`
+	CurrentValue string                     `json:"currentValue,omitempty"`
+	Options      SessionConfigSelectOptions `json:"options,omitzero"`
+}
+
+type SessionConfigSelectOptions struct {
+	Flat   []SessionConfigSelectOption `json:"-"`
+	Groups []SessionConfigSelectGroup  `json:"-"`
+}
+
+type SessionConfigSelectGroup struct {
+	Meta    Meta                        `json:"_meta,omitzero"`
+	Group   string                      `json:"group"`
+	Name    string                      `json:"name"`
+	Options []SessionConfigSelectOption `json:"options"`
 }
 
 type SessionConfigSelectOption struct {
@@ -328,8 +340,8 @@ type SessionUpdate struct {
 	RawOutput         any                   `json:"rawOutput,omitempty"`
 	AvailableCommands []AvailableCommand    `json:"availableCommands,omitzero"`
 	CurrentModeID     string                `json:"currentModeId,omitempty"`
-	ConfigOptions     []SessionConfigOption `json:"configOptions,omitempty"`
-	Entries           []PlanEntry           `json:"entries,omitempty"`
+	ConfigOptions     []SessionConfigOption `json:"configOptions,omitzero"`
+	Entries           []PlanEntry           `json:"entries,omitzero"`
 	UpdatedAt         *string               `json:"updatedAt,omitempty"`
 }
 
@@ -384,7 +396,7 @@ type AvailableCommand struct {
 
 type AvailableCommandInput struct {
 	Meta Meta   `json:"_meta,omitzero"`
-	Type string `json:"type"`
+	Hint string `json:"hint"`
 }
 
 type PlanEntry struct {
