@@ -72,7 +72,17 @@ func main() {
 
 ## Development
 
+Run the full test suite with:
+
 ```sh
 go test ./...
+```
+
+The `conformance` package contains black-box tests for ACP behavior and wire compatibility. It covers public protocol type round trips, JSON-RPC client/agent flows, bidirectional callbacks, cancellation while prompts are pending, concurrent requests, optional method dispatch, and binary content encoding.
+
+To run only the conformance tests:
+
+```sh
+go test ./conformance
 ```
 
