@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 )
 
+// MarshalJSON implements json.Marshaler.
 func (r NewSessionRequest) MarshalJSON() ([]byte, error) {
 	type alias NewSessionRequest
 	a := alias(r)
@@ -17,6 +18,7 @@ func (r NewSessionRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// MarshalJSON implements json.Marshaler.
 func (r LoadSessionRequest) MarshalJSON() ([]byte, error) {
 	type alias LoadSessionRequest
 	a := alias(r)
@@ -26,6 +28,7 @@ func (r LoadSessionRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// MarshalJSON implements json.Marshaler.
 func (r PromptRequest) MarshalJSON() ([]byte, error) {
 	type alias PromptRequest
 	a := alias(r)
@@ -35,6 +38,7 @@ func (r PromptRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// MarshalJSON implements json.Marshaler.
 func (s SessionModeState) MarshalJSON() ([]byte, error) {
 	type alias SessionModeState
 	a := alias(s)
@@ -44,6 +48,7 @@ func (s SessionModeState) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// MarshalJSON implements json.Marshaler.
 func (o SessionConfigOption) MarshalJSON() ([]byte, error) {
 	type alias SessionConfigOption
 	a := alias(o)
@@ -53,6 +58,7 @@ func (o SessionConfigOption) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// MarshalJSON implements json.Marshaler.
 func (o SessionConfigSelectOptions) MarshalJSON() ([]byte, error) {
 	if o.Groups != nil {
 		return json.Marshal(o.Groups)
@@ -63,6 +69,7 @@ func (o SessionConfigSelectOptions) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
 func (o *SessionConfigSelectOptions) UnmarshalJSON(data []byte) error {
 	if string(data) == "null" {
 		*o = SessionConfigSelectOptions{}
@@ -88,6 +95,7 @@ func (o *SessionConfigSelectOptions) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, &o.Flat)
 }
 
+// MarshalJSON implements json.Marshaler.
 func (g SessionConfigSelectGroup) MarshalJSON() ([]byte, error) {
 	type alias SessionConfigSelectGroup
 	a := alias(g)
@@ -97,6 +105,7 @@ func (g SessionConfigSelectGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// MarshalJSON implements json.Marshaler.
 func (s MCPServer) MarshalJSON() ([]byte, error) {
 	type alias MCPServer
 	a := alias(s)
@@ -116,6 +125,7 @@ func (s MCPServer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// MarshalJSON implements json.Marshaler.
 func (r ListSessionsResponse) MarshalJSON() ([]byte, error) {
 	type alias ListSessionsResponse
 	a := alias(r)
@@ -125,6 +135,7 @@ func (r ListSessionsResponse) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// MarshalJSON implements json.Marshaler.
 func (r SetSessionConfigOptionResponse) MarshalJSON() ([]byte, error) {
 	type alias SetSessionConfigOptionResponse
 	a := alias(r)
@@ -134,6 +145,7 @@ func (r SetSessionConfigOptionResponse) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// MarshalJSON implements json.Marshaler.
 func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 	type alias SessionUpdate
 	a := alias(u)
@@ -154,6 +166,7 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// MarshalJSON implements json.Marshaler.
 func (r RequestPermissionRequest) MarshalJSON() ([]byte, error) {
 	type alias RequestPermissionRequest
 	a := alias(r)

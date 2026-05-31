@@ -22,25 +22,35 @@ type ContentBlock struct {
 }
 
 const (
-	ContentTypeText     = "text"
-	ContentTypeImage    = "image"
-	ContentTypeAudio    = "audio"
+	// ContentTypeText identifies Markdown-capable text content.
+	ContentTypeText = "text"
+	// ContentTypeImage identifies base64-encoded image content.
+	ContentTypeImage = "image"
+	// ContentTypeAudio identifies base64-encoded audio content.
+	ContentTypeAudio = "audio"
+	// ContentTypeResource identifies embedded resource contents.
 	ContentTypeResource = "resource"
-	ContentTypeLink     = "resource_link"
+	// ContentTypeLink identifies a link to a resource the agent can access.
+	ContentTypeLink = "resource_link"
 )
 
+// Annotations describe optional presentation hints for content.
 type Annotations struct {
 	Audience []Role  `json:"audience,omitzero"`
 	Priority float64 `json:"priority,omitempty"`
 }
 
+// Role identifies the intended recipient of annotated content.
 type Role string
 
 const (
-	RoleUser      Role = "user"
+	// RoleUser marks content intended for the user.
+	RoleUser Role = "user"
+	// RoleAssistant marks content intended for the assistant.
 	RoleAssistant Role = "assistant"
 )
 
+// ResourceContents contains text or binary data embedded in a content block.
 type ResourceContents struct {
 	Meta     Meta   `json:"_meta,omitzero"`
 	URI      string `json:"uri"`
@@ -49,6 +59,7 @@ type ResourceContents struct {
 	Blob     []byte `json:"blob,omitempty"`
 }
 
+// ToolCallContent represents displayable output attached to a tool call.
 type ToolCallContent struct {
 	Meta       Meta          `json:"_meta,omitzero"`
 	Type       string        `json:"type"`
@@ -60,7 +71,10 @@ type ToolCallContent struct {
 }
 
 const (
-	ToolCallContentTypeContent  = "content"
-	ToolCallContentTypeDiff     = "diff"
+	// ToolCallContentTypeContent embeds a standard content block in a tool call.
+	ToolCallContentTypeContent = "content"
+	// ToolCallContentTypeDiff describes a text edit produced by a tool call.
+	ToolCallContentTypeDiff = "diff"
+	// ToolCallContentTypeTerminal references terminal output produced by a tool call.
 	ToolCallContentTypeTerminal = "terminal"
 )

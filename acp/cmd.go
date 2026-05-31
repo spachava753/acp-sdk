@@ -15,11 +15,13 @@ import (
 
 var defaultTerminateDuration = 5 * time.Second
 
+// CommandTransport starts a subprocess and speaks ACP over its stdin/stdout.
 type CommandTransport struct {
 	Command           *exec.Cmd
 	TerminateDuration time.Duration
 }
 
+// Connect starts the command and returns an ACP connection to its stdio streams.
 func (t *CommandTransport) Connect(ctx context.Context) (Connection, error) {
 	if t.Command == nil {
 		return nil, fmt.Errorf("nil command")

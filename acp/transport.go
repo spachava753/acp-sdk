@@ -18,20 +18,25 @@ import (
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
+// ErrConnectionClosed reports that an ACP connection is no longer usable.
 var ErrConnectionClosed = errors.New("connection closed")
 
+// Transport opens a bidirectional ACP connection.
 type Transport interface {
 	Connect(context.Context) (Connection, error)
 }
 
+// Connection reads and writes JSON-RPC messages for an ACP transport.
 type Connection interface {
 	Read(context.Context) (jsonrpc.Message, error)
 	Write(context.Context, jsonrpc.Message) error
 	Close() error
 }
 
+// StdioTransport speaks ACP over os.Stdin and os.Stdout.
 type StdioTransport struct{}
 
+// Connect returns an ACP connection over standard input and output.
 func (*StdioTransport) Connect(context.Context) (Connection, error) {
 	return newIOConn(rwc{os.Stdin, nopCloserWriter{os.Stdout}}), nil
 }
@@ -40,11 +45,13 @@ type nopCloserWriter struct{ io.Writer }
 
 func (nopCloserWriter) Close() error { return nil }
 
+// IOTransport speaks ACP over caller-provided reader and writer streams.
 type IOTransport struct {
 	Reader io.ReadCloser
 	Writer io.WriteCloser
 }
 
+// Connect returns an ACP connection over the configured reader and writer.
 func (t *IOTransport) Connect(context.Context) (Connection, error) {
 	if t.Reader == nil {
 		return nil, fmt.Errorf("nil reader")
@@ -55,14 +62,17 @@ func (t *IOTransport) Connect(context.Context) (Connection, error) {
 	return newIOConn(rwc{t.Reader, t.Writer}), nil
 }
 
+// InMemoryTransport is one endpoint of an in-process ACP connection pair.
 type InMemoryTransport struct {
 	rwc io.ReadWriteCloser
 }
 
+// Connect returns the in-memory ACP connection endpoint.
 func (t *InMemoryTransport) Connect(context.Context) (Connection, error) {
 	return newIOConn(t.rwc), nil
 }
 
+// NewInMemoryTransports returns connected client and agent in-memory transports.
 func NewInMemoryTransports() (*InMemoryTransport, *InMemoryTransport) {
 	c1, c2 := net.Pipe()
 	return &InMemoryTransport{c1}, &InMemoryTransport{c2}

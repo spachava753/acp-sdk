@@ -11,6 +11,7 @@ import (
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
+// Agent handles the core agent-side ACP methods.
 type Agent interface {
 	Initialize(context.Context, *InitializeRequest) (*InitializeResponse, error)
 	NewSession(context.Context, *NewSessionRequest) (*NewSessionResponse, error)
@@ -18,44 +19,55 @@ type Agent interface {
 	Cancel(context.Context, *CancelNotification) error
 }
 
+// AgentFactory constructs an Agent after the bidirectional connection is ready.
 type AgentFactory func(*AgentConnection) Agent
 
+// AuthenticatingAgent handles the optional authenticate method.
 type AuthenticatingAgent interface {
 	Authenticate(context.Context, *AuthenticateRequest) (*AuthenticateResponse, error)
 }
 
+// LogoutAgent handles the optional logout method.
 type LogoutAgent interface {
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
 }
 
+// SessionLoadingAgent handles the optional session/load method.
 type SessionLoadingAgent interface {
 	LoadSession(context.Context, *LoadSessionRequest) (*LoadSessionResponse, error)
 }
 
+// SessionResumingAgent handles the optional session/resume method.
 type SessionResumingAgent interface {
 	ResumeSession(context.Context, *ResumeSessionRequest) (*ResumeSessionResponse, error)
 }
 
+// SessionListingAgent handles the optional session/list method.
 type SessionListingAgent interface {
 	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
 }
 
+// SessionClosingAgent handles the optional session/close method.
 type SessionClosingAgent interface {
 	CloseSession(context.Context, *CloseSessionRequest) (*CloseSessionResponse, error)
 }
 
+// ModeSettingAgent handles the optional session/set_mode method.
 type ModeSettingAgent interface {
 	SetSessionMode(context.Context, *SetSessionModeRequest) (*SetSessionModeResponse, error)
 }
 
+// ConfigOptionSettingAgent handles the optional session/set_config_option method.
 type ConfigOptionSettingAgent interface {
 	SetSessionConfigOption(context.Context, *SetSessionConfigOptionRequest) (*SetSessionConfigOptionResponse, error)
 }
 
+// AgentConnection lets an agent call client-side ACP methods on its peer.
 type AgentConnection struct {
 	rpc *rpcEndpoint
 }
 
+// RunAgent serves an ACP agent over transport until the connection closes.
 func RunAgent(ctx context.Context, transport Transport, newAgent AgentFactory) error {
 	raw, err := transport.Connect(ctx)
 	if err != nil {
@@ -79,42 +91,52 @@ func RunAgent(ctx context.Context, transport Transport, newAgent AgentFactory) e
 	return rpc.Wait()
 }
 
+// Close closes the agent-side ACP connection.
 func (c *AgentConnection) Close() error {
 	return c.rpc.conn.Close()
 }
 
+// SessionUpdate sends a session/update notification to the client.
 func (c *AgentConnection) SessionUpdate(ctx context.Context, params *SessionNotification) error {
 	return notify(ctx, c.rpc.conn, MethodSessionUpdate, params)
 }
 
+// RequestPermission calls session/request_permission on the client.
 func (c *AgentConnection) RequestPermission(ctx context.Context, params *RequestPermissionRequest) (*RequestPermissionResponse, error) {
 	return call[RequestPermissionResponse](ctx, c.rpc.conn, MethodRequestPermission, params)
 }
 
+// ReadTextFile calls fs/read_text_file on the client.
 func (c *AgentConnection) ReadTextFile(ctx context.Context, params *ReadTextFileRequest) (*ReadTextFileResponse, error) {
 	return call[ReadTextFileResponse](ctx, c.rpc.conn, MethodReadTextFile, params)
 }
 
+// WriteTextFile calls fs/write_text_file on the client.
 func (c *AgentConnection) WriteTextFile(ctx context.Context, params *WriteTextFileRequest) (*WriteTextFileResponse, error) {
 	return call[WriteTextFileResponse](ctx, c.rpc.conn, MethodWriteTextFile, params)
 }
 
+// CreateTerminal calls terminal/create on the client.
 func (c *AgentConnection) CreateTerminal(ctx context.Context, params *CreateTerminalRequest) (*CreateTerminalResponse, error) {
 	return call[CreateTerminalResponse](ctx, c.rpc.conn, MethodCreateTerminal, params)
 }
 
+// TerminalOutput calls terminal/output on the client.
 func (c *AgentConnection) TerminalOutput(ctx context.Context, params *TerminalOutputRequest) (*TerminalOutputResponse, error) {
 	return call[TerminalOutputResponse](ctx, c.rpc.conn, MethodTerminalOutput, params)
 }
 
+// WaitForTerminalExit calls terminal/wait_for_exit on the client.
 func (c *AgentConnection) WaitForTerminalExit(ctx context.Context, params *WaitForTerminalExitRequest) (*WaitForTerminalExitResponse, error) {
 	return call[WaitForTerminalExitResponse](ctx, c.rpc.conn, MethodWaitTerminalExit, params)
 }
 
+// KillTerminal calls terminal/kill on the client.
 func (c *AgentConnection) KillTerminal(ctx context.Context, params *KillTerminalRequest) (*KillTerminalResponse, error) {
 	return call[KillTerminalResponse](ctx, c.rpc.conn, MethodKillTerminal, params)
 }
 
+// ReleaseTerminal calls terminal/release on the client.
 func (c *AgentConnection) ReleaseTerminal(ctx context.Context, params *ReleaseTerminalRequest) (*ReleaseTerminalResponse, error) {
 	return call[ReleaseTerminalResponse](ctx, c.rpc.conn, MethodReleaseTerminal, params)
 }
