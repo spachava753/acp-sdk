@@ -1,0 +1,472 @@
+{
+  "$defs": {
+    "AgentMethodNotification": {
+      "description": "Notification sent from the client to the agent.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "Reserved metadata for protocol extensions.",
+          "type": ["object", "null"]
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
+        }
+      },
+      "required": ["sessionId"],
+      "type": "object",
+      "x-method": "group/agent_notify",
+      "x-side": "agent"
+    },
+    "AgentMethodRequest": {
+      "description": "Request sent from the client to the agent.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "Reserved metadata for protocol extensions.",
+          "type": ["object", "null"]
+        },
+        "cwd": {
+          "description": "The working directory for this request.",
+          "type": "string"
+        },
+        "extraRoots": {
+          "description": "Additional workspace roots for this request.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["cwd"],
+      "type": "object",
+      "x-method": "group/agent_method",
+      "x-side": "agent"
+    },
+    "AgentMethodResponse": {
+      "description": "Response sent from the agent to the client.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "Reserved metadata for protocol extensions.",
+          "type": ["object", "null"]
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "Unique identifier for the created session."
+        }
+      },
+      "required": ["sessionId"],
+      "type": "object",
+      "x-method": "group/agent_method",
+      "x-side": "agent"
+    },
+    "AgentNotification": {
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ClientMethodNotification"
+                    }
+                  ],
+                  "description": "Notification sent from the agent to the client.",
+                  "title": "ClientMethodNotification"
+                }
+              ],
+              "description": "All possible notifications that an agent can send to a client."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["method"],
+      "type": "object",
+      "x-docs-ignore": true
+    },
+    "AgentRequest": {
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ClientMethodRequest"
+                    }
+                  ],
+                  "description": "Request sent from the agent to the client.",
+                  "title": "ClientMethodRequest"
+                }
+              ],
+              "description": "All possible requests that an agent can send to a client."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["id", "method"],
+      "type": "object",
+      "x-docs-ignore": true
+    },
+    "AgentResponse": {
+      "anyOf": [
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            },
+            "result": {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/AgentMethodResponse"
+                    }
+                  ],
+                  "title": "AgentMethodResponse"
+                }
+              ],
+              "description": "All possible responses that an agent can send to a client."
+            }
+          },
+          "required": ["id", "result"],
+          "title": "Result",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "error": {
+              "$ref": "#/$defs/Error"
+            },
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            }
+          },
+          "required": ["id", "error"],
+          "title": "Error",
+          "type": "object"
+        }
+      ],
+      "x-docs-ignore": true
+    },
+    "ClientMethodNotification": {
+      "description": "Notification sent from the agent to the client.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "Reserved metadata for protocol extensions.",
+          "type": ["object", "null"]
+        },
+        "message": {
+          "description": "Notification message.",
+          "type": "string"
+        }
+      },
+      "required": ["message"],
+      "type": "object",
+      "x-method": "group/client_notify",
+      "x-side": "client"
+    },
+    "ClientMethodRequest": {
+      "description": "Request sent from the agent to the client.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "Reserved metadata for protocol extensions.",
+          "type": ["object", "null"]
+        },
+        "path": {
+          "description": "Path to read.",
+          "type": "string"
+        }
+      },
+      "required": ["path"],
+      "type": "object",
+      "x-method": "group/client_method",
+      "x-side": "client"
+    },
+    "ClientMethodResponse": {
+      "description": "Response sent from the client to the agent.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "Reserved metadata for protocol extensions.",
+          "type": ["object", "null"]
+        },
+        "content": {
+          "description": "File content.",
+          "type": "string"
+        }
+      },
+      "required": ["content"],
+      "type": "object",
+      "x-method": "group/client_method",
+      "x-side": "client"
+    },
+    "ClientNotification": {
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/AgentMethodNotification"
+                    }
+                  ],
+                  "description": "Notification sent from the client to the agent.",
+                  "title": "AgentMethodNotification"
+                }
+              ],
+              "description": "All possible notifications that a client can send to an agent."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["method"],
+      "type": "object",
+      "x-docs-ignore": true
+    },
+    "ClientRequest": {
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/AgentMethodRequest"
+                    }
+                  ],
+                  "description": "Request sent from the client to the agent.",
+                  "title": "AgentMethodRequest"
+                }
+              ],
+              "description": "All possible requests that a client can send to an agent."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["id", "method"],
+      "type": "object",
+      "x-docs-ignore": true
+    },
+    "ClientResponse": {
+      "anyOf": [
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            },
+            "result": {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ClientMethodResponse"
+                    }
+                  ],
+                  "title": "ClientMethodResponse"
+                }
+              ],
+              "description": "All possible responses that a client can send to an agent."
+            }
+          },
+          "required": ["id", "result"],
+          "title": "Result",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "error": {
+              "$ref": "#/$defs/Error"
+            },
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            }
+          },
+          "required": ["id", "error"],
+          "title": "Error",
+          "type": "object"
+        }
+      ],
+      "x-docs-ignore": true
+    },
+    "Error": {
+      "description": "A JSON-RPC error response.",
+      "properties": {
+        "code": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": ["code", "message"],
+      "type": "object"
+    },
+    "ProtocolNotification": {
+      "description": "Protocol-level notification shared by both sides.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "Reserved metadata for protocol extensions.",
+          "type": ["object", "null"]
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      },
+      "required": ["requestId"],
+      "type": "object",
+      "x-method": "$/cancel_request",
+      "x-side": "protocol"
+    },
+    "RequestId": {
+      "description": "A JSON-RPC request identifier.",
+      "type": "string"
+    },
+    "SessionId": {
+      "description": "A unique identifier for a conversation session between a client and agent.",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AgentRequest"
+            }
+          ],
+          "title": "Request"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AgentResponse"
+            }
+          ],
+          "title": "Response"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AgentNotification"
+            }
+          ],
+          "title": "Notification"
+        }
+      ],
+      "description": "A JSON-RPC message sent by the agent.",
+      "properties": {
+        "jsonrpc": {
+          "enum": ["2.0"],
+          "type": "string"
+        }
+      },
+      "required": ["jsonrpc"],
+      "title": "Agent",
+      "type": "object"
+    },
+    {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ClientRequest"
+            }
+          ],
+          "title": "Request"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ClientResponse"
+            }
+          ],
+          "title": "Response"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ClientNotification"
+            }
+          ],
+          "title": "Notification"
+        }
+      ],
+      "description": "A JSON-RPC message sent by the client.",
+      "properties": {
+        "jsonrpc": {
+          "enum": ["2.0"],
+          "type": "string"
+        }
+      },
+      "required": ["jsonrpc"],
+      "title": "Client",
+      "type": "object"
+    },
+    {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProtocolNotification"
+            }
+          ],
+          "description": "Notification to cancel an ongoing request.",
+          "title": "ProtocolNotification"
+        }
+      ],
+      "description": "General protocol-level notifications that all sides are expected to implement.",
+      "title": "ProtocolLevel"
+    }
+  ],
+  "title": "Agent Client Protocol Test Fixture"
+}

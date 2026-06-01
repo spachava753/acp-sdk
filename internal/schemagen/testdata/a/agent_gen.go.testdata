@@ -1,0 +1,55 @@
+package acp
+
+const (
+	// MethodGroupAgentMethod is the JSON-RPC method for group/agent_method.
+	MethodGroupAgentMethod = "group/agent_method"
+	// MethodGroupAgentNotify is the JSON-RPC method for group/agent_notify.
+	MethodGroupAgentNotify = "group/agent_notify"
+	// MethodGroupClientMethod is the JSON-RPC method for group/client_method.
+	MethodGroupClientMethod = "group/client_method"
+	// MethodGroupClientNotify is the JSON-RPC method for group/client_notify.
+	MethodGroupClientNotify = "group/client_notify"
+)
+
+// GroupHandler handles all group related agent methods.
+type GroupHandler interface {
+	AgentMethod(context.Context, *AgentMethodRequest) (*AgentMethodResponse, error)
+	AgentNotify(context.Context, *AgentMethodNotification) error
+}
+
+// ClientMethod calls group/client_method on the client.
+func (c *AgentConnection) ClientMethod(ctx context.Context, params *ClientMethodRequest) (*ClientMethodResponse, error) {
+	return call[ClientMethodResponse](ctx, c.rpc.conn, MethodGroupClientMethod, params)
+}
+
+// ClientNotify sends group/client_notify to the client.
+func (c *AgentConnection) ClientNotify(ctx context.Context, params *ClientMethodNotification) error {
+	return notify(ctx, c.rpc.conn, MethodGroupClientNotify, params)
+}
+
+func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) (any, error) {
+	jsonrpc2.Async(ctx)
+	if agent == nil {
+		return nil, methodNotFound(req.Method)
+	}
+	handler, ok := agent.(GroupHandler)
+	if !ok {
+		return nil, methodNotFound(req.Method)
+	}
+	switch req.Method {
+	case MethodGroupAgentMethod:
+		params, err := decodeParams[AgentMethodRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(handler.AgentMethod(ctx, params))
+	case MethodGroupAgentNotify:
+		params, err := decodeParams[AgentMethodNotification](req)
+		if err != nil {
+			return nil, err
+		}
+		return nil, handler.AgentNotify(ctx, params)
+	default:
+		return nil, methodNotFound(req.Method)
+	}
+}
