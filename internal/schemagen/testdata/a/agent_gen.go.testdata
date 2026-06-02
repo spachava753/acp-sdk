@@ -1,28 +1,31 @@
 package acp
 
 const (
-	// MethodGroupAgentMethod is the JSON-RPC method for group/agent_method.
+	// MethodGroupAgentMethod: Asks the agent to run the test agent method.
 	MethodGroupAgentMethod = "group/agent_method"
-	// MethodGroupAgentNotify is the JSON-RPC method for group/agent_notify.
+	// MethodGroupAgentNotify: Tells the agent about the test agent notification.
 	MethodGroupAgentNotify = "group/agent_notify"
-	// MethodGroupClientMethod is the JSON-RPC method for group/client_method.
+	// MethodGroupClientMethod: Asks the client to run the test client method.
 	MethodGroupClientMethod = "group/client_method"
-	// MethodGroupClientNotify is the JSON-RPC method for group/client_notify.
+	// MethodGroupClientNotify: Tells the client about the test client notification.
 	MethodGroupClientNotify = "group/client_notify"
 )
 
 // GroupHandler handles all group related agent methods.
 type GroupHandler interface {
+	// AgentMethod: Asks the agent to run the test agent method.
 	AgentMethod(context.Context, *AgentMethodRequest) (*AgentMethodResponse, error)
+
+	// AgentNotify: Tells the agent about the test agent notification.
 	AgentNotify(context.Context, *AgentMethodNotification) error
 }
 
-// ClientMethod calls group/client_method on the client.
+// ClientMethod: Asks the client to run the test client method.
 func (c *AgentConnection) ClientMethod(ctx context.Context, params *ClientMethodRequest) (*ClientMethodResponse, error) {
 	return call[ClientMethodResponse](ctx, c.rpc.conn, MethodGroupClientMethod, params)
 }
 
-// ClientNotify sends group/client_notify to the client.
+// ClientNotify: Tells the client about the test client notification.
 func (c *AgentConnection) ClientNotify(ctx context.Context, params *ClientMethodNotification) error {
 	return notify(ctx, c.rpc.conn, MethodGroupClientNotify, params)
 }

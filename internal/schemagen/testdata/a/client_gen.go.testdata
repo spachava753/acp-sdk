@@ -2,16 +2,19 @@ package acp
 
 // GroupClientHandler handles all group related client methods.
 type GroupClientHandler interface {
+	// ClientMethod: Asks the client to run the test client method.
 	ClientMethod(context.Context, *ClientMethodRequest) (*ClientMethodResponse, error)
+
+	// ClientNotify: Tells the client about the test client notification.
 	ClientNotify(context.Context, *ClientMethodNotification) error
 }
 
-// AgentMethod calls group/agent_method on the agent.
+// AgentMethod: Asks the agent to run the test agent method.
 func (c *Client) AgentMethod(ctx context.Context, params *AgentMethodRequest) (*AgentMethodResponse, error) {
 	return call[AgentMethodResponse](ctx, c.rpc.conn, MethodGroupAgentMethod, params)
 }
 
-// AgentNotify sends group/agent_notify to the agent.
+// AgentNotify: Tells the agent about the test agent notification.
 func (c *Client) AgentNotify(ctx context.Context, params *AgentMethodNotification) error {
 	return notify(ctx, c.rpc.conn, MethodGroupAgentNotify, params)
 }

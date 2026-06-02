@@ -84,7 +84,7 @@
                       "$ref": "#/$defs/ClientMethodNotification"
                     }
                   ],
-                  "description": "Notification sent from the agent to the client.",
+                  "description": "Tells the client about the test client notification.",
                   "title": "ClientMethodNotification"
                 }
               ],
@@ -118,7 +118,7 @@
                       "$ref": "#/$defs/ClientMethodRequest"
                     }
                   ],
-                  "description": "Request sent from the agent to the client.",
+                  "description": "Asks the client to run the test client method.",
                   "title": "ClientMethodRequest"
                 }
               ],
@@ -244,7 +244,7 @@
                       "$ref": "#/$defs/AgentMethodNotification"
                     }
                   ],
-                  "description": "Notification sent from the client to the agent.",
+                  "description": "Tells the agent about the test agent notification.",
                   "title": "AgentMethodNotification"
                 }
               ],
@@ -278,7 +278,7 @@
                       "$ref": "#/$defs/AgentMethodRequest"
                     }
                   ],
-                  "description": "Request sent from the client to the agent.",
+                  "description": "Asks the agent to run the test agent method.",
                   "title": "AgentMethodRequest"
                 }
               ],

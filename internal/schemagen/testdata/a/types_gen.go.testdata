@@ -1,0 +1,59 @@
+package acp
+
+// Meta: Reserved metadata for protocol extensions.
+type Meta map[string]any
+
+// AgentMethodNotification: Notification sent from the client to the agent.
+type AgentMethodNotification struct {
+	Meta      Meta      `json:"_meta,omitzero"`
+	SessionID SessionId `json:"sessionId"`
+}
+
+// AgentMethodRequest: Request sent from the client to the agent.
+type AgentMethodRequest struct {
+	Meta       Meta     `json:"_meta,omitzero"`
+	Cwd        string   `json:"cwd"`
+	ExtraRoots []string `json:"extraRoots,omitempty"`
+}
+
+// AgentMethodResponse: Response sent from the agent to the client.
+type AgentMethodResponse struct {
+	Meta      Meta      `json:"_meta,omitzero"`
+	SessionID SessionId `json:"sessionId"`
+}
+
+// ClientMethodNotification: Notification sent from the agent to the client.
+type ClientMethodNotification struct {
+	Meta    Meta   `json:"_meta,omitzero"`
+	Message string `json:"message"`
+}
+
+// ClientMethodRequest: Request sent from the agent to the client.
+type ClientMethodRequest struct {
+	Meta Meta   `json:"_meta,omitzero"`
+	Path string `json:"path"`
+}
+
+// ClientMethodResponse: Response sent from the client to the agent.
+type ClientMethodResponse struct {
+	Meta    Meta   `json:"_meta,omitzero"`
+	Content string `json:"content"`
+}
+
+// Error: A JSON-RPC error response.
+type Error struct {
+	Code    int64  `json:"code"`
+	Message string `json:"message"`
+}
+
+// ProtocolNotification: Protocol-level notification shared by both sides.
+type ProtocolNotification struct {
+	Meta      Meta      `json:"_meta,omitzero"`
+	RequestID RequestId `json:"requestId"`
+}
+
+// RequestId: A JSON-RPC request identifier.
+type RequestId string
+
+// SessionId: A unique identifier for a conversation session between a client and agent.
+type SessionId string
