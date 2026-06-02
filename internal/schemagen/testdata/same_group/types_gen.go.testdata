@@ -1,0 +1,51 @@
+package acp
+
+// Error: A JSON-RPC error response.
+type Error struct {
+	Code    int64  `json:"code"`
+	Message string `json:"message"`
+}
+
+// ReadTaskRequest: Parameters for reading a task.
+type ReadTaskRequest struct {
+	TaskID string `json:"taskId"`
+}
+
+// ReadTaskResponse: Result from reading a task.
+type ReadTaskResponse struct {
+	Summary string `json:"summary"`
+}
+
+// RequestId: A JSON-RPC request identifier.
+type RequestId string
+
+// StartTaskRequest: Parameters for starting a task.
+type StartTaskRequest struct {
+	TaskID string `json:"taskId"`
+}
+
+// StartTaskResponse: Result from starting a task.
+type StartTaskResponse struct {
+	Started bool `json:"started"`
+}
+
+// StopTaskRequest: Parameters for stopping a task.
+type StopTaskRequest struct {
+	TaskID string `json:"taskId"`
+}
+
+// StopTaskResponse: Result from stopping a task.
+type StopTaskResponse struct {
+	Stopped bool `json:"stopped"`
+}
+
+// WriteTaskRequest: Parameters for writing a task.
+type WriteTaskRequest struct {
+	Content string `json:"content"`
+	TaskID  string `json:"taskId"`
+}
+
+// WriteTaskResponse: Result from writing a task.
+type WriteTaskResponse struct {
+	Version int64 `json:"version"`
+}

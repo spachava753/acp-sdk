@@ -1,0 +1,377 @@
+{
+  "$defs": {
+    "AgentRequest": {
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ReadTaskRequest"
+                    }
+                  ],
+                  "description": "Asks the client to read task details.",
+                  "title": "ReadTaskRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/WriteTaskRequest"
+                    }
+                  ],
+                  "description": "Asks the client to write task details.",
+                  "title": "WriteTaskRequest"
+                }
+              ],
+              "description": "All possible requests that an agent can send to a client."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["id", "method"],
+      "type": "object",
+      "x-docs-ignore": true
+    },
+    "AgentResponse": {
+      "anyOf": [
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            },
+            "result": {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/StartTaskResponse"
+                    }
+                  ],
+                  "title": "StartTaskResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/StopTaskResponse"
+                    }
+                  ],
+                  "title": "StopTaskResponse"
+                }
+              ],
+              "description": "All possible responses that an agent can send to a client."
+            }
+          },
+          "required": ["id", "result"],
+          "title": "Result",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "error": {
+              "$ref": "#/$defs/Error"
+            },
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            }
+          },
+          "required": ["id", "error"],
+          "title": "Error",
+          "type": "object"
+        }
+      ],
+      "x-docs-ignore": true
+    },
+    "ClientRequest": {
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/StartTaskRequest"
+                    }
+                  ],
+                  "description": "Asks the agent to start a task.",
+                  "title": "StartTaskRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/StopTaskRequest"
+                    }
+                  ],
+                  "description": "Asks the agent to stop a task.",
+                  "title": "StopTaskRequest"
+                }
+              ],
+              "description": "All possible requests that a client can send to an agent."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["id", "method"],
+      "type": "object",
+      "x-docs-ignore": true
+    },
+    "ClientResponse": {
+      "anyOf": [
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            },
+            "result": {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ReadTaskResponse"
+                    }
+                  ],
+                  "title": "ReadTaskResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/WriteTaskResponse"
+                    }
+                  ],
+                  "title": "WriteTaskResponse"
+                }
+              ],
+              "description": "All possible responses that a client can send to an agent."
+            }
+          },
+          "required": ["id", "result"],
+          "title": "Result",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "error": {
+              "$ref": "#/$defs/Error"
+            },
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            }
+          },
+          "required": ["id", "error"],
+          "title": "Error",
+          "type": "object"
+        }
+      ],
+      "x-docs-ignore": true
+    },
+    "Error": {
+      "description": "A JSON-RPC error response.",
+      "properties": {
+        "code": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": ["code", "message"],
+      "type": "object"
+    },
+    "ReadTaskRequest": {
+      "description": "Parameters for reading a task.",
+      "properties": {
+        "taskId": {
+          "description": "The task to read.",
+          "type": "string"
+        }
+      },
+      "required": ["taskId"],
+      "type": "object",
+      "x-method": "task/read",
+      "x-side": "client"
+    },
+    "ReadTaskResponse": {
+      "description": "Result from reading a task.",
+      "properties": {
+        "summary": {
+          "description": "Task summary.",
+          "type": "string"
+        }
+      },
+      "required": ["summary"],
+      "type": "object",
+      "x-method": "task/read",
+      "x-side": "client"
+    },
+    "RequestId": {
+      "description": "A JSON-RPC request identifier.",
+      "type": "string"
+    },
+    "StartTaskRequest": {
+      "description": "Parameters for starting a task.",
+      "properties": {
+        "taskId": {
+          "description": "The task to start.",
+          "type": "string"
+        }
+      },
+      "required": ["taskId"],
+      "type": "object",
+      "x-method": "task/start",
+      "x-side": "agent"
+    },
+    "StartTaskResponse": {
+      "description": "Result from starting a task.",
+      "properties": {
+        "started": {
+          "description": "Whether the task started.",
+          "type": "boolean"
+        }
+      },
+      "required": ["started"],
+      "type": "object",
+      "x-method": "task/start",
+      "x-side": "agent"
+    },
+    "StopTaskRequest": {
+      "description": "Parameters for stopping a task.",
+      "properties": {
+        "taskId": {
+          "description": "The task to stop.",
+          "type": "string"
+        }
+      },
+      "required": ["taskId"],
+      "type": "object",
+      "x-method": "task/stop",
+      "x-side": "agent"
+    },
+    "StopTaskResponse": {
+      "description": "Result from stopping a task.",
+      "properties": {
+        "stopped": {
+          "description": "Whether the task stopped.",
+          "type": "boolean"
+        }
+      },
+      "required": ["stopped"],
+      "type": "object",
+      "x-method": "task/stop",
+      "x-side": "agent"
+    },
+    "WriteTaskRequest": {
+      "description": "Parameters for writing a task.",
+      "properties": {
+        "content": {
+          "description": "Task content.",
+          "type": "string"
+        },
+        "taskId": {
+          "description": "The task to write.",
+          "type": "string"
+        }
+      },
+      "required": ["taskId", "content"],
+      "type": "object",
+      "x-method": "task/write",
+      "x-side": "client"
+    },
+    "WriteTaskResponse": {
+      "description": "Result from writing a task.",
+      "properties": {
+        "version": {
+          "description": "Updated task version.",
+          "type": "integer"
+        }
+      },
+      "required": ["version"],
+      "type": "object",
+      "x-method": "task/write",
+      "x-side": "client"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AgentRequest"
+            }
+          ],
+          "title": "Request"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AgentResponse"
+            }
+          ],
+          "title": "Response"
+        }
+      ],
+      "description": "A JSON-RPC message sent by the agent.",
+      "properties": {
+        "jsonrpc": {
+          "enum": ["2.0"],
+          "type": "string"
+        }
+      },
+      "required": ["jsonrpc"],
+      "title": "Agent",
+      "type": "object"
+    },
+    {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ClientRequest"
+            }
+          ],
+          "title": "Request"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ClientResponse"
+            }
+          ],
+          "title": "Response"
+        }
+      ],
+      "description": "A JSON-RPC message sent by the client.",
+      "properties": {
+        "jsonrpc": {
+          "enum": ["2.0"],
+          "type": "string"
+        }
+      },
+      "required": ["jsonrpc"],
+      "title": "Client",
+      "type": "object"
+    }
+  ],
+  "title": "Same Group Method Test Fixture"
+}

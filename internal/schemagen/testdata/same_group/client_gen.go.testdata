@@ -1,0 +1,51 @@
+package acp
+
+// TaskClientHandler handles all task related client methods.
+type TaskClientHandler interface {
+	// ReadTask: Asks the client to read task details.
+	ReadTask(context.Context, *ReadTaskRequest) (*ReadTaskResponse, error)
+
+	// WriteTask: Asks the client to write task details.
+	WriteTask(context.Context, *WriteTaskRequest) (*WriteTaskResponse, error)
+}
+
+// StartTask: Asks the agent to start a task.
+func (c *Client) StartTask(ctx context.Context, params *StartTaskRequest) (*StartTaskResponse, error) {
+	return call[StartTaskResponse](ctx, c.rpc.conn, MethodTaskStart, params)
+}
+
+// StopTask: Asks the agent to stop a task.
+func (c *Client) StopTask(ctx context.Context, params *StopTaskRequest) (*StopTaskResponse, error) {
+	return call[StopTaskResponse](ctx, c.rpc.conn, MethodTaskStop, params)
+}
+
+func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) {
+	jsonrpc2.Async(ctx)
+	if c.handler == nil {
+		return nil, methodNotFound(req.Method)
+	}
+	switch req.Method {
+	case MethodTaskRead:
+		handler, ok := c.handler.(TaskClientHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[ReadTaskRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(handler.ReadTask(ctx, params))
+	case MethodTaskWrite:
+		handler, ok := c.handler.(TaskClientHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[WriteTaskRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(handler.WriteTask(ctx, params))
+	default:
+		return nil, methodNotFound(req.Method)
+	}
+}
