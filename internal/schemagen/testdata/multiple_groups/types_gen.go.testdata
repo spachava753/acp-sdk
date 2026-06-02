@@ -1,0 +1,51 @@
+package acp
+
+// Error: A JSON-RPC error response.
+type Error struct {
+	Code    int64  `json:"code"`
+	Message string `json:"message"`
+}
+
+// ReadGammaRequest: Parameters for reading gamma state.
+type ReadGammaRequest struct {
+	GammaID string `json:"gammaId"`
+}
+
+// ReadGammaResponse: Result from reading gamma state.
+type ReadGammaResponse struct {
+	Value string `json:"value"`
+}
+
+// RequestId: A JSON-RPC request identifier.
+type RequestId string
+
+// StartAlphaRequest: Parameters for starting alpha processing.
+type StartAlphaRequest struct {
+	AlphaID string `json:"alphaId"`
+}
+
+// StartAlphaResponse: Result from starting alpha processing.
+type StartAlphaResponse struct {
+	Started bool `json:"started"`
+}
+
+// StopBetaRequest: Parameters for stopping beta processing.
+type StopBetaRequest struct {
+	BetaID string `json:"betaId"`
+}
+
+// StopBetaResponse: Result from stopping beta processing.
+type StopBetaResponse struct {
+	Stopped bool `json:"stopped"`
+}
+
+// WriteDeltaRequest: Parameters for writing delta state.
+type WriteDeltaRequest struct {
+	DeltaID string `json:"deltaId"`
+	Value   string `json:"value"`
+}
+
+// WriteDeltaResponse: Result from writing delta state.
+type WriteDeltaResponse struct {
+	Version int64 `json:"version"`
+}

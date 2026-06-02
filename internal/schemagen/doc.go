@@ -133,12 +133,14 @@
 //     method group for both agent-implemented and client-implemented methods.
 //     This verifies grouped handler generation, grouped outbound helpers, and
 //     switch ordering within one group.
+//   - testdata/multiple_groups: request/response methods spread across multiple
+//     method groups for both sides. This verifies distinct handler interface
+//     names and per-method handler assertions in dispatch code.
 //
 // # Additional test cases to add
 //
 // Future fixtures should cover:
 //
-//   - Methods across multiple groups to verify interface naming.
 //   - x-side "both" methods, such as mcp/message.
 //   - x-side "protocol" notifications and whether they are generated, skipped,
 //     or routed through a separate protocol handler.

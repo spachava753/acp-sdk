@@ -1,0 +1,54 @@
+package acp
+
+// DeltaClientHandler handles all delta related client methods.
+type DeltaClientHandler interface {
+	// WriteDelta: Asks the client to write delta state.
+	WriteDelta(context.Context, *WriteDeltaRequest) (*WriteDeltaResponse, error)
+}
+
+// GammaClientHandler handles all gamma related client methods.
+type GammaClientHandler interface {
+	// ReadGamma: Asks the client to read gamma state.
+	ReadGamma(context.Context, *ReadGammaRequest) (*ReadGammaResponse, error)
+}
+
+// StartAlpha: Asks the agent to start alpha processing.
+func (c *Client) StartAlpha(ctx context.Context, params *StartAlphaRequest) (*StartAlphaResponse, error) {
+	return call[StartAlphaResponse](ctx, c.rpc.conn, MethodAlphaStart, params)
+}
+
+// StopBeta: Asks the agent to stop beta processing.
+func (c *Client) StopBeta(ctx context.Context, params *StopBetaRequest) (*StopBetaResponse, error) {
+	return call[StopBetaResponse](ctx, c.rpc.conn, MethodBetaStop, params)
+}
+
+func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) {
+	jsonrpc2.Async(ctx)
+	if c.handler == nil {
+		return nil, methodNotFound(req.Method)
+	}
+	switch req.Method {
+	case MethodDeltaWrite:
+		handler, ok := c.handler.(DeltaClientHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[WriteDeltaRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(handler.WriteDelta(ctx, params))
+	case MethodGammaRead:
+		handler, ok := c.handler.(GammaClientHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[ReadGammaRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(handler.ReadGamma(ctx, params))
+	default:
+		return nil, methodNotFound(req.Method)
+	}
+}

@@ -1,0 +1,65 @@
+package acp
+
+const (
+	// MethodAlphaStart: Asks the agent to start alpha processing.
+	MethodAlphaStart = "alpha/start"
+	// MethodBetaStop: Asks the agent to stop beta processing.
+	MethodBetaStop = "beta/stop"
+	// MethodDeltaWrite: Asks the client to write delta state.
+	MethodDeltaWrite = "delta/write"
+	// MethodGammaRead: Asks the client to read gamma state.
+	MethodGammaRead = "gamma/read"
+)
+
+// AlphaHandler handles all alpha related agent methods.
+type AlphaHandler interface {
+	// StartAlpha: Asks the agent to start alpha processing.
+	StartAlpha(context.Context, *StartAlphaRequest) (*StartAlphaResponse, error)
+}
+
+// BetaHandler handles all beta related agent methods.
+type BetaHandler interface {
+	// StopBeta: Asks the agent to stop beta processing.
+	StopBeta(context.Context, *StopBetaRequest) (*StopBetaResponse, error)
+}
+
+// WriteDelta: Asks the client to write delta state.
+func (c *AgentConnection) WriteDelta(ctx context.Context, params *WriteDeltaRequest) (*WriteDeltaResponse, error) {
+	return call[WriteDeltaResponse](ctx, c.rpc.conn, MethodDeltaWrite, params)
+}
+
+// ReadGamma: Asks the client to read gamma state.
+func (c *AgentConnection) ReadGamma(ctx context.Context, params *ReadGammaRequest) (*ReadGammaResponse, error) {
+	return call[ReadGammaResponse](ctx, c.rpc.conn, MethodGammaRead, params)
+}
+
+func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) (any, error) {
+	jsonrpc2.Async(ctx)
+	if agent == nil {
+		return nil, methodNotFound(req.Method)
+	}
+	switch req.Method {
+	case MethodAlphaStart:
+		handler, ok := agent.(AlphaHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[StartAlphaRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(handler.StartAlpha(ctx, params))
+	case MethodBetaStop:
+		handler, ok := agent.(BetaHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[StopBetaRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(handler.StopBeta(ctx, params))
+	default:
+		return nil, methodNotFound(req.Method)
+	}
+}

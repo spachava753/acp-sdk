@@ -1,0 +1,377 @@
+{
+  "$defs": {
+    "AgentRequest": {
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ReadGammaRequest"
+                    }
+                  ],
+                  "description": "Asks the client to read gamma state.",
+                  "title": "ReadGammaRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/WriteDeltaRequest"
+                    }
+                  ],
+                  "description": "Asks the client to write delta state.",
+                  "title": "WriteDeltaRequest"
+                }
+              ],
+              "description": "All possible requests that an agent can send to a client."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["id", "method"],
+      "type": "object",
+      "x-docs-ignore": true
+    },
+    "AgentResponse": {
+      "anyOf": [
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            },
+            "result": {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/StartAlphaResponse"
+                    }
+                  ],
+                  "title": "StartAlphaResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/StopBetaResponse"
+                    }
+                  ],
+                  "title": "StopBetaResponse"
+                }
+              ],
+              "description": "All possible responses that an agent can send to a client."
+            }
+          },
+          "required": ["id", "result"],
+          "title": "Result",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "error": {
+              "$ref": "#/$defs/Error"
+            },
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            }
+          },
+          "required": ["id", "error"],
+          "title": "Error",
+          "type": "object"
+        }
+      ],
+      "x-docs-ignore": true
+    },
+    "ClientRequest": {
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/StartAlphaRequest"
+                    }
+                  ],
+                  "description": "Asks the agent to start alpha processing.",
+                  "title": "StartAlphaRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/StopBetaRequest"
+                    }
+                  ],
+                  "description": "Asks the agent to stop beta processing.",
+                  "title": "StopBetaRequest"
+                }
+              ],
+              "description": "All possible requests that a client can send to an agent."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["id", "method"],
+      "type": "object",
+      "x-docs-ignore": true
+    },
+    "ClientResponse": {
+      "anyOf": [
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            },
+            "result": {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ReadGammaResponse"
+                    }
+                  ],
+                  "title": "ReadGammaResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/WriteDeltaResponse"
+                    }
+                  ],
+                  "title": "WriteDeltaResponse"
+                }
+              ],
+              "description": "All possible responses that a client can send to an agent."
+            }
+          },
+          "required": ["id", "result"],
+          "title": "Result",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "error": {
+              "$ref": "#/$defs/Error"
+            },
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            }
+          },
+          "required": ["id", "error"],
+          "title": "Error",
+          "type": "object"
+        }
+      ],
+      "x-docs-ignore": true
+    },
+    "Error": {
+      "description": "A JSON-RPC error response.",
+      "properties": {
+        "code": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": ["code", "message"],
+      "type": "object"
+    },
+    "ReadGammaRequest": {
+      "description": "Parameters for reading gamma state.",
+      "properties": {
+        "gammaId": {
+          "description": "The gamma state to read.",
+          "type": "string"
+        }
+      },
+      "required": ["gammaId"],
+      "type": "object",
+      "x-method": "gamma/read",
+      "x-side": "client"
+    },
+    "ReadGammaResponse": {
+      "description": "Result from reading gamma state.",
+      "properties": {
+        "value": {
+          "description": "Gamma value.",
+          "type": "string"
+        }
+      },
+      "required": ["value"],
+      "type": "object",
+      "x-method": "gamma/read",
+      "x-side": "client"
+    },
+    "RequestId": {
+      "description": "A JSON-RPC request identifier.",
+      "type": "string"
+    },
+    "StartAlphaRequest": {
+      "description": "Parameters for starting alpha processing.",
+      "properties": {
+        "alphaId": {
+          "description": "The alpha process to start.",
+          "type": "string"
+        }
+      },
+      "required": ["alphaId"],
+      "type": "object",
+      "x-method": "alpha/start",
+      "x-side": "agent"
+    },
+    "StartAlphaResponse": {
+      "description": "Result from starting alpha processing.",
+      "properties": {
+        "started": {
+          "description": "Whether alpha processing started.",
+          "type": "boolean"
+        }
+      },
+      "required": ["started"],
+      "type": "object",
+      "x-method": "alpha/start",
+      "x-side": "agent"
+    },
+    "StopBetaRequest": {
+      "description": "Parameters for stopping beta processing.",
+      "properties": {
+        "betaId": {
+          "description": "The beta process to stop.",
+          "type": "string"
+        }
+      },
+      "required": ["betaId"],
+      "type": "object",
+      "x-method": "beta/stop",
+      "x-side": "agent"
+    },
+    "StopBetaResponse": {
+      "description": "Result from stopping beta processing.",
+      "properties": {
+        "stopped": {
+          "description": "Whether beta processing stopped.",
+          "type": "boolean"
+        }
+      },
+      "required": ["stopped"],
+      "type": "object",
+      "x-method": "beta/stop",
+      "x-side": "agent"
+    },
+    "WriteDeltaRequest": {
+      "description": "Parameters for writing delta state.",
+      "properties": {
+        "deltaId": {
+          "description": "The delta state to write.",
+          "type": "string"
+        },
+        "value": {
+          "description": "Delta value.",
+          "type": "string"
+        }
+      },
+      "required": ["deltaId", "value"],
+      "type": "object",
+      "x-method": "delta/write",
+      "x-side": "client"
+    },
+    "WriteDeltaResponse": {
+      "description": "Result from writing delta state.",
+      "properties": {
+        "version": {
+          "description": "Delta version.",
+          "type": "integer"
+        }
+      },
+      "required": ["version"],
+      "type": "object",
+      "x-method": "delta/write",
+      "x-side": "client"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AgentRequest"
+            }
+          ],
+          "title": "Request"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AgentResponse"
+            }
+          ],
+          "title": "Response"
+        }
+      ],
+      "description": "A JSON-RPC message sent by the agent.",
+      "properties": {
+        "jsonrpc": {
+          "enum": ["2.0"],
+          "type": "string"
+        }
+      },
+      "required": ["jsonrpc"],
+      "title": "Agent",
+      "type": "object"
+    },
+    {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ClientRequest"
+            }
+          ],
+          "title": "Request"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ClientResponse"
+            }
+          ],
+          "title": "Response"
+        }
+      ],
+      "description": "A JSON-RPC message sent by the client.",
+      "properties": {
+        "jsonrpc": {
+          "enum": ["2.0"],
+          "type": "string"
+        }
+      },
+      "required": ["jsonrpc"],
+      "title": "Client",
+      "type": "object"
+    }
+  ],
+  "title": "Multiple Group Method Test Fixture"
+}
