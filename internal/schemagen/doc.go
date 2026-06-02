@@ -136,6 +136,8 @@
 //   - testdata/multiple_groups: request/response methods spread across multiple
 //     method groups for both sides. This verifies distinct handler interface
 //     names and per-method handler assertions in dispatch code.
+//   - testdata/enums: named string enums from the enum keyword and named scalar
+//     enums from oneOf const values, including enum fields inside object types.
 //
 // # Additional test cases to add
 //
@@ -148,7 +150,7 @@
 //   - allOf $ref wrappers in properties and response result unions.
 //   - anyOf unions used for real protocol variants, such as content blocks and
 //     session updates.
-//   - enums and const discriminators.
+//   - Const discriminators for tagged object unions.
 //   - arrays of primitives, arrays of refs, maps/additionalProperties, and raw
 //     arbitrary JSON values.
 //   - Naming edge cases: initialisms, method names with underscores, method

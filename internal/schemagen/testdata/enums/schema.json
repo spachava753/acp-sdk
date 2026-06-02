@@ -1,0 +1,64 @@
+{
+  "$defs": {
+    "PromptOutcome": {
+      "description": "A simple object that uses enum definitions.",
+      "properties": {
+        "role": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Role"
+            }
+          ],
+          "description": "The participant role."
+        },
+        "stopReason": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/StopReason"
+            }
+          ],
+          "description": "Why prompt processing stopped."
+        }
+      },
+      "required": ["role", "stopReason"],
+      "type": "object"
+    },
+    "Role": {
+      "description": "The sender or recipient of messages and data in a conversation.",
+      "enum": ["assistant", "user"],
+      "type": "string"
+    },
+    "StopReason": {
+      "description": "Reasons why an agent stops processing a prompt turn.",
+      "oneOf": [
+        {
+          "const": "end_turn",
+          "description": "The turn ended successfully.",
+          "type": "string"
+        },
+        {
+          "const": "max_tokens",
+          "description": "The turn ended because the agent reached the maximum number of tokens.",
+          "type": "string"
+        },
+        {
+          "const": "max_turn_requests",
+          "description": "The turn ended because the agent reached the maximum number of allowed agent requests between user turns.",
+          "type": "string"
+        },
+        {
+          "const": "refusal",
+          "description": "The turn ended because the agent refused to continue.",
+          "type": "string"
+        },
+        {
+          "const": "cancelled",
+          "description": "The turn was cancelled by the client.",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Enum Test Fixture"
+}

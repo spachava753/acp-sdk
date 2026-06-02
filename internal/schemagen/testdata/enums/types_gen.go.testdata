@@ -1,0 +1,31 @@
+package acp
+
+// PromptOutcome: A simple object that uses enum definitions.
+type PromptOutcome struct {
+	Role       Role       `json:"role"`
+	StopReason StopReason `json:"stopReason"`
+}
+
+// Role: The sender or recipient of messages and data in a conversation.
+type Role string
+
+const (
+	RoleAssistant Role = "assistant"
+	RoleUser      Role = "user"
+)
+
+// StopReason: Reasons why an agent stops processing a prompt turn.
+type StopReason string
+
+const (
+	// StopReasonEndTurn: The turn ended successfully.
+	StopReasonEndTurn StopReason = "end_turn"
+	// StopReasonMaxTokens: The turn ended because the agent reached the maximum number of tokens.
+	StopReasonMaxTokens StopReason = "max_tokens"
+	// StopReasonMaxTurnRequests: The turn ended because the agent reached the maximum number of allowed agent requests between user turns.
+	StopReasonMaxTurnRequests StopReason = "max_turn_requests"
+	// StopReasonRefusal: The turn ended because the agent refused to continue.
+	StopReasonRefusal StopReason = "refusal"
+	// StopReasonCancelled: The turn was cancelled by the client.
+	StopReasonCancelled StopReason = "cancelled"
+)
