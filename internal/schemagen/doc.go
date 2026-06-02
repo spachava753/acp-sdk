@@ -100,6 +100,25 @@
 // Constants for JSON-RPC method names should be generated once per method name
 // and shared by agent and client glue.
 //
+// # Dispatch generation
+//
+// Agent and client request dispatch should follow the hand-written dispatch
+// shape in acp/agent.go and acp/client.go:
+//
+//   - Call jsonrpc2.Async(ctx) at the top of the handler.
+//   - Return methodNotFound when the concrete agent or client handler is nil.
+//   - Switch on req.Method before asserting optional handler interfaces.
+//   - In each case, assert only the handler interface needed for that method,
+//     then decode params, then invoke the method.
+//   - Return rpcResult for request/response methods.
+//   - Return nil plus the handler error for notifications.
+//   - Return methodNotFound in the default case.
+//
+// Handler assertions must stay inside each switch case. Do not assert a group
+// handler before the switch, even when a fixture currently has only one group;
+// real schemas contain multiple optional handler interfaces, and a pre-switch
+// assertion would reject valid methods implemented by another interface.
+//
 // # Testdata authoring
 //
 // Each fixture directory under testdata should contain one schema.json input and
@@ -141,12 +160,13 @@
 //   - testdata/collections: arrays of primitives, arrays of refs,
 //     additionalProperties maps for primitive/ref/arbitrary values, and raw
 //     arbitrary JSON values.
+//   - testdata/both_side: x-side "both" request/response methods that generate
+//     handler interfaces and outbound helpers for both agent and client sides.
 //
 // # Additional test cases to add
 //
 // Future fixtures should cover:
 //
-//   - x-side "both" methods, such as mcp/message.
 //   - x-side "protocol" notifications and whether they are generated, skipped,
 //     or routed through a separate protocol handler.
 //   - Optional fields, required fields, nullable fields, and default values.

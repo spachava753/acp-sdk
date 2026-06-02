@@ -1,0 +1,20 @@
+package acp
+
+// Error: A JSON-RPC error response.
+type Error struct {
+	Code    int64  `json:"code"`
+	Message string `json:"message"`
+}
+
+// MessageRequest: Parameters for processing a peer message.
+type MessageRequest struct {
+	Text string `json:"text"`
+}
+
+// MessageResponse: Result from processing a peer message.
+type MessageResponse struct {
+	Acknowledged bool `json:"acknowledged"`
+}
+
+// RequestId: A JSON-RPC request identifier.
+type RequestId string

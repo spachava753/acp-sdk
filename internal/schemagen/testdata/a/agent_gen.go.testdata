@@ -35,18 +35,22 @@ func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) 
 	if agent == nil {
 		return nil, methodNotFound(req.Method)
 	}
-	handler, ok := agent.(GroupHandler)
-	if !ok {
-		return nil, methodNotFound(req.Method)
-	}
 	switch req.Method {
 	case MethodGroupAgentMethod:
+		handler, ok := agent.(GroupHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
 		params, err := decodeParams[AgentMethodRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(handler.AgentMethod(ctx, params))
 	case MethodGroupAgentNotify:
+		handler, ok := agent.(GroupHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
 		params, err := decodeParams[AgentMethodNotification](req)
 		if err != nil {
 			return nil, err

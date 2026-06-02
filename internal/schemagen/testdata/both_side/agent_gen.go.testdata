@@ -1,0 +1,38 @@
+package acp
+
+const (
+	// MethodMcpMessage: Asks the peer to process a message.
+	MethodMcpMessage = "mcp/message"
+)
+
+// McpHandler handles all mcp related agent methods.
+type McpHandler interface {
+	// Message: Asks the peer to process a message.
+	Message(context.Context, *MessageRequest) (*MessageResponse, error)
+}
+
+// Message: Asks the peer to process a message.
+func (c *AgentConnection) Message(ctx context.Context, params *MessageRequest) (*MessageResponse, error) {
+	return call[MessageResponse](ctx, c.rpc.conn, MethodMcpMessage, params)
+}
+
+func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) (any, error) {
+	jsonrpc2.Async(ctx)
+	if agent == nil {
+		return nil, methodNotFound(req.Method)
+	}
+	switch req.Method {
+	case MethodMcpMessage:
+		handler, ok := agent.(McpHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[MessageRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(handler.Message(ctx, params))
+	default:
+		return nil, methodNotFound(req.Method)
+	}
+}
