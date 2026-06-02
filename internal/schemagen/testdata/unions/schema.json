@@ -1,0 +1,84 @@
+{
+  "$defs": {
+    "ContentBlock": {
+      "description": "A flattened union of content block variants.",
+      "oneOf": [
+        {
+          "description": "Text content displayed to the user.",
+          "properties": {
+            "text": {
+              "description": "The text content.",
+              "type": "string"
+            },
+            "type": {
+              "const": "text",
+              "description": "Text content discriminator.",
+              "type": "string"
+            }
+          },
+          "required": ["type", "text"],
+          "title": "Text",
+          "type": "object"
+        },
+        {
+          "description": "Image content displayed to the user.",
+          "properties": {
+            "data": {
+              "description": "Base64-encoded image data.",
+              "type": "string"
+            },
+            "mimeType": {
+              "description": "Image MIME type.",
+              "type": "string"
+            },
+            "type": {
+              "const": "image",
+              "description": "Image content discriminator.",
+              "type": "string"
+            }
+          },
+          "required": ["type", "data", "mimeType"],
+          "title": "Image",
+          "type": "object"
+        },
+        {
+          "description": "Resource content displayed to the user.",
+          "properties": {
+            "title": {
+              "description": "Optional resource title.",
+              "type": "string"
+            },
+            "type": {
+              "const": "resource",
+              "description": "Resource content discriminator.",
+              "type": "string"
+            },
+            "uri": {
+              "description": "Resource URI.",
+              "type": "string"
+            }
+          },
+          "required": ["type", "uri"],
+          "title": "Resource",
+          "type": "object"
+        }
+      ]
+    },
+    "Message": {
+      "description": "A message containing content blocks.",
+      "properties": {
+        "content": {
+          "description": "Content blocks in this message.",
+          "items": {
+            "$ref": "#/$defs/ContentBlock"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["content"],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Flattened Union Test Fixture"
+}

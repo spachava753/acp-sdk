@@ -1,0 +1,245 @@
+{
+  "$defs": {
+    "AuthMethod": {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthMethodEnvVar"
+            }
+          ],
+          "description": "The client passes an environment variable to the agent.",
+          "properties": {
+            "type": {
+              "const": "env_var",
+              "description": "Environment variable authentication discriminator.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthMethodTerminal"
+            }
+          ],
+          "description": "The client runs an interactive terminal for authentication.",
+          "properties": {
+            "type": {
+              "const": "terminal",
+              "description": "Terminal authentication discriminator.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthMethodAgent"
+            }
+          ],
+          "description": "The agent handles authentication when no type discriminator is present.",
+          "title": "agent"
+        }
+      ],
+      "description": "Authentication method union with a default variant."
+    },
+    "AuthMethodAgent": {
+      "description": "Agent-managed authentication method.",
+      "properties": {
+        "id": {
+          "description": "Authentication method identifier.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "name"],
+      "type": "object"
+    },
+    "AuthMethodEnvVar": {
+      "description": "Environment variable authentication method.",
+      "properties": {
+        "envName": {
+          "description": "Environment variable name.",
+          "type": "string"
+        },
+        "id": {
+          "description": "Authentication method identifier.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "name", "envName"],
+      "type": "object"
+    },
+    "AuthMethodTerminal": {
+      "description": "Terminal authentication method.",
+      "properties": {
+        "command": {
+          "description": "Command to run.",
+          "type": "string"
+        },
+        "id": {
+          "description": "Authentication method identifier.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "name", "command"],
+      "type": "object"
+    },
+    "ElicitationContentValue": {
+      "anyOf": [
+        {
+          "title": "String",
+          "type": "string"
+        },
+        {
+          "title": "Integer",
+          "type": "integer"
+        },
+        {
+          "title": "Number",
+          "type": "number"
+        },
+        {
+          "title": "Boolean",
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "title": "StringArray",
+          "type": "array"
+        }
+      ],
+      "description": "Primitive or string-array elicitation content."
+    },
+    "RequestId": {
+      "anyOf": [
+        {
+          "title": "Null",
+          "type": "null"
+        },
+        {
+          "title": "Number",
+          "type": "integer"
+        },
+        {
+          "title": "String",
+          "type": "string"
+        }
+      ],
+      "description": "JSON-RPC request identifier."
+    },
+    "SelectGroup": {
+      "description": "A grouped set of select options.",
+      "properties": {
+        "group": {
+          "description": "Group label.",
+          "type": "string"
+        },
+        "options": {
+          "description": "Options in this group.",
+          "items": {
+            "$ref": "#/$defs/SelectOption"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["group", "options"],
+      "type": "object"
+    },
+    "SelectOption": {
+      "description": "A selectable option.",
+      "properties": {
+        "label": {
+          "description": "Display label.",
+          "type": "string"
+        },
+        "value": {
+          "description": "Option value.",
+          "type": "string"
+        }
+      },
+      "required": ["label", "value"],
+      "type": "object"
+    },
+    "SelectOptions": {
+      "anyOf": [
+        {
+          "description": "A flat list of options with no grouping.",
+          "items": {
+            "$ref": "#/$defs/SelectOption"
+          },
+          "title": "Flat",
+          "type": "array"
+        },
+        {
+          "description": "A list of options grouped under headers.",
+          "items": {
+            "$ref": "#/$defs/SelectGroup"
+          },
+          "title": "Grouped",
+          "type": "array"
+        }
+      ],
+      "description": "Select options represented by one of two array shapes."
+    },
+    "UnionContainer": {
+      "description": "Object that references hard union shapes.",
+      "properties": {
+        "auth": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthMethod"
+            }
+          ],
+          "description": "Authentication method."
+        },
+        "content": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationContentValue"
+            }
+          ],
+          "description": "Elicitation content value."
+        },
+        "requestId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/RequestId"
+            }
+          ],
+          "description": "Request identifier."
+        },
+        "selectOptions": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SelectOptions"
+            }
+          ],
+          "description": "Select options."
+        }
+      },
+      "required": ["auth", "requestId", "selectOptions"],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hard Union Test Fixture"
+}

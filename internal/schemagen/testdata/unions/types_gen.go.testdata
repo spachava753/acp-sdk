@@ -1,0 +1,65 @@
+package acp
+
+import "encoding/json"
+
+// ContentBlock: A flattened union of content block variants.
+type ContentBlock struct {
+	Type     ContentBlockType `json:"type"`
+	Data     string           `json:"data,omitempty"`
+	MimeType string           `json:"mimeType,omitempty"`
+	Text     string           `json:"text,omitempty"`
+	Title    string           `json:"title,omitempty"`
+	URI      string           `json:"uri,omitempty"`
+}
+
+// ContentBlockType is the discriminator for ContentBlock variants.
+type ContentBlockType string
+
+const (
+	// ContentBlockTypeText: Text content discriminator.
+	ContentBlockTypeText ContentBlockType = "text"
+	// ContentBlockTypeImage: Image content discriminator.
+	ContentBlockTypeImage ContentBlockType = "image"
+	// ContentBlockTypeResource: Resource content discriminator.
+	ContentBlockTypeResource ContentBlockType = "resource"
+)
+
+// TextContentBlock creates text content displayed to the user.
+func TextContentBlock(text string) ContentBlock {
+	return ContentBlock{
+		Type: ContentBlockTypeText,
+		Text: text,
+	}
+}
+
+// ImageContentBlock creates image content displayed to the user.
+func ImageContentBlock(data string, mimeType string) ContentBlock {
+	return ContentBlock{
+		Type:     ContentBlockTypeImage,
+		Data:     data,
+		MimeType: mimeType,
+	}
+}
+
+// ResourceContentBlock creates resource content displayed to the user.
+func ResourceContentBlock(uri string) ContentBlock {
+	return ContentBlock{
+		Type: ContentBlockTypeResource,
+		URI:  uri,
+	}
+}
+
+// Message: A message containing content blocks.
+type Message struct {
+	Content []ContentBlock `json:"content"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (m Message) MarshalJSON() ([]byte, error) {
+	type alias Message
+	a := alias(m)
+	if a.Content == nil {
+		a.Content = []ContentBlock{}
+	}
+	return json.Marshal(a)
+}

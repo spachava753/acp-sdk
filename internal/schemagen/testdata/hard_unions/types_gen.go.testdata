@@ -1,0 +1,166 @@
+package acp
+
+import "encoding/json"
+
+// AuthMethod: Authentication method union with a default variant.
+type AuthMethod struct {
+	Type    AuthMethodType `json:"type,omitempty"`
+	Command string         `json:"command,omitempty"`
+	EnvName string         `json:"envName,omitempty"`
+	ID      string         `json:"id"`
+	Name    string         `json:"name"`
+}
+
+// AuthMethodType is the discriminator for AuthMethod variants.
+type AuthMethodType string
+
+const (
+	// AuthMethodTypeEnvVar: Environment variable authentication discriminator.
+	AuthMethodTypeEnvVar AuthMethodType = "env_var"
+	// AuthMethodTypeTerminal: Terminal authentication discriminator.
+	AuthMethodTypeTerminal AuthMethodType = "terminal"
+)
+
+// EnvVarAuthMethod creates an AuthMethod variant: The client passes an environment variable to the agent.
+func EnvVarAuthMethod(id string, name string, envName string) AuthMethod {
+	return AuthMethod{
+		Type:    AuthMethodTypeEnvVar,
+		EnvName: envName,
+		ID:      id,
+		Name:    name,
+	}
+}
+
+// TerminalAuthMethod creates an AuthMethod variant: The client runs an interactive terminal for authentication.
+func TerminalAuthMethod(id string, name string, command string) AuthMethod {
+	return AuthMethod{
+		Type:    AuthMethodTypeTerminal,
+		Command: command,
+		ID:      id,
+		Name:    name,
+	}
+}
+
+// AgentAuthMethod creates an AuthMethod variant: The agent handles authentication when no type discriminator is present.
+func AgentAuthMethod(id string, name string) AuthMethod {
+	return AuthMethod{
+		ID:   id,
+		Name: name,
+	}
+}
+
+// AuthMethodAgent: Agent-managed authentication method.
+type AuthMethodAgent struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// AuthMethodEnvVar: Environment variable authentication method.
+type AuthMethodEnvVar struct {
+	EnvName string `json:"envName"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+}
+
+// AuthMethodTerminal: Terminal authentication method.
+type AuthMethodTerminal struct {
+	Command string `json:"command"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+}
+
+// ElicitationContentValue: Primitive or string-array elicitation content.
+type ElicitationContentValue = json.RawMessage
+
+// RequestId: JSON-RPC request identifier.
+type RequestId = json.RawMessage
+
+// SelectGroup: A grouped set of select options.
+type SelectGroup struct {
+	Group   string         `json:"group"`
+	Options []SelectOption `json:"options"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (g SelectGroup) MarshalJSON() ([]byte, error) {
+	type alias SelectGroup
+	a := alias(g)
+	if a.Options == nil {
+		a.Options = []SelectOption{}
+	}
+	return json.Marshal(a)
+}
+
+// SelectOption: A selectable option.
+type SelectOption struct {
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
+
+// SelectOptions: Select options represented by one of two array shapes.
+type SelectOptions struct {
+	Flat   *FlatSelectOptions
+	Groups *GroupedSelectOptions
+}
+
+// FlatSelectOptions is the flat variant of SelectOptions.
+type FlatSelectOptions []SelectOption
+
+// GroupedSelectOptions is the grouped variant of SelectOptions.
+type GroupedSelectOptions []SelectGroup
+
+// MarshalJSON implements json.Marshaler.
+func (o SelectOptions) MarshalJSON() ([]byte, error) {
+	if o.Groups != nil {
+		return json.Marshal(o.Groups)
+	}
+	if o.Flat != nil {
+		return json.Marshal(o.Flat)
+	}
+	return []byte("null"), nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *SelectOptions) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*o = SelectOptions{}
+		return nil
+	}
+	var raw []json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw) == 0 {
+		flat := FlatSelectOptions{}
+		*o = SelectOptions{Flat: &flat}
+		return nil
+	}
+	var probe struct {
+		Group string `json:"group"`
+	}
+	if err := json.Unmarshal(raw[0], &probe); err != nil {
+		return err
+	}
+	if probe.Group != "" {
+		var groups GroupedSelectOptions
+		if err := json.Unmarshal(data, &groups); err != nil {
+			return err
+		}
+		*o = SelectOptions{Groups: &groups}
+		return nil
+	}
+	var flat FlatSelectOptions
+	if err := json.Unmarshal(data, &flat); err != nil {
+		return err
+	}
+	*o = SelectOptions{Flat: &flat}
+	return nil
+}
+
+// UnionContainer: Object that references hard union shapes.
+type UnionContainer struct {
+	Auth          AuthMethod              `json:"auth"`
+	Content       ElicitationContentValue `json:"content,omitempty"`
+	RequestID     RequestId               `json:"requestId"`
+	SelectOptions SelectOptions           `json:"selectOptions"`
+}

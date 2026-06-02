@@ -82,12 +82,53 @@
 //   - $ref to #/$defs/Name.
 //   - allOf with exactly one entry, used as a wrapped $ref.
 //   - anyOf for JSON-RPC envelope unions and simple nullable fields.
+//   - oneOf for tagged object unions that can be flattened into one Go struct.
 //
 // Object field names are derived from JSON property names. JSON tags should omit
 // optional fields and keep required fields non-omitempty. The _meta property maps
 // to Meta and should use omitzero to match the existing ACP package style.
 // Required slice fields need custom MarshalJSON methods that encode nil slices
 // as empty JSON arrays, matching the hand-written behavior in acp/protocol_json.go.
+//
+// # Union generation
+//
+// Go has no native sum types, so the generator uses different strategies for
+// different schema union shapes.
+//
+// Tagged object unions should be generated as a single flattened struct rather
+// than as wrapper structs with one pointer field per variant. For a oneOf/anyOf
+// where each variant is an object with the same string const discriminator
+// property, generate:
+//
+//   - one struct named after the union definition;
+//   - one discriminator field on that struct;
+//   - one named discriminator type plus constants for each const value;
+//   - all fields from all variants on the same struct;
+//   - constructor helpers for each variant that set the discriminator and the
+//     required fields for that variant.
+//
+// A partially tagged union with a default variant, such as AuthMethod, uses the
+// same flattened strategy. Variants with const discriminator values get
+// discriminator constants. The default variant gets a constructor that leaves the
+// discriminator unset when the schema says the missing discriminator selects that
+// variant.
+//
+// Primitive or mixed scalar unions that have no object shape or discriminator,
+// such as RequestId or ElicitationContentValue, should be represented as
+// json.RawMessage aliases. They are intentionally preserved as raw JSON instead
+// of forcing an awkward public wrapper type.
+//
+// Untagged array unions, such as a value that can be []Option or []Group, should
+// use a wrapper type with one pointer field per variant and custom MarshalJSON
+// and UnmarshalJSON methods. The unmarshal method should probe the JSON shape to
+// choose the correct variant, following the hand-written style used by
+// SessionConfigSelectOptions.
+//
+// Flattened tagged unions do not need custom marshal or unmarshal logic solely
+// to select variants. Encoding/json can marshal the flattened struct directly,
+// and callers should use the generated constructors to set the discriminator.
+// Custom JSON helpers are still needed for unrelated rules such as required nil
+// slices that must encode as empty arrays.
 //
 // # Generated files
 //
@@ -150,12 +191,13 @@
 // Existing fixture directories cover:
 //
 //   - testdata/a: a compact ACP-shaped schema with agent and client request,
-//     response, and notification payloads; nested $defs references; shared type
-//     generation; and distinct type descriptions versus RPC method descriptions.
+//     response, and notification payloads; nested $defs references; property
+//     allOf $ref wrappers; shared type generation; and distinct type
+//     descriptions versus RPC method descriptions.
 //   - testdata/same_group: multiple request/response methods in the same
 //     method group for both agent-implemented and client-implemented methods.
-//     This verifies grouped handler generation, grouped outbound helpers, and
-//     switch ordering within one group.
+//     This verifies grouped handler generation, grouped outbound helpers,
+//     response-result allOf $ref wrappers, and switch ordering within one group.
 //   - testdata/multiple_groups: request/response methods spread across multiple
 //     method groups for both sides. This verifies distinct handler interface
 //     names and per-method handler assertions in dispatch code.
@@ -167,6 +209,12 @@
 //   - testdata/field_shapes: required fields, optional fields, nullable fields,
 //     defaults, and required slice fields that need nil-as-empty-array marshal
 //     methods.
+//   - testdata/unions: tagged oneOf object unions generated as one flattened
+//     struct with a discriminator field, discriminator constants, and variant
+//     constructor helpers.
+//   - testdata/hard_unions: partially tagged unions with default variants, raw
+//     JSON aliases for non-object mixed unions, and wrapper types with custom
+//     JSON for untagged array unions.
 //   - testdata/both_side: x-side "both" request/response methods that generate
 //     handler interfaces and outbound helpers for both agent and client sides.
 //
@@ -176,10 +224,6 @@
 //
 //   - x-side "protocol" notifications and whether they are generated, skipped,
 //     or routed through a separate protocol handler.
-//   - allOf $ref wrappers in properties and response result unions.
-//   - anyOf unions used for real protocol variants, such as content blocks and
-//     session updates.
-//   - Const discriminators for tagged object unions.
 //   - Naming edge cases: initialisms, method names with underscores, method
 //     names with '$/', and JSON field names that need Go initialism handling.
 //   - Comment generation for multiline Markdown descriptions.
