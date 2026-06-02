@@ -122,12 +122,22 @@
 //   - Keep payload fields simple in early fixtures so failures isolate schema
 //     traversal and RPC generation before covering complex JSON Schema features.
 //
+// # Current fixtures
+//
+// Existing fixture directories cover:
+//
+//   - testdata/a: a compact ACP-shaped schema with agent and client request,
+//     response, and notification payloads; nested $defs references; shared type
+//     generation; and distinct type descriptions versus RPC method descriptions.
+//   - testdata/same_group: multiple request/response methods in the same
+//     method group for both agent-implemented and client-implemented methods.
+//     This verifies grouped handler generation, grouped outbound helpers, and
+//     switch ordering within one group.
+//
 // # Additional test cases to add
 //
 // Future fixtures should cover:
 //
-//   - Multiple methods in the same group to verify handler grouping and switch
-//     ordering.
 //   - Methods across multiple groups to verify interface naming.
 //   - x-side "both" methods, such as mcp/message.
 //   - x-side "protocol" notifications and whether they are generated, skipped,
