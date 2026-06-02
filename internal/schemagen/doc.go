@@ -138,6 +138,9 @@
 //     names and per-method handler assertions in dispatch code.
 //   - testdata/enums: named string enums from the enum keyword and named scalar
 //     enums from oneOf const values, including enum fields inside object types.
+//   - testdata/collections: arrays of primitives, arrays of refs,
+//     additionalProperties maps for primitive/ref/arbitrary values, and raw
+//     arbitrary JSON values.
 //
 // # Additional test cases to add
 //
@@ -151,8 +154,6 @@
 //   - anyOf unions used for real protocol variants, such as content blocks and
 //     session updates.
 //   - Const discriminators for tagged object unions.
-//   - arrays of primitives, arrays of refs, maps/additionalProperties, and raw
-//     arbitrary JSON values.
 //   - Naming edge cases: initialisms, method names with underscores, method
 //     names with '$/', and JSON field names that need Go initialism handling.
 //   - Comment generation for multiline Markdown descriptions.

@@ -1,0 +1,90 @@
+{
+  "$defs": {
+    "AnyValue": {
+      "description": "Any JSON value."
+    },
+    "CollectionRequest": {
+      "description": "A request containing arrays, maps, and arbitrary JSON values.",
+      "properties": {
+        "args": {
+          "description": "Command arguments.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "env": {
+          "description": "Environment variables.",
+          "items": {
+            "$ref": "#/$defs/EnvVariable"
+          },
+          "type": "array"
+        },
+        "extensions": {
+          "additionalProperties": true,
+          "description": "Arbitrary extension metadata.",
+          "type": ["object", "null"]
+        },
+        "headers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Headers keyed by name.",
+          "type": "object"
+        },
+        "payload": {
+          "description": "Unconstrained JSON payload."
+        },
+        "rawResult": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AnyValue"
+            }
+          ],
+          "description": "Named arbitrary JSON result."
+        },
+        "resources": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ResourceSpec"
+          },
+          "description": "Resources keyed by ID.",
+          "type": "object"
+        }
+      },
+      "required": ["args", "env", "headers", "resources"],
+      "type": "object"
+    },
+    "EnvVariable": {
+      "description": "An environment variable.",
+      "properties": {
+        "name": {
+          "description": "Environment variable name.",
+          "type": "string"
+        },
+        "value": {
+          "description": "Environment variable value.",
+          "type": "string"
+        }
+      },
+      "required": ["name", "value"],
+      "type": "object"
+    },
+    "ResourceSpec": {
+      "description": "A resource specification.",
+      "properties": {
+        "mimeType": {
+          "description": "Resource MIME type.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "Resource URI.",
+          "type": "string"
+        }
+      },
+      "required": ["uri"],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Collection Shape Test Fixture"
+}

@@ -1,0 +1,27 @@
+package acp
+
+// AnyValue: Any JSON value.
+type AnyValue any
+
+// CollectionRequest: A request containing arrays, maps, and arbitrary JSON values.
+type CollectionRequest struct {
+	Args       []string                `json:"args"`
+	Env        []EnvVariable           `json:"env"`
+	Extensions map[string]any          `json:"extensions,omitempty"`
+	Headers    map[string]string       `json:"headers"`
+	Payload    any                     `json:"payload,omitempty"`
+	RawResult  AnyValue                `json:"rawResult,omitempty"`
+	Resources  map[string]ResourceSpec `json:"resources"`
+}
+
+// EnvVariable: An environment variable.
+type EnvVariable struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// ResourceSpec: A resource specification.
+type ResourceSpec struct {
+	MimeType string `json:"mimeType,omitempty"`
+	URI      string `json:"uri"`
+}
