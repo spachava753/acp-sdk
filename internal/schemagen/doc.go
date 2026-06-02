@@ -86,12 +86,16 @@
 // Object field names are derived from JSON property names. JSON tags should omit
 // optional fields and keep required fields non-omitempty. The _meta property maps
 // to Meta and should use omitzero to match the existing ACP package style.
+// Required slice fields need custom MarshalJSON methods that encode nil slices
+// as empty JSON arrays, matching the hand-written behavior in acp/protocol_json.go.
 //
 // # Generated files
 //
 // Generate should produce separate files for stable concerns:
 //
-//   - types_gen.go: generated Go types for concrete schema definitions.
+//   - types_gen.go: generated Go types for concrete schema definitions,
+//     including type-adjacent JSON helpers such as required-slice MarshalJSON
+//     methods.
 //   - agent_gen.go: constants, handler interfaces, AgentConnection outbound
 //     helpers, and agent-side request dispatch.
 //   - client_gen.go: client handler interfaces, Client outbound helpers, and
@@ -160,6 +164,9 @@
 //   - testdata/collections: arrays of primitives, arrays of refs,
 //     additionalProperties maps for primitive/ref/arbitrary values, and raw
 //     arbitrary JSON values.
+//   - testdata/field_shapes: required fields, optional fields, nullable fields,
+//     defaults, and required slice fields that need nil-as-empty-array marshal
+//     methods.
 //   - testdata/both_side: x-side "both" request/response methods that generate
 //     handler interfaces and outbound helpers for both agent and client sides.
 //
@@ -169,7 +176,6 @@
 //
 //   - x-side "protocol" notifications and whether they are generated, skipped,
 //     or routed through a separate protocol handler.
-//   - Optional fields, required fields, nullable fields, and default values.
 //   - allOf $ref wrappers in properties and response result unions.
 //   - anyOf unions used for real protocol variants, such as content blocks and
 //     session updates.

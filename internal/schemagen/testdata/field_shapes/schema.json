@@ -1,0 +1,95 @@
+{
+  "$defs": {
+    "FieldShape": {
+      "description": "Object covering required, optional, nullable, defaulted, and required array fields.",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "Whether the shape is enabled.",
+          "type": "boolean"
+        },
+        "items": {
+          "description": "Required referenced items.",
+          "items": {
+            "$ref": "#/$defs/Item"
+          },
+          "type": "array"
+        },
+        "label": {
+          "description": "Optional label.",
+          "type": "string"
+        },
+        "metadata": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            }
+          ],
+          "default": {},
+          "description": "Optional metadata with an object default."
+        },
+        "mode": {
+          "default": "auto",
+          "description": "Optional mode with a string default.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Required name.",
+          "type": "string"
+        },
+        "nullableAlias": {
+          "description": "Optional nullable alias.",
+          "type": ["string", "null"]
+        },
+        "nullableMetadata": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional nullable metadata."
+        },
+        "retries": {
+          "default": 3,
+          "description": "Optional retry count with an integer default.",
+          "type": "integer"
+        },
+        "tags": {
+          "description": "Required string tags.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["name", "tags", "items"],
+      "type": "object"
+    },
+    "Item": {
+      "description": "A referenced item.",
+      "properties": {
+        "id": {
+          "description": "Item identifier.",
+          "type": "string"
+        }
+      },
+      "required": ["id"],
+      "type": "object"
+    },
+    "Metadata": {
+      "description": "Metadata for the field shape.",
+      "properties": {
+        "note": {
+          "description": "Optional note.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Field Shape Test Fixture"
+}

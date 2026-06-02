@@ -1,0 +1,40 @@
+package acp
+
+import "encoding/json"
+
+// FieldShape: Object covering required, optional, nullable, defaulted, and required array fields.
+type FieldShape struct {
+	Enabled          bool      `json:"enabled,omitempty"`
+	Items            []Item    `json:"items"`
+	Label            string    `json:"label,omitempty"`
+	Metadata         *Metadata `json:"metadata,omitempty"`
+	Mode             string    `json:"mode,omitempty"`
+	Name             string    `json:"name"`
+	NullableAlias    *string   `json:"nullableAlias,omitempty"`
+	NullableMetadata *Metadata `json:"nullableMetadata,omitempty"`
+	Retries          int64     `json:"retries,omitempty"`
+	Tags             []string  `json:"tags"`
+}
+
+// Item: A referenced item.
+type Item struct {
+	ID string `json:"id"`
+}
+
+// Metadata: Metadata for the field shape.
+type Metadata struct {
+	Note string `json:"note,omitempty"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (s FieldShape) MarshalJSON() ([]byte, error) {
+	type alias FieldShape
+	a := alias(s)
+	if a.Items == nil {
+		a.Items = []Item{}
+	}
+	if a.Tags == nil {
+		a.Tags = []string{}
+	}
+	return json.Marshal(a)
+}
