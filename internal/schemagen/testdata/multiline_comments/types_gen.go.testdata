@@ -1,0 +1,23 @@
+package acp
+
+// GenerateDocsRequest: Request parameters for generating documentation.
+//
+// Includes a title and body.
+//
+// See also: `GenerateDocsResponse`.
+type GenerateDocsRequest struct {
+	Body  string `json:"body,omitempty"`
+	Title string `json:"title"`
+}
+
+// GenerateDocsResponse: Generated documentation output.
+//
+// The content is Markdown.
+//
+// Clients may render it directly.
+type GenerateDocsResponse struct {
+	Content string `json:"content"`
+}
+
+// RequestId: A JSON-RPC request identifier.
+type RequestId string

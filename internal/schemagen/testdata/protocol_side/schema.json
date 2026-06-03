@@ -1,0 +1,44 @@
+{
+  "$defs": {
+    "ProtocolNotification": {
+      "description": "Protocol-level notification that should not generate agent or client RPC glue.",
+      "properties": {
+        "requestId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/RequestId"
+            }
+          ],
+          "description": "The request to cancel."
+        }
+      },
+      "required": ["requestId"],
+      "type": "object",
+      "x-method": "$/cancel_request",
+      "x-side": "protocol"
+    },
+    "RequestId": {
+      "description": "A JSON-RPC request identifier.",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProtocolNotification"
+            }
+          ],
+          "description": "Cancels an in-flight JSON-RPC request.",
+          "title": "ProtocolNotification"
+        }
+      ],
+      "description": "General protocol-level notifications that are handled outside generated ACP agent/client glue.",
+      "title": "ProtocolLevel"
+    }
+  ],
+  "title": "Protocol Side Test Fixture"
+}

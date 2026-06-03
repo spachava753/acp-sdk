@@ -63,9 +63,6 @@ func readExpectedFiles(t *testing.T, dir string) map[string][]byte {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(paths) == 0 {
-		t.Fatalf("no *.testdata fixtures found in %s", dir)
-	}
 
 	files := make(map[string][]byte, len(paths))
 	for _, path := range paths {

@@ -1,0 +1,43 @@
+package acp
+
+const (
+	// MethodDocsGenerate: Generates documentation from structured input.
+	//
+	// The agent should preserve Markdown formatting.
+	//
+	// - Validate the title
+	// - Render the body
+	MethodDocsGenerate = "docs/generate"
+)
+
+// DocsHandler handles all docs related agent methods.
+type DocsHandler interface {
+	// GenerateDocs: Generates documentation from structured input.
+	//
+	// The agent should preserve Markdown formatting.
+	//
+	// - Validate the title
+	// - Render the body
+	GenerateDocs(context.Context, *GenerateDocsRequest) (*GenerateDocsResponse, error)
+}
+
+func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) (any, error) {
+	jsonrpc2.Async(ctx)
+	if agent == nil {
+		return nil, methodNotFound(req.Method)
+	}
+	switch req.Method {
+	case MethodDocsGenerate:
+		handler, ok := agent.(DocsHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[GenerateDocsRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(handler.GenerateDocs(ctx, params))
+	default:
+		return nil, methodNotFound(req.Method)
+	}
+}

@@ -10,8 +10,10 @@
 //
 // The schema has two layers:
 //
-//   - Concrete protocol definitions under $defs. These become Go types and, when
-//     they include x-method and x-side, define RPC payloads.
+//   - Concrete protocol definitions under $defs. These become Go types when
+//     they are reachable from generated ACP agent/client payloads and are not
+//     skipped by schema policy. When they include x-method and x-side, they
+//     define RPC payloads.
 //   - JSON-RPC envelope definitions under $defs, such as ClientRequest,
 //     ClientResponse, ClientNotification, AgentRequest, AgentResponse, and
 //     AgentNotification. These describe which concrete payloads can appear in
@@ -35,7 +37,9 @@
 //     request or notification to the client.
 //   - x-side "both" means both sides implement the same method shape.
 //   - x-side "protocol" is for protocol-level messages such as
-//     "$/cancel_request" and should be handled separately from ACP app methods.
+//     "$/cancel_request". These messages should not generate agent/client RPC
+//     constants, outbound helpers, handler interfaces, dispatch cases, or
+//     protocol-only payload types.
 //
 // A request/response method is represented by two concrete definitions with the
 // same x-method and x-side: one *Request and one *Response. A notification is
@@ -167,9 +171,10 @@
 // # Testdata authoring
 //
 // Each fixture directory under testdata should contain one schema.json input and
-// one or more expected output files using the .testdata suffix. The test strips
+// zero or more expected output files using the .testdata suffix. The test strips
 // .testdata from expected filenames before comparing with Generate output. For
 // example, agent_gen.go.testdata expects a generated file named agent_gen.go.
+// A fixture with no .testdata files asserts that Generate returns no files.
 //
 // Fixture schemas should be small but structurally faithful to acp/schema.json:
 //
@@ -215,16 +220,15 @@
 //   - testdata/hard_unions: partially tagged unions with default variants, raw
 //     JSON aliases for non-object mixed unions, and wrapper types with custom
 //     JSON for untagged array unions.
+//   - testdata/protocol_side: x-side "protocol" notifications are skipped
+//     entirely by ACP agent/client generation and produce no output files.
+//   - testdata/multiline_comments: multiline Markdown descriptions generate
+//     correctly formatted Go doc comments for types, method constants, and
+//     handler methods.
 //   - testdata/both_side: x-side "both" request/response methods that generate
 //     handler interfaces and outbound helpers for both agent and client sides.
 //
 // # Additional test cases to add
 //
-// Future fixtures should cover:
-//
-//   - x-side "protocol" notifications and whether they are generated, skipped,
-//     or routed through a separate protocol handler.
-//   - Naming edge cases: initialisms, method names with underscores, method
-//     names with '$/', and JSON field names that need Go initialism handling.
-//   - Comment generation for multiline Markdown descriptions.
+// Future fixtures should cover additional schema shapes as they are identified.
 package schemagen

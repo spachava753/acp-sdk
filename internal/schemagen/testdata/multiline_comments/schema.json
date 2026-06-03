@@ -1,0 +1,161 @@
+{
+  "$defs": {
+    "AgentResponse": {
+      "anyOf": [
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            },
+            "result": {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/GenerateDocsResponse"
+                    }
+                  ],
+                  "title": "GenerateDocsResponse"
+                }
+              ],
+              "description": "All possible responses that an agent can send to a client."
+            }
+          },
+          "required": ["id", "result"],
+          "title": "Result",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "error": {
+              "type": "object"
+            },
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            }
+          },
+          "required": ["id", "error"],
+          "title": "Error",
+          "type": "object"
+        }
+      ],
+      "x-docs-ignore": true
+    },
+    "ClientRequest": {
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/GenerateDocsRequest"
+                    }
+                  ],
+                  "description": "Generates documentation from structured input.\n\nThe agent should preserve Markdown formatting.\n\n- Validate the title\n- Render the body",
+                  "title": "GenerateDocsRequest"
+                }
+              ],
+              "description": "All possible requests that a client can send to an agent."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["id", "method"],
+      "type": "object",
+      "x-docs-ignore": true
+    },
+    "GenerateDocsRequest": {
+      "description": "Request parameters for generating documentation.\n\nIncludes a title and body.\n\nSee also: `GenerateDocsResponse`.",
+      "properties": {
+        "body": {
+          "description": "Optional Markdown body.",
+          "type": "string"
+        },
+        "title": {
+          "description": "Document title.",
+          "type": "string"
+        }
+      },
+      "required": ["title"],
+      "type": "object",
+      "x-method": "docs/generate",
+      "x-side": "agent"
+    },
+    "GenerateDocsResponse": {
+      "description": "Generated documentation output.\n\nThe content is Markdown.\n\nClients may render it directly.",
+      "properties": {
+        "content": {
+          "description": "Rendered Markdown content.",
+          "type": "string"
+        }
+      },
+      "required": ["content"],
+      "type": "object",
+      "x-method": "docs/generate",
+      "x-side": "agent"
+    },
+    "RequestId": {
+      "description": "A JSON-RPC request identifier.",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AgentResponse"
+            }
+          ],
+          "title": "Response"
+        }
+      ],
+      "description": "A JSON-RPC message sent by the agent.",
+      "properties": {
+        "jsonrpc": {
+          "enum": ["2.0"],
+          "type": "string"
+        }
+      },
+      "required": ["jsonrpc"],
+      "title": "Agent",
+      "type": "object"
+    },
+    {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ClientRequest"
+            }
+          ],
+          "title": "Request"
+        }
+      ],
+      "description": "A JSON-RPC message sent by the client.",
+      "properties": {
+        "jsonrpc": {
+          "enum": ["2.0"],
+          "type": "string"
+        }
+      },
+      "required": ["jsonrpc"],
+      "title": "Client",
+      "type": "object"
+    }
+  ],
+  "title": "Multiline Comment Test Fixture"
+}
