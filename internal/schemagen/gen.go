@@ -2,6 +2,7 @@ package schemagen
 
 import (
 	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/spachava753/acp-sdk/internal/schemagen/agentgen"
 	"github.com/spachava753/acp-sdk/internal/schemagen/typegen"
 )
 
@@ -18,6 +19,9 @@ func Generate(schema *jsonschema.Schema) []GeneratedFile {
 	var gf []GeneratedFile
 	if contents := typegen.Generate(schema); len(contents) > 0 {
 		gf = append(gf, GeneratedFile{Filename: "types_gen.go", Contents: contents})
+	}
+	if contents := agentgen.Generate(schema); len(contents) > 0 {
+		gf = append(gf, GeneratedFile{Filename: "agent_gen.go", Contents: contents})
 	}
 	return gf
 }
