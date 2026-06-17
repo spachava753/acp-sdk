@@ -170,11 +170,7 @@ const (
 	// The agent must cancel any ongoing work (as if `session/cancel` was called)
 	// and then free up any resources associated with the session.
 	MethodSessionClose = "session/close"
-	// MethodSessionDelete: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Deletes an existing session from `session/list`.
+	// MethodSessionDelete: Deletes an existing session from `session/list`.
 	//
 	// This method is only available if the agent advertises the `sessionCapabilities.delete` capability.
 	MethodSessionDelete = "session/delete"
@@ -266,12 +262,6 @@ const (
 	//
 	// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
 	MethodSessionSetMode = "session/set_mode"
-	// MethodSessionSetModel: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Select a model for a given session.
-	MethodSessionSetModel = "session/set_model"
 	// MethodSessionUpdate: Handles session update notifications from the agent.
 	//
 	// This is a notification endpoint (no response expected) that receives
@@ -498,11 +488,7 @@ type SessionHandler interface {
 	// and then free up any resources associated with the session.
 	CloseSession(context.Context, *CloseSessionRequest) (*CloseSessionResponse, error)
 
-	// DeleteSession: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Deletes an existing session from `session/list`.
+	// DeleteSession: Deletes an existing session from `session/list`.
 	//
 	// This method is only available if the agent advertises the `sessionCapabilities.delete` capability.
 	DeleteSession(context.Context, *DeleteSessionRequest) (*DeleteSessionResponse, error)
@@ -591,13 +577,6 @@ type SessionHandler interface {
 	//
 	// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
 	SetSessionMode(context.Context, *SetSessionModeRequest) (*SetSessionModeResponse, error)
-
-	// SetSessionModel: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Select a model for a given session.
-	SetSessionModel(context.Context, *SetSessionModelRequest) (*SetSessionModelResponse, error)
 }
 
 // Complete: **UNSTABLE**
@@ -1047,16 +1026,6 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 			return nil, err
 		}
 		return rpcResult(handler.SetSessionMode(ctx, params))
-	case MethodSessionSetModel:
-		handler, ok := agent.(SessionHandler)
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
-		params, err := decodeParams[SetSessionModelRequest](req)
-		if err != nil {
-			return nil, err
-		}
-		return rpcResult(handler.SetSessionModel(ctx, params))
 	default:
 		return nil, methodNotFound(req.Method)
 	}

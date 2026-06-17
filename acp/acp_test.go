@@ -48,9 +48,6 @@ func (noopSessionHandler) SetSessionConfigOption(context.Context, *SetSessionCon
 func (noopSessionHandler) SetSessionMode(context.Context, *SetSessionModeRequest) (*SetSessionModeResponse, error) {
 	return &SetSessionModeResponse{}, nil
 }
-func (noopSessionHandler) SetSessionModel(context.Context, *SetSessionModelRequest) (*SetSessionModelResponse, error) {
-	return &SetSessionModelResponse{}, nil
-}
 
 type testAgent struct {
 	noopSessionHandler

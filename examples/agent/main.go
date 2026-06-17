@@ -89,10 +89,6 @@ func (a *agent) SetSessionMode(context.Context, *acp.SetSessionModeRequest) (*ac
 	return &acp.SetSessionModeResponse{}, nil
 }
 
-func (a *agent) SetSessionModel(context.Context, *acp.SetSessionModelRequest) (*acp.SetSessionModelResponse, error) {
-	return &acp.SetSessionModelResponse{}, nil
-}
-
 func main() {
 	err := acp.RunAgent(context.Background(), &acp.StdioTransport{}, func(conn *acp.AgentConnection) any {
 		return &agent{conn: conn, sessions: make(map[string]struct{})}

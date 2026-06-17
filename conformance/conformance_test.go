@@ -184,6 +184,3 @@ func (noopSessionHandler) SetSessionConfigOption(context.Context, *acp.SetSessio
 func (noopSessionHandler) SetSessionMode(context.Context, *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error) {
 	return &acp.SetSessionModeResponse{}, nil
 }
-func (noopSessionHandler) SetSessionModel(context.Context, *acp.SetSessionModelRequest) (*acp.SetSessionModelResponse, error) {
-	return &acp.SetSessionModelResponse{}, nil
-}

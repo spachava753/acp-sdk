@@ -267,6 +267,7 @@ type BlobResourceContents struct {
 
 // BooleanPropertySchema: Schema for boolean properties in an elicitation form.
 type BooleanPropertySchema struct {
+	Meta        Meta    `json:"_meta,omitzero"`
 	Default     *bool   `json:"default,omitempty"`
 	Description *string `json:"description,omitempty"`
 	Title       *string `json:"title,omitempty"`
@@ -304,7 +305,7 @@ type ClientCapabilities struct {
 	Elicitation       *ElicitationCapabilities `json:"elicitation,omitempty"`
 	Fs                *FileSystemCapabilities  `json:"fs,omitempty"`
 	Nes               *ClientNesCapabilities   `json:"nes,omitempty"`
-	PlanCapabilities  *PlanCapabilities        `json:"planCapabilities,omitempty"`
+	Plan              *PlanCapabilities        `json:"plan,omitempty"`
 	PositionEncodings []PositionEncodingKind   `json:"positionEncodings,omitempty"`
 	Terminal          bool                     `json:"terminal,omitempty"`
 }
@@ -500,15 +501,12 @@ func ResourceContentBlock(resource EmbeddedResourceResource) ContentBlock {
 type ContentChunk struct {
 	Meta      Meta         `json:"_meta,omitzero"`
 	Content   ContentBlock `json:"content"`
-	MessageID *string      `json:"messageId,omitempty"`
+	MessageID *MessageId   `json:"messageId,omitempty"`
 }
 
-// Cost: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Cost information for a session.
+// Cost: Cost information for a session.
 type Cost struct {
+	Meta     Meta    `json:"_meta,omitzero"`
 	Amount   float64 `json:"amount"`
 	Currency string  `json:"currency"`
 }
@@ -619,11 +617,7 @@ type CurrentModeUpdate struct {
 	CurrentModeID SessionModeId `json:"currentModeId"`
 }
 
-// DeleteSessionRequest: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Request parameters for deleting an existing session from `session/list`.
+// DeleteSessionRequest: Request parameters for deleting an existing session from `session/list`.
 //
 // Only available if the Agent supports the `sessionCapabilities.delete` capability.
 type DeleteSessionRequest struct {
@@ -631,11 +625,7 @@ type DeleteSessionRequest struct {
 	SessionID SessionId `json:"sessionId"`
 }
 
-// DeleteSessionResponse: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Response from deleting a session.
+// DeleteSessionResponse: Response from deleting a session.
 type DeleteSessionResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
@@ -814,6 +804,7 @@ type ElicitationId string
 // Multi-select enums use the `Array` variant.
 type ElicitationPropertySchema struct {
 	Type        ElicitationPropertySchemaType `json:"type"`
+	Meta        map[string]any                `json:"_meta,omitempty"`
 	Default     *string                       `json:"default,omitempty"`
 	Description *string                       `json:"description,omitempty"`
 	Enum        *[]string                     `json:"enum,omitempty"`
@@ -892,6 +883,7 @@ type ElicitationRequestScope struct {
 // This represents a JSON Schema object with primitive-typed properties,
 // as required by the elicitation specification.
 type ElicitationSchema struct {
+	Meta        Meta                                 `json:"_meta,omitzero"`
 	Description *string                              `json:"description,omitempty"`
 	Properties  map[string]ElicitationPropertySchema `json:"properties,omitempty"`
 	Required    *[]string                            `json:"required,omitempty"`
@@ -998,6 +990,7 @@ func BlobResourceContentsEmbeddedResourceResource(blob string, uri string) Embed
 
 // EnumOption: A titled enum option with a const value and human-readable title.
 type EnumOption struct {
+	Meta  Meta   `json:"_meta,omitzero"`
 	Const string `json:"const"`
 	Title string `json:"title"`
 }
@@ -1083,7 +1076,6 @@ type ForkSessionRequest struct {
 type ForkSessionResponse struct {
 	Meta          Meta                   `json:"_meta,omitzero"`
 	ConfigOptions *[]SessionConfigOption `json:"configOptions,omitempty"`
-	Models        *SessionModelState     `json:"models,omitempty"`
 	Modes         *SessionModeState      `json:"modes,omitempty"`
 	SessionID     SessionId              `json:"sessionId"`
 }
@@ -1141,6 +1133,7 @@ type InitializeResponse struct {
 
 // IntegerPropertySchema: Schema for integer properties in an elicitation form.
 type IntegerPropertySchema struct {
+	Meta        Meta    `json:"_meta,omitzero"`
 	Default     *int64  `json:"default,omitempty"`
 	Description *string `json:"description,omitempty"`
 	Maximum     *int64  `json:"maximum,omitempty"`
@@ -1244,7 +1237,6 @@ func (r LoadSessionRequest) MarshalJSON() ([]byte, error) {
 type LoadSessionResponse struct {
 	Meta          Meta                   `json:"_meta,omitzero"`
 	ConfigOptions *[]SessionConfigOption `json:"configOptions,omitempty"`
-	Models        *SessionModelState     `json:"models,omitempty"`
 	Modes         *SessionModeState      `json:"modes,omitempty"`
 }
 
@@ -1337,7 +1329,7 @@ func SseMcpServer(name string, url string, headers []HttpHeader) McpServer {
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
 //
-// # ACP transport configuration
+// ACP transport configuration
 //
 // Only available when the Agent capabilities indicate `mcp_capabilities.acp` is `true`.
 // The MCP server is provided by an ACP component and communicates over the ACP channel.
@@ -1469,6 +1461,9 @@ func (s McpServerStdio) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// MessageId: Unique identifier for a message within a session.
+type MessageId string
+
 // MessageMcpNotification: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -1505,27 +1500,9 @@ type MessageMcpRequest struct {
 // This is the inner MCP response result payload. Any JSON value is valid.
 type MessageMcpResponse any
 
-// ModelId: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A unique identifier for a model.
-type ModelId string
-
-// ModelInfo: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Information about a selectable model.
-type ModelInfo struct {
-	Meta        Meta    `json:"_meta,omitzero"`
-	Description *string `json:"description,omitempty"`
-	ModelID     ModelId `json:"modelId"`
-	Name        string  `json:"name"`
-}
-
 // MultiSelectItems: Items for a multi-select (array) property schema.
 type MultiSelectItems struct {
+	Meta  map[string]any        `json:"_meta,omitempty"`
 	AnyOf []EnumOption          `json:"anyOf,omitempty"`
 	Enum  []string              `json:"enum,omitempty"`
 	Type  ElicitationStringType `json:"type,omitempty"`
@@ -1548,6 +1525,7 @@ func NewTitledMultiSelectItems(anyOf []EnumOption) MultiSelectItems {
 
 // MultiSelectPropertySchema: Schema for multi-select (array) properties in an elicitation form.
 type MultiSelectPropertySchema struct {
+	Meta        Meta             `json:"_meta,omitzero"`
 	Default     *[]string        `json:"default,omitempty"`
 	Description *string          `json:"description,omitempty"`
 	Items       MultiSelectItems `json:"items"`
@@ -1576,6 +1554,7 @@ type NesContextCapabilities struct {
 
 // NesDiagnostic: A diagnostic (error, warning, etc.).
 type NesDiagnostic struct {
+	Meta     Meta                  `json:"_meta,omitzero"`
 	Message  string                `json:"message"`
 	Range    Range                 `json:"range"`
 	Severity NesDiagnosticSeverity `json:"severity"`
@@ -1645,12 +1624,14 @@ type NesEditHistoryCapabilities struct {
 
 // NesEditHistoryEntry: An entry in the edit history.
 type NesEditHistoryEntry struct {
+	Meta Meta   `json:"_meta,omitzero"`
 	Diff string `json:"diff"`
 	URI  string `json:"uri"`
 }
 
 // NesEditSuggestion: A text edit suggestion.
 type NesEditSuggestion struct {
+	Meta           Meta          `json:"_meta,omitzero"`
 	CursorPosition *Position     `json:"cursorPosition,omitempty"`
 	Edits          []NesTextEdit `json:"edits"`
 	ID             string        `json:"id"`
@@ -1665,6 +1646,7 @@ type NesEventCapabilities struct {
 
 // NesExcerpt: A code excerpt from a file.
 type NesExcerpt struct {
+	Meta      Meta   `json:"_meta,omitzero"`
 	EndLine   int64  `json:"endLine"`
 	StartLine int64  `json:"startLine"`
 	Text      string `json:"text"`
@@ -1677,6 +1659,7 @@ type NesJumpCapabilities struct {
 
 // NesJumpSuggestion: A jump-to-location suggestion.
 type NesJumpSuggestion struct {
+	Meta     Meta     `json:"_meta,omitzero"`
 	ID       string   `json:"id"`
 	Position Position `json:"position"`
 	URI      string   `json:"uri"`
@@ -1684,6 +1667,7 @@ type NesJumpSuggestion struct {
 
 // NesOpenFile: An open file in the editor.
 type NesOpenFile struct {
+	Meta          Meta   `json:"_meta,omitzero"`
 	LanguageID    string `json:"languageId"`
 	LastFocusedMs *int64 `json:"lastFocusedMs,omitempty"`
 	URI           string `json:"uri"`
@@ -1697,6 +1681,7 @@ type NesOpenFilesCapabilities struct {
 
 // NesRecentFile: A recently accessed file.
 type NesRecentFile struct {
+	Meta       Meta   `json:"_meta,omitzero"`
 	LanguageID string `json:"languageId"`
 	Text       string `json:"text"`
 	URI        string `json:"uri"`
@@ -1724,6 +1709,7 @@ const (
 
 // NesRelatedSnippet: A related code snippet from a file.
 type NesRelatedSnippet struct {
+	Meta     Meta         `json:"_meta,omitzero"`
 	Excerpts []NesExcerpt `json:"excerpts"`
 	URI      string       `json:"uri"`
 }
@@ -1750,6 +1736,7 @@ type NesRenameCapabilities struct {
 
 // NesRenameSuggestion: A rename symbol suggestion.
 type NesRenameSuggestion struct {
+	Meta     Meta     `json:"_meta,omitzero"`
 	ID       string   `json:"id"`
 	NewName  string   `json:"newName"`
 	Position Position `json:"position"`
@@ -1758,6 +1745,7 @@ type NesRenameSuggestion struct {
 
 // NesRepository: Repository metadata for an NES session.
 type NesRepository struct {
+	Meta      Meta   `json:"_meta,omitzero"`
 	Name      string `json:"name"`
 	Owner     string `json:"owner"`
 	RemoteUrl string `json:"remoteUrl"`
@@ -1770,6 +1758,7 @@ type NesSearchAndReplaceCapabilities struct {
 
 // NesSearchAndReplaceSuggestion: A search-and-replace suggestion.
 type NesSearchAndReplaceSuggestion struct {
+	Meta    Meta   `json:"_meta,omitzero"`
 	ID      string `json:"id"`
 	IsRegex *bool  `json:"isRegex,omitempty"`
 	Replace string `json:"replace"`
@@ -1791,6 +1780,7 @@ type NesSuggestContext struct {
 // NesSuggestion: A suggestion returned by the agent.
 type NesSuggestion struct {
 	Kind           NesSuggestionType `json:"kind"`
+	Meta           map[string]any    `json:"_meta,omitempty"`
 	CursorPosition *Position         `json:"cursorPosition,omitempty"`
 	Edits          []NesTextEdit     `json:"edits,omitempty"`
 	ID             string            `json:"id"`
@@ -1875,6 +1865,7 @@ func (s NesSuggestion) MarshalJSON() ([]byte, error) {
 
 // NesTextEdit: A text edit within a suggestion.
 type NesTextEdit struct {
+	Meta    Meta   `json:"_meta,omitzero"`
 	NewText string `json:"newText"`
 	Range   Range  `json:"range"`
 }
@@ -1893,6 +1884,7 @@ const (
 
 // NesUserAction: A user action (typing, cursor movement, etc.).
 type NesUserAction struct {
+	Meta        Meta     `json:"_meta,omitzero"`
 	Action      string   `json:"action"`
 	Position    Position `json:"position"`
 	TimestampMs int64    `json:"timestampMs"`
@@ -1931,13 +1923,13 @@ func (r NewSessionRequest) MarshalJSON() ([]byte, error) {
 type NewSessionResponse struct {
 	Meta          Meta                   `json:"_meta,omitzero"`
 	ConfigOptions *[]SessionConfigOption `json:"configOptions,omitempty"`
-	Models        *SessionModelState     `json:"models,omitempty"`
 	Modes         *SessionModeState      `json:"modes,omitempty"`
 	SessionID     SessionId              `json:"sessionId"`
 }
 
 // NumberPropertySchema: Schema for number (floating-point) properties in an elicitation form.
 type NumberPropertySchema struct {
+	Meta        Meta     `json:"_meta,omitzero"`
 	Default     *float64 `json:"default,omitempty"`
 	Description *string  `json:"description,omitempty"`
 	Maximum     *float64 `json:"maximum,omitempty"`
@@ -2189,6 +2181,7 @@ func (c PlanUpdateContent) MarshalJSON() ([]byte, error) {
 //
 // The meaning of `character` depends on the negotiated position encoding.
 type Position struct {
+	Meta      Meta  `json:"_meta,omitzero"`
 	Character int64 `json:"character"`
 	Line      int64 `json:"line"`
 }
@@ -2233,19 +2226,27 @@ type PromptCapabilities struct {
 // See protocol docs: [User Message](https://agentclientprotocol.com/protocol/prompt-turn#1-user-message)
 type PromptRequest struct {
 	Meta      Meta           `json:"_meta,omitzero"`
-	MessageID *string        `json:"messageId,omitempty"`
 	Prompt    []ContentBlock `json:"prompt"`
 	SessionID SessionId      `json:"sessionId"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (r PromptRequest) MarshalJSON() ([]byte, error) {
+	type alias PromptRequest
+	a := alias(r)
+	if a.Prompt == nil {
+		a.Prompt = []ContentBlock{}
+	}
+	return json.Marshal(a)
 }
 
 // PromptResponse: Response from processing a user prompt.
 //
 // See protocol docs: [Check for Completion](https://agentclientprotocol.com/protocol/prompt-turn#4-check-for-completion)
 type PromptResponse struct {
-	Meta          Meta       `json:"_meta,omitzero"`
-	StopReason    StopReason `json:"stopReason"`
-	Usage         *Usage     `json:"usage,omitempty"`
-	UserMessageID *string    `json:"userMessageId,omitempty"`
+	Meta       Meta       `json:"_meta,omitzero"`
+	StopReason StopReason `json:"stopReason"`
+	Usage      *Usage     `json:"usage,omitempty"`
 }
 
 // ProtocolVersion: Protocol version identifier.
@@ -2260,6 +2261,7 @@ type ProtocolVersion int64
 //
 // Current effective non-secret routing configuration for a provider.
 type ProviderCurrentConfig struct {
+	Meta    Meta        `json:"_meta,omitzero"`
 	ApiType LlmProtocol `json:"apiType"`
 	BaseUrl string      `json:"baseUrl"`
 }
@@ -2290,6 +2292,7 @@ type ProvidersCapabilities struct {
 
 // Range: A range in a text document, expressed as start and end positions.
 type Range struct {
+	Meta  Meta     `json:"_meta,omitzero"`
 	End   Position `json:"end"`
 	Start Position `json:"start"`
 }
@@ -2436,7 +2439,6 @@ type ResumeSessionRequest struct {
 type ResumeSessionResponse struct {
 	Meta          Meta                   `json:"_meta,omitzero"`
 	ConfigOptions *[]SessionConfigOption `json:"configOptions,omitempty"`
-	Models        *SessionModelState     `json:"models,omitempty"`
 	Modes         *SessionModeState      `json:"modes,omitempty"`
 }
 
@@ -2454,11 +2456,7 @@ type SelectedPermissionOutcome struct {
 	OptionID PermissionOptionId `json:"optionId"`
 }
 
-// SessionAdditionalDirectoriesCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Capabilities for additional session directories support.
+// SessionAdditionalDirectoriesCapabilities: Capabilities for additional session directories support.
 //
 // By supplying `{}` it means that the agent supports the `additionalDirectories`
 // field on supported session lifecycle requests. Agents that also support
@@ -2651,11 +2649,7 @@ func (o *SessionConfigSelectOptions) UnmarshalJSON(data []byte) error {
 // SessionConfigValueId: Unique identifier for a session configuration option value.
 type SessionConfigValueId string
 
-// SessionDeleteCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Capabilities for the `session/delete` method.
+// SessionDeleteCapabilities: Capabilities for the `session/delete` method.
 //
 // Supplying `{}` means the agent supports deleting sessions from `session/list`.
 type SessionDeleteCapabilities struct {
@@ -2738,27 +2732,6 @@ func (s SessionModeState) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
-// SessionModelState: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// The set of models and the one currently active.
-type SessionModelState struct {
-	Meta            Meta        `json:"_meta,omitzero"`
-	AvailableModels []ModelInfo `json:"availableModels"`
-	CurrentModelID  ModelId     `json:"currentModelId"`
-}
-
-// MarshalJSON implements json.Marshaler.
-func (s SessionModelState) MarshalJSON() ([]byte, error) {
-	type alias SessionModelState
-	a := alias(s)
-	if a.AvailableModels == nil {
-		a.AvailableModels = []ModelInfo{}
-	}
-	return json.Marshal(a)
-}
-
 // SessionNotification: Notification containing a session update from the agent.
 //
 // Used to stream real-time progress and results during prompt processing.
@@ -2794,7 +2767,7 @@ type SessionUpdate struct {
 	ID                PlanId                `json:"id,omitempty"`
 	Kind              ToolKind              `json:"kind,omitempty"`
 	Locations         any                   `json:"locations,omitempty"`
-	MessageID         *string               `json:"messageId,omitempty"`
+	MessageID         *MessageId            `json:"messageId,omitempty"`
 	Plan              PlanUpdateContent     `json:"plan,omitempty,omitzero"`
 	RawInput          any                   `json:"rawInput,omitempty"`
 	RawOutput         any                   `json:"rawOutput,omitempty"`
@@ -2932,11 +2905,7 @@ func SessionInfoUpdateSessionUpdate() SessionUpdate {
 	}
 }
 
-// UsageUpdateSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Context window and cost update for the session.
+// UsageUpdateSessionUpdate creates an SessionUpdate variant: Context window and cost update for the session.
 func UsageUpdateSessionUpdate(used int64, size int64) SessionUpdate {
 	return SessionUpdate{
 		SessionUpdate: SessionUpdateTypeUsageUpdate,
@@ -3062,26 +3031,6 @@ type SetSessionModeResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
-// SetSessionModelRequest: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Request parameters for setting a session model.
-type SetSessionModelRequest struct {
-	Meta      Meta      `json:"_meta,omitzero"`
-	ModelID   ModelId   `json:"modelId"`
-	SessionID SessionId `json:"sessionId"`
-}
-
-// SetSessionModelResponse: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Response to `session/set_model` method.
-type SetSessionModelResponse struct {
-	Meta Meta `json:"_meta,omitzero"`
-}
-
 // StartNesRequest: Request to start an NES session.
 type StartNesRequest struct {
 	Meta             Meta               `json:"_meta,omitzero"`
@@ -3141,6 +3090,7 @@ const (
 // When `enum` or `oneOf` is set, this represents a single-select enum
 // with `"type": "string"`.
 type StringPropertySchema struct {
+	Meta        Meta          `json:"_meta,omitzero"`
 	Default     *string       `json:"default,omitempty"`
 	Description *string       `json:"description,omitempty"`
 	Enum        *[]string     `json:"enum,omitempty"`
@@ -3224,6 +3174,7 @@ type TextContent struct {
 // When `range` is `None`, `text` is the full content of the document.
 // When `range` is `Some`, `text` replaces the given range.
 type TextDocumentContentChangeEvent struct {
+	Meta  Meta   `json:"_meta,omitzero"`
 	Range *Range `json:"range,omitempty"`
 	Text  string `json:"text"`
 }
@@ -3248,6 +3199,7 @@ type TextResourceContents struct {
 
 // TitledMultiSelectItems: Items definition for titled multi-select enum properties.
 type TitledMultiSelectItems struct {
+	Meta  Meta         `json:"_meta,omitzero"`
 	AnyOf []EnumOption `json:"anyOf"`
 }
 
@@ -3424,6 +3376,7 @@ type UnstructuredCommandInput struct {
 
 // UntitledMultiSelectItems: Items definition for untitled multi-select enum properties.
 type UntitledMultiSelectItems struct {
+	Meta Meta                  `json:"_meta,omitzero"`
 	Enum []string              `json:"enum"`
 	Type ElicitationStringType `json:"type"`
 }
@@ -3444,6 +3397,7 @@ func (i UntitledMultiSelectItems) MarshalJSON() ([]byte, error) {
 //
 // Token usage information for a prompt turn.
 type Usage struct {
+	Meta              Meta   `json:"_meta,omitzero"`
 	CachedReadTokens  *int64 `json:"cachedReadTokens,omitempty"`
 	CachedWriteTokens *int64 `json:"cachedWriteTokens,omitempty"`
 	InputTokens       int64  `json:"inputTokens"`
@@ -3452,11 +3406,7 @@ type Usage struct {
 	TotalTokens       int64  `json:"totalTokens"`
 }
 
-// UsageUpdate: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Context window and cost update for a session.
+// UsageUpdate: Context window and cost update for a session.
 type UsageUpdate struct {
 	Meta Meta  `json:"_meta,omitzero"`
 	Cost *Cost `json:"cost,omitempty"`
@@ -3480,6 +3430,7 @@ type WaitForTerminalExitResponse struct {
 
 // WorkspaceFolder: A workspace folder.
 type WorkspaceFolder struct {
+	Meta Meta   `json:"_meta,omitzero"`
 	Name string `json:"name"`
 	URI  string `json:"uri"`
 }
@@ -3525,16 +3476,6 @@ func (s NesEditSuggestion) MarshalJSON() ([]byte, error) {
 	a := alias(s)
 	if a.Edits == nil {
 		a.Edits = []NesTextEdit{}
-	}
-	return json.Marshal(a)
-}
-
-// MarshalJSON implements json.Marshaler.
-func (r PromptRequest) MarshalJSON() ([]byte, error) {
-	type alias PromptRequest
-	a := alias(r)
-	if a.Prompt == nil {
-		a.Prompt = []ContentBlock{}
 	}
 	return json.Marshal(a)
 }

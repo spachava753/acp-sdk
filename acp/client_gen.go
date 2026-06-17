@@ -65,12 +65,12 @@ type McpClientHandler interface {
 	// Closes an MCP-over-ACP connection.
 	DisconnectMcp(context.Context, *DisconnectMcpRequest) (*DisconnectMcpResponse, error)
 
-	// Message: **UNSTABLE**
+	// MessageMcp: **UNSTABLE**
 	//
 	// This capability is not part of the spec yet, and may be removed or changed at any point.
 	//
-	// Receives an MCP-over-ACP notification.
-	Message(context.Context, *MessageMcpNotification) error
+	// Exchanges an MCP-over-ACP message.
+	MessageMcp(context.Context, *MessageMcpNotification) error
 }
 
 // SessionClientHandler handles all session related client methods.
@@ -231,12 +231,12 @@ func (c *Client) Logout(ctx context.Context, params *LogoutRequest) (*LogoutResp
 	return call[LogoutResponse](ctx, c.rpc.conn, MethodLogout, params)
 }
 
-// Message: **UNSTABLE**
+// MessageMcp: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
 //
-// Receives an MCP-over-ACP notification.
-func (c *Client) Message(ctx context.Context, params *MessageMcpNotification) error {
+// Exchanges an MCP-over-ACP message.
+func (c *Client) MessageMcp(ctx context.Context, params *MessageMcpNotification) error {
 	return notify(ctx, c.rpc.conn, MethodMcpMessage, params)
 }
 
@@ -336,11 +336,7 @@ func (c *Client) CloseSession(ctx context.Context, params *CloseSessionRequest) 
 	return call[CloseSessionResponse](ctx, c.rpc.conn, MethodSessionClose, params)
 }
 
-// DeleteSession: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Deletes an existing session from `session/list`.
+// DeleteSession: Deletes an existing session from `session/list`.
 //
 // This method is only available if the agent advertises the `sessionCapabilities.delete` capability.
 func (c *Client) DeleteSession(ctx context.Context, params *DeleteSessionRequest) (*DeleteSessionResponse, error) {
@@ -448,15 +444,6 @@ func (c *Client) SetSessionMode(ctx context.Context, params *SetSessionModeReque
 	return call[SetSessionModeResponse](ctx, c.rpc.conn, MethodSessionSetMode, params)
 }
 
-// SetSessionModel: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Select a model for a given session.
-func (c *Client) SetSessionModel(ctx context.Context, params *SetSessionModelRequest) (*SetSessionModelResponse, error) {
-	return call[SetSessionModelResponse](ctx, c.rpc.conn, MethodSessionSetModel, params)
-}
-
 func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
 	if c.handler == nil {
@@ -532,7 +519,7 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return nil, handler.Message(ctx, params)
+		return nil, handler.MessageMcp(ctx, params)
 	case MethodSessionRequestPermission:
 		handler, ok := c.handler.(SessionClientHandler)
 		if !ok {
