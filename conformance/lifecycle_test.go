@@ -14,47 +14,47 @@ import (
 
 func TestConformanceLifecycleAndOptionalAgentMethods(t *testing.T) {
 	agent := &lifecycleAgent{calls: map[string]any{}}
-	client, done := connectConformanceClient(t, newConformanceClient(), func(conn *acp.AgentConnection) acp.Agent {
+	client, done := connectConformanceClient(t, newConformanceClient(), func(conn *acp.AgentConnection) any {
 		agent.conn = conn
 		return agent
 	})
 	defer closeConformanceClient(t, client, done)
 
 	ctx := t.Context()
-	init, err := client.Initialize(ctx, &acp.InitializeRequest{ProtocolVersion: acp.ProtocolVersion})
+	init, err := client.Initialize(ctx, &acp.InitializeRequest{ProtocolVersion: acp.ProtocolVersion(1)})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if init.ProtocolVersion != acp.ProtocolVersion || len(init.AuthMethods) != 0 {
+	if init.ProtocolVersion != acp.ProtocolVersion(1) || len(init.AuthMethods) != 0 {
 		t.Fatalf("initialize response = %#v", init)
 	}
 	if init.AgentCapabilities == nil || !init.AgentCapabilities.LoadSession {
 		t.Fatalf("agent capabilities = %#v, want loadSession", init.AgentCapabilities)
 	}
 
-	session, err := client.NewSession(ctx, &acp.NewSessionRequest{CWD: "/workspace", MCPServers: []acp.MCPServer{}})
+	session, err := client.NewSession(ctx, &acp.NewSessionRequest{Cwd: "/workspace", McpServers: []acp.McpServer{}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if session.SessionID != "sess-123" {
 		t.Fatalf("session ID = %q, want sess-123", session.SessionID)
 	}
-	if _, err := client.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: session.SessionID, CWD: "/workspace", MCPServers: []acp.MCPServer{}}); err != nil {
+	if _, err := client.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: session.SessionID, Cwd: "/workspace", McpServers: []acp.McpServer{}}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := client.Authenticate(ctx, &acp.AuthenticateRequest{MethodID: "password"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.ListSessions(ctx, &acp.ListSessionsRequest{CWD: "/workspace"}); err != nil {
+	if _, err := client.ListSessions(ctx, &acp.ListSessionsRequest{Cwd: stringPtr("/workspace")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.ResumeSession(ctx, &acp.ResumeSessionRequest{SessionID: session.SessionID, CWD: "/workspace"}); err != nil {
+	if _, err := client.ResumeSession(ctx, &acp.ResumeSessionRequest{SessionID: session.SessionID, Cwd: "/workspace"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := client.SetSessionMode(ctx, &acp.SetSessionModeRequest{SessionID: session.SessionID, ModeID: "code"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.SetSessionConfigOption(ctx, &acp.SetSessionConfigOptionRequest{SessionID: session.SessionID, ConfigID: "model", Value: "gpt-4o-mini"}); err != nil {
+	if _, err := client.SetSessionConfigOption(ctx, &acp.SetSessionConfigOptionRequest{Value: "gpt-4o-mini"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := client.CloseSession(ctx, &acp.CloseSessionRequest{SessionID: session.SessionID}); err != nil {
@@ -72,6 +72,7 @@ func TestConformanceLifecycleAndOptionalAgentMethods(t *testing.T) {
 }
 
 type lifecycleAgent struct {
+	noopSessionHandler
 	conn  *acp.AgentConnection
 	mu    sync.Mutex
 	calls map[string]any
@@ -90,7 +91,7 @@ func (a *lifecycleAgent) Initialize(_ context.Context, params *acp.InitializeReq
 
 func (a *lifecycleAgent) NewSession(_ context.Context, params *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
 	a.record(acp.MethodSessionNew, *params)
-	return &acp.NewSessionResponse{SessionID: "sess-123"}, nil
+	return &acp.NewSessionResponse{SessionID: acp.SessionId("sess-123")}, nil
 }
 
 func (a *lifecycleAgent) Prompt(context.Context, *acp.PromptRequest) (*acp.PromptResponse, error) {
@@ -119,7 +120,7 @@ func (a *lifecycleAgent) ResumeSession(_ context.Context, params *acp.ResumeSess
 
 func (a *lifecycleAgent) ListSessions(_ context.Context, params *acp.ListSessionsRequest) (*acp.ListSessionsResponse, error) {
 	a.record(acp.MethodSessionList, *params)
-	return &acp.ListSessionsResponse{Sessions: []acp.SessionInfo{{SessionID: "sess-123", CWD: "/workspace"}}}, nil
+	return &acp.ListSessionsResponse{Sessions: []acp.SessionInfo{{SessionID: acp.SessionId("sess-123"), Cwd: "/workspace"}}}, nil
 }
 
 func (a *lifecycleAgent) CloseSession(_ context.Context, params *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error) {

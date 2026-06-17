@@ -19,7 +19,7 @@ func emitHandleAgentRequest(file *jen.File, ops []operation) {
 	cases = append(cases, jen.Default().Block(jen.Return(jen.Nil(), jen.Id("methodNotFound").Call(jen.Id("req").Dot("Method")))))
 	file.Func().Id("handleAgentRequest").Params(
 		jen.Id("ctx").Id("context.Context"),
-		jen.Id("agent").Id("Agent"),
+		jen.Id("agent").Any(),
 		jen.Id("req").Op("*").Id("jsonrpc.Request"),
 	).Params(jen.Any(), jen.Error()).Block(
 		jen.Id("jsonrpc2.Async").Call(jen.Id("ctx")),

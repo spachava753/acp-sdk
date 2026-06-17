@@ -21,14 +21,14 @@ func TestCommandTransport(t *testing.T) {
 	}
 	defer client.Close()
 
-	init, err := client.Initialize(t.Context(), &InitializeRequest{ProtocolVersion: ProtocolVersion})
+	init, err := client.Initialize(t.Context(), &InitializeRequest{ProtocolVersion: ProtocolVersion(1)})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if init.ProtocolVersion != ProtocolVersion {
-		t.Fatalf("protocol version = %d, want %d", init.ProtocolVersion, ProtocolVersion)
+	if init.ProtocolVersion != ProtocolVersion(1) {
+		t.Fatalf("protocol version = %d, want %d", init.ProtocolVersion, ProtocolVersion(1))
 	}
-	session, err := client.NewSession(t.Context(), &NewSessionRequest{CWD: "/repo"})
+	session, err := client.NewSession(t.Context(), &NewSessionRequest{Cwd: "/repo"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestCommandTransportHelper(t *testing.T) {
 	if os.Getenv("ACP_COMMAND_TRANSPORT_HELPER") != "1" {
 		return
 	}
-	err := RunAgent(context.Background(), &StdioTransport{}, func(conn *AgentConnection) Agent {
+	err := RunAgent(context.Background(), &StdioTransport{}, func(conn *AgentConnection) any {
 		return &commandTransportAgent{conn: conn}
 	})
 	if err != nil {
@@ -51,11 +51,12 @@ func TestCommandTransportHelper(t *testing.T) {
 }
 
 type commandTransportAgent struct {
+	noopSessionHandler
 	conn *AgentConnection
 }
 
 func (a *commandTransportAgent) Initialize(context.Context, *InitializeRequest) (*InitializeResponse, error) {
-	return &InitializeResponse{ProtocolVersion: ProtocolVersion}, nil
+	return &InitializeResponse{ProtocolVersion: ProtocolVersion(1)}, nil
 }
 
 func (a *commandTransportAgent) NewSession(context.Context, *NewSessionRequest) (*NewSessionResponse, error) {

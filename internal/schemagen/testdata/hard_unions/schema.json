@@ -1,5 +1,13 @@
 {
   "$defs": {
+    "AliasA": {
+      "description": "First named string alias.",
+      "type": "string"
+    },
+    "AliasB": {
+      "description": "Second named string alias.",
+      "type": "string"
+    },
     "AuthMethod": {
       "anyOf": [
         {
@@ -16,7 +24,9 @@
               "type": "string"
             }
           },
-          "required": ["type"],
+          "required": [
+            "type"
+          ],
           "type": "object"
         },
         {
@@ -33,7 +43,9 @@
               "type": "string"
             }
           },
-          "required": ["type"],
+          "required": [
+            "type"
+          ],
           "type": "object"
         },
         {
@@ -60,7 +72,10 @@
           "type": "string"
         }
       },
-      "required": ["id", "name"],
+      "required": [
+        "id",
+        "name"
+      ],
       "type": "object"
     },
     "AuthMethodEnvVar": {
@@ -79,7 +94,11 @@
           "type": "string"
         }
       },
-      "required": ["id", "name", "envName"],
+      "required": [
+        "id",
+        "name",
+        "envName"
+      ],
       "type": "object"
     },
     "AuthMethodTerminal": {
@@ -98,8 +117,26 @@
           "type": "string"
         }
       },
-      "required": ["id", "name", "command"],
+      "required": [
+        "id",
+        "name",
+        "command"
+      ],
       "type": "object"
+    },
+    "Collision": {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SpecialCollision"
+            }
+          ],
+          "description": "Collision variant branch.",
+          "title": "Special"
+        }
+      ],
+      "description": "Union whose constructor name would collide with a referenced variant type."
     },
     "ElicitationContentValue": {
       "anyOf": [
@@ -128,6 +165,121 @@
         }
       ],
       "description": "Primitive or string-array elicitation content."
+    },
+    "NestedObject": {
+      "description": "Nested object that must disappear when its flattened union field is zero.",
+      "properties": {
+        "uri": {
+          "description": "Nested URI.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "uri"
+      ],
+      "type": "object"
+    },
+    "ObjectFieldUnion": {
+      "description": "Flattened union with an optional object-valued variant field.",
+      "oneOf": [
+        {
+          "description": "Text branch.",
+          "properties": {
+            "items": {
+              "description": "Required list that should marshal nil as an empty array.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "text": {
+              "type": "string"
+            },
+            "type": {
+              "const": "text",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "text",
+            "items"
+          ],
+          "title": "Text",
+          "type": "object"
+        },
+        {
+          "description": "Nested object branch.",
+          "properties": {
+            "nested": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/NestedObject"
+                }
+              ]
+            },
+            "type": {
+              "const": "nested",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "nested"
+          ],
+          "title": "Nested",
+          "type": "object"
+        }
+      ]
+    },
+    "PlainLeft": {
+      "description": "Left variant without a discriminator.",
+      "properties": {
+        "left": {
+          "description": "Left value.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "left"
+      ],
+      "type": "object"
+    },
+    "PlainRight": {
+      "description": "Right variant without a discriminator.",
+      "properties": {
+        "right": {
+          "description": "Right value.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "right"
+      ],
+      "type": "object"
+    },
+    "PlainUnion": {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlainLeft"
+            }
+          ],
+          "description": "Left branch.",
+          "title": "Left"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlainRight"
+            }
+          ],
+          "description": "Right branch.",
+          "title": "Right"
+        }
+      ],
+      "description": "Titled referenced object union without a const discriminator."
     },
     "RequestId": {
       "anyOf": [
@@ -161,7 +313,10 @@
           "type": "array"
         }
       },
-      "required": ["group", "options"],
+      "required": [
+        "group",
+        "options"
+      ],
       "type": "object"
     },
     "SelectOption": {
@@ -176,7 +331,10 @@
           "type": "string"
         }
       },
-      "required": ["label", "value"],
+      "required": [
+        "label",
+        "value"
+      ],
       "type": "object"
     },
     "SelectOptions": {
@@ -200,6 +358,86 @@
       ],
       "description": "Select options represented by one of two array shapes."
     },
+    "SharedFieldUnion": {
+      "description": "Flattened union with repeated fields that use compatible aliases and incompatible primitive kinds.",
+      "oneOf": [
+        {
+          "description": "Alias string branch.",
+          "properties": {
+            "kind": {
+              "const": "alias_one",
+              "type": "string"
+            },
+            "value": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/AliasA"
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "title": "AliasOne",
+          "type": "object"
+        },
+        {
+          "description": "Second alias string branch.",
+          "properties": {
+            "kind": {
+              "const": "alias_two",
+              "type": "string"
+            },
+            "value": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/AliasB"
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "title": "AliasTwo",
+          "type": "object"
+        },
+        {
+          "description": "Boolean branch sharing the same value field name.",
+          "properties": {
+            "kind": {
+              "const": "boolean",
+              "type": "string"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "title": "Boolean",
+          "type": "object"
+        }
+      ]
+    },
+    "SpecialCollision": {
+      "description": "Referenced variant whose name would collide with the generated constructor.",
+      "properties": {
+        "value": {
+          "description": "Variant value.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "type": "object"
+    },
     "UnionContainer": {
       "description": "Object that references hard union shapes.",
       "properties": {
@@ -211,6 +449,14 @@
           ],
           "description": "Authentication method."
         },
+        "collision": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Collision"
+            }
+          ],
+          "description": "Collision union."
+        },
         "content": {
           "allOf": [
             {
@@ -218,6 +464,22 @@
             }
           ],
           "description": "Elicitation content value."
+        },
+        "objectField": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ObjectFieldUnion"
+            }
+          ],
+          "description": "Union with object field."
+        },
+        "plain": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlainUnion"
+            }
+          ],
+          "description": "Plain union."
         },
         "requestId": {
           "allOf": [
@@ -234,9 +496,21 @@
             }
           ],
           "description": "Select options."
+        },
+        "shared": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SharedFieldUnion"
+            }
+          ],
+          "description": "Shared field union."
         }
       },
-      "required": ["auth", "requestId", "selectOptions"],
+      "required": [
+        "auth",
+        "requestId",
+        "selectOptions"
+      ],
       "type": "object"
     }
   },

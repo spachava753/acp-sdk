@@ -17,7 +17,7 @@ import (
 
 func TestConformanceCancelReachesAgentDuringPendingPrompt(t *testing.T) {
 	agent := newCancelDuringPromptAgent()
-	client, done := connectConformanceClient(t, newConformanceClient(), func(*acp.AgentConnection) acp.Agent {
+	client, done := connectConformanceClient(t, newConformanceClient(), func(*acp.AgentConnection) any {
 		return agent
 	})
 	defer closeConformanceClient(t, client, done)
@@ -25,8 +25,8 @@ func TestConformanceCancelReachesAgentDuringPendingPrompt(t *testing.T) {
 	promptDone := make(chan promptResult, 1)
 	go func() {
 		res, err := client.Prompt(t.Context(), &acp.PromptRequest{
-			SessionID: "sess-cancel",
-			Prompt:    []acp.ContentBlock{{Type: acp.ContentTypeText, Text: "wait"}},
+			SessionID: acp.SessionId("sess-cancel"),
+			Prompt:    []acp.ContentBlock{{Type: acp.ContentBlockTypeText, Text: "wait"}},
 		})
 		promptDone <- promptResult{res: res, err: err}
 	}()
@@ -41,7 +41,7 @@ func TestConformanceCancelReachesAgentDuringPendingPrompt(t *testing.T) {
 		t.Fatalf("prompt completed before cancel: %#v", result)
 	default:
 	}
-	if err := client.Cancel(t.Context(), &acp.CancelNotification{SessionID: "sess-cancel"}); err != nil {
+	if err := client.Cancel(t.Context(), &acp.CancelNotification{SessionID: acp.SessionId("sess-cancel")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -56,12 +56,13 @@ func TestConformanceCancelReachesAgentDuringPendingPrompt(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for cancelled prompt")
 	}
-	if got := agent.cancelledSession.Load(); got != "sess-cancel" {
+	if got := agent.cancelledSession.Load(); got != acp.SessionId("sess-cancel") {
 		t.Fatalf("cancelled session = %q, want sess-cancel", got)
 	}
 }
 
 type cancelDuringPromptAgent struct {
+	noopSessionHandler
 	started          chan struct{}
 	cancelled        chan struct{}
 	startOnce        sync.Once
@@ -74,11 +75,11 @@ func newCancelDuringPromptAgent() *cancelDuringPromptAgent {
 }
 
 func (a *cancelDuringPromptAgent) Initialize(context.Context, *acp.InitializeRequest) (*acp.InitializeResponse, error) {
-	return &acp.InitializeResponse{ProtocolVersion: acp.ProtocolVersion, AuthMethods: []acp.AuthMethod{}}, nil
+	return &acp.InitializeResponse{ProtocolVersion: acp.ProtocolVersion(1), AuthMethods: []acp.AuthMethod{}}, nil
 }
 
 func (a *cancelDuringPromptAgent) NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
-	return &acp.NewSessionResponse{SessionID: "sess-cancel"}, nil
+	return &acp.NewSessionResponse{SessionID: acp.SessionId("sess-cancel")}, nil
 }
 
 func (a *cancelDuringPromptAgent) Prompt(ctx context.Context, _ *acp.PromptRequest) (*acp.PromptResponse, error) {

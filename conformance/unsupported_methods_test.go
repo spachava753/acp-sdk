@@ -14,14 +14,14 @@ import (
 )
 
 func TestConformanceUnsupportedOptionalMethodsReturnMethodNotFound(t *testing.T) {
-	client, done := connectConformanceClient(t, newConformanceClient(), func(conn *acp.AgentConnection) acp.Agent {
+	client, done := connectConformanceClient(t, newConformanceClient(), func(conn *acp.AgentConnection) any {
 		return &basicAgent{conn: conn}
 	})
 	defer closeConformanceClient(t, client, done)
 
-	_, err := client.LoadSession(t.Context(), &acp.LoadSessionRequest{SessionID: "sess-123", CWD: "/workspace", MCPServers: []acp.MCPServer{}})
+	_, err := client.Authenticate(t.Context(), &acp.AuthenticateRequest{MethodID: "agent"})
 	if err == nil {
-		t.Fatal("LoadSession succeeded, want method not found")
+		t.Fatal("Authenticate succeeded, want method not found")
 	}
 	var wireErr *jsonrpc.Error
 	if !errors.As(err, &wireErr) {
@@ -33,15 +33,16 @@ func TestConformanceUnsupportedOptionalMethodsReturnMethodNotFound(t *testing.T)
 }
 
 type basicAgent struct {
+	noopSessionHandler
 	conn *acp.AgentConnection
 }
 
 func (a *basicAgent) Initialize(context.Context, *acp.InitializeRequest) (*acp.InitializeResponse, error) {
-	return &acp.InitializeResponse{ProtocolVersion: acp.ProtocolVersion, AuthMethods: []acp.AuthMethod{}}, nil
+	return &acp.InitializeResponse{ProtocolVersion: acp.ProtocolVersion(1), AuthMethods: []acp.AuthMethod{}}, nil
 }
 
 func (a *basicAgent) NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
-	return &acp.NewSessionResponse{SessionID: "sess-123"}, nil
+	return &acp.NewSessionResponse{SessionID: acp.SessionId("sess-123")}, nil
 }
 
 func (a *basicAgent) Prompt(context.Context, *acp.PromptRequest) (*acp.PromptResponse, error) {

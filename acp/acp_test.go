@@ -15,13 +15,51 @@ var errUnexpectedCallbackResult = errors.New("unexpected callback result")
 
 func ptr[T any](v T) *T { return &v }
 
+type noopSessionHandler struct{}
+
+func (noopSessionHandler) Cancel(context.Context, *CancelNotification) error { return nil }
+func (noopSessionHandler) CloseSession(context.Context, *CloseSessionRequest) (*CloseSessionResponse, error) {
+	return &CloseSessionResponse{}, nil
+}
+func (noopSessionHandler) DeleteSession(context.Context, *DeleteSessionRequest) (*DeleteSessionResponse, error) {
+	return &DeleteSessionResponse{}, nil
+}
+func (noopSessionHandler) ForkSession(context.Context, *ForkSessionRequest) (*ForkSessionResponse, error) {
+	return &ForkSessionResponse{}, nil
+}
+func (noopSessionHandler) ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error) {
+	return &ListSessionsResponse{}, nil
+}
+func (noopSessionHandler) LoadSession(context.Context, *LoadSessionRequest) (*LoadSessionResponse, error) {
+	return &LoadSessionResponse{}, nil
+}
+func (noopSessionHandler) NewSession(context.Context, *NewSessionRequest) (*NewSessionResponse, error) {
+	return &NewSessionResponse{}, nil
+}
+func (noopSessionHandler) Prompt(context.Context, *PromptRequest) (*PromptResponse, error) {
+	return &PromptResponse{StopReason: StopReasonEndTurn}, nil
+}
+func (noopSessionHandler) ResumeSession(context.Context, *ResumeSessionRequest) (*ResumeSessionResponse, error) {
+	return &ResumeSessionResponse{}, nil
+}
+func (noopSessionHandler) SetSessionConfigOption(context.Context, *SetSessionConfigOptionRequest) (*SetSessionConfigOptionResponse, error) {
+	return &SetSessionConfigOptionResponse{}, nil
+}
+func (noopSessionHandler) SetSessionMode(context.Context, *SetSessionModeRequest) (*SetSessionModeResponse, error) {
+	return &SetSessionModeResponse{}, nil
+}
+func (noopSessionHandler) SetSessionModel(context.Context, *SetSessionModelRequest) (*SetSessionModelResponse, error) {
+	return &SetSessionModelResponse{}, nil
+}
+
 type testAgent struct {
+	noopSessionHandler
 	conn *AgentConnection
 }
 
 func (a *testAgent) Initialize(context.Context, *InitializeRequest) (*InitializeResponse, error) {
 	return &InitializeResponse{
-		ProtocolVersion: ProtocolVersion,
+		ProtocolVersion: ProtocolVersion(1),
 		AgentCapabilities: &AgentCapabilities{
 			PromptCapabilities: &PromptCapabilities{Image: true},
 		},
@@ -43,7 +81,7 @@ func (a *testAgent) Prompt(ctx context.Context, req *PromptRequest) (*PromptResp
 	perm, err := a.conn.RequestPermission(ctx, &RequestPermissionRequest{
 		SessionID: req.SessionID,
 		ToolCall:  ToolCallUpdate{ToolCallID: "call-1", Title: ptr("edit file")},
-		Options:   []PermissionOption{{OptionID: "allow", Name: "Allow", Kind: PermissionAllowOnce}},
+		Options:   []PermissionOption{{OptionID: "allow", Name: "Allow", Kind: PermissionOptionKindAllowOnce}},
 	})
 	if err != nil {
 		return nil, err
@@ -62,7 +100,7 @@ func (a *testAgent) Prompt(ctx context.Context, req *PromptRequest) (*PromptResp
 		SessionID: req.SessionID,
 		Update: SessionUpdate{
 			SessionUpdate: "agent_message_chunk",
-			Content:       ContentBlock{Type: ContentTypeText, Text: "hello"},
+			Content:       ContentBlock{Type: ContentBlockTypeText, Text: "hello"},
 		},
 	}); err != nil {
 		return nil, err
@@ -80,7 +118,7 @@ func newTestClientHandler() *testClientHandler {
 	return &testClientHandler{updates: make(chan SessionNotification, 8)}
 }
 
-func (h *testClientHandler) SessionUpdate(_ context.Context, params *SessionNotification) error {
+func (h *testClientHandler) Update(_ context.Context, params *SessionNotification) error {
 	h.updates <- *params
 	return nil
 }
@@ -123,7 +161,7 @@ func TestClientAgentPrompt(t *testing.T) {
 
 	agentDone := make(chan error, 1)
 	go func() {
-		agentDone <- RunAgent(ctx, agentTransport, func(conn *AgentConnection) Agent {
+		agentDone <- RunAgent(ctx, agentTransport, func(conn *AgentConnection) any {
 			return &testAgent{conn: conn}
 		})
 	}()
@@ -135,15 +173,15 @@ func TestClientAgentPrompt(t *testing.T) {
 	}
 	defer client.Close()
 
-	init, err := client.Initialize(ctx, &InitializeRequest{ProtocolVersion: ProtocolVersion})
+	init, err := client.Initialize(ctx, &InitializeRequest{ProtocolVersion: ProtocolVersion(1)})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if init.ProtocolVersion != ProtocolVersion {
-		t.Fatalf("protocol version = %d, want %d", init.ProtocolVersion, ProtocolVersion)
+	if init.ProtocolVersion != ProtocolVersion(1) {
+		t.Fatalf("protocol version = %d, want %d", init.ProtocolVersion, ProtocolVersion(1))
 	}
 
-	session, err := client.NewSession(ctx, &NewSessionRequest{CWD: "/tmp"})
+	session, err := client.NewSession(ctx, &NewSessionRequest{Cwd: "/tmp"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +191,7 @@ func TestClientAgentPrompt(t *testing.T) {
 
 	prompt, err := client.Prompt(ctx, &PromptRequest{
 		SessionID: session.SessionID,
-		Prompt:    []ContentBlock{{Type: ContentTypeText, Text: "hi"}},
+		Prompt:    []ContentBlock{{Type: ContentBlockTypeText, Text: "hi"}},
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -22,7 +22,7 @@ type agent struct {
 
 func (a *agent) Initialize(context.Context, *acp.InitializeRequest) (*acp.InitializeResponse, error) {
 	return &acp.InitializeResponse{
-		ProtocolVersion: acp.ProtocolVersion,
+		ProtocolVersion: acp.ProtocolVersion(1),
 		AgentCapabilities: &acp.AgentCapabilities{
 			PromptCapabilities: &acp.PromptCapabilities{EmbeddedContext: true},
 		},
@@ -39,7 +39,7 @@ func (a *agent) NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSes
 	a.mu.Lock()
 	a.sessions[id] = struct{}{}
 	a.mu.Unlock()
-	return &acp.NewSessionResponse{SessionID: id}, nil
+	return &acp.NewSessionResponse{SessionID: acp.SessionId(id)}, nil
 }
 
 func (a *agent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.PromptResponse, error) {
@@ -47,7 +47,7 @@ func (a *agent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.Prompt
 		SessionID: req.SessionID,
 		Update: acp.SessionUpdate{
 			SessionUpdate: "agent_message_chunk",
-			Content:       acp.ContentBlock{Type: acp.ContentTypeText, Text: "Example agent received your prompt."},
+			Content:       acp.ContentBlock{Type: acp.ContentBlockTypeText, Text: "Example agent received your prompt."},
 		},
 	}); err != nil {
 		return nil, err
@@ -57,8 +57,44 @@ func (a *agent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.Prompt
 
 func (a *agent) Cancel(context.Context, *acp.CancelNotification) error { return nil }
 
+func (a *agent) CloseSession(context.Context, *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error) {
+	return &acp.CloseSessionResponse{}, nil
+}
+
+func (a *agent) DeleteSession(context.Context, *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error) {
+	return &acp.DeleteSessionResponse{}, nil
+}
+
+func (a *agent) ForkSession(context.Context, *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
+	return &acp.ForkSessionResponse{}, nil
+}
+
+func (a *agent) ListSessions(context.Context, *acp.ListSessionsRequest) (*acp.ListSessionsResponse, error) {
+	return &acp.ListSessionsResponse{}, nil
+}
+
+func (a *agent) LoadSession(context.Context, *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
+	return &acp.LoadSessionResponse{}, nil
+}
+
+func (a *agent) ResumeSession(context.Context, *acp.ResumeSessionRequest) (*acp.ResumeSessionResponse, error) {
+	return &acp.ResumeSessionResponse{}, nil
+}
+
+func (a *agent) SetSessionConfigOption(context.Context, *acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
+	return &acp.SetSessionConfigOptionResponse{}, nil
+}
+
+func (a *agent) SetSessionMode(context.Context, *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error) {
+	return &acp.SetSessionModeResponse{}, nil
+}
+
+func (a *agent) SetSessionModel(context.Context, *acp.SetSessionModelRequest) (*acp.SetSessionModelResponse, error) {
+	return &acp.SetSessionModelResponse{}, nil
+}
+
 func main() {
-	err := acp.RunAgent(context.Background(), &acp.StdioTransport{}, func(conn *acp.AgentConnection) acp.Agent {
+	err := acp.RunAgent(context.Background(), &acp.StdioTransport{}, func(conn *acp.AgentConnection) any {
 		return &agent{conn: conn, sessions: make(map[string]struct{})}
 	})
 	if err != nil {

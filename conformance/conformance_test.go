@@ -26,7 +26,7 @@ func newConformanceClient() *conformanceClient {
 	return &conformanceClient{files: map[string]string{}}
 }
 
-func (c *conformanceClient) SessionUpdate(_ context.Context, params *acp.SessionNotification) error {
+func (c *conformanceClient) Update(_ context.Context, params *acp.SessionNotification) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.updates = append(c.updates, *params)
@@ -88,7 +88,7 @@ func (c *conformanceClient) createdTerminal() string {
 	return c.terminals[0]
 }
 
-func connectConformanceClient(t *testing.T, handler acp.ClientHandler, newAgent acp.AgentFactory) (*acp.Client, chan error) {
+func connectConformanceClient(t *testing.T, handler any, newAgent acp.AgentFactory) (*acp.Client, chan error) {
 	t.Helper()
 	clientTransport, agentTransport := acp.NewInMemoryTransports()
 	done := make(chan error, 1)
@@ -149,3 +149,41 @@ func assertJSONEqual(t *testing.T, got, want string) {
 func stringPtr(v string) *string { return &v }
 func intPtr(v int) *int          { return &v }
 func int64Ptr(v int64) *int64    { return &v }
+func genericPtr[T any](v T) *T   { return &v }
+
+type noopSessionHandler struct{}
+
+func (noopSessionHandler) Cancel(context.Context, *acp.CancelNotification) error { return nil }
+func (noopSessionHandler) CloseSession(context.Context, *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error) {
+	return &acp.CloseSessionResponse{}, nil
+}
+func (noopSessionHandler) DeleteSession(context.Context, *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error) {
+	return &acp.DeleteSessionResponse{}, nil
+}
+func (noopSessionHandler) ForkSession(context.Context, *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
+	return &acp.ForkSessionResponse{}, nil
+}
+func (noopSessionHandler) ListSessions(context.Context, *acp.ListSessionsRequest) (*acp.ListSessionsResponse, error) {
+	return &acp.ListSessionsResponse{}, nil
+}
+func (noopSessionHandler) LoadSession(context.Context, *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
+	return &acp.LoadSessionResponse{}, nil
+}
+func (noopSessionHandler) NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
+	return &acp.NewSessionResponse{}, nil
+}
+func (noopSessionHandler) Prompt(context.Context, *acp.PromptRequest) (*acp.PromptResponse, error) {
+	return &acp.PromptResponse{StopReason: acp.StopReasonEndTurn}, nil
+}
+func (noopSessionHandler) ResumeSession(context.Context, *acp.ResumeSessionRequest) (*acp.ResumeSessionResponse, error) {
+	return &acp.ResumeSessionResponse{}, nil
+}
+func (noopSessionHandler) SetSessionConfigOption(context.Context, *acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
+	return &acp.SetSessionConfigOptionResponse{}, nil
+}
+func (noopSessionHandler) SetSessionMode(context.Context, *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error) {
+	return &acp.SetSessionModeResponse{}, nil
+}
+func (noopSessionHandler) SetSessionModel(context.Context, *acp.SetSessionModelRequest) (*acp.SetSessionModelResponse, error) {
+	return &acp.SetSessionModelResponse{}, nil
+}

@@ -16,15 +16,15 @@ func TestConformanceBidirectionalCallbacksDuringPrompt(t *testing.T) {
 	handler := newConformanceClient()
 	handler.files["/workspace/main.go"] = "package main\n"
 	agent := &callbackAgent{}
-	client, done := connectConformanceClient(t, handler, func(conn *acp.AgentConnection) acp.Agent {
+	client, done := connectConformanceClient(t, handler, func(conn *acp.AgentConnection) any {
 		agent.conn = conn
 		return agent
 	})
 	defer closeConformanceClient(t, client, done)
 
 	res, err := client.Prompt(t.Context(), &acp.PromptRequest{
-		SessionID: "sess-123",
-		Prompt:    []acp.ContentBlock{{Type: acp.ContentTypeText, Text: "inspect"}},
+		SessionID: acp.SessionId("sess-123"),
+		Prompt:    []acp.ContentBlock{{Type: acp.ContentBlockTypeText, Text: "inspect"}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -44,15 +44,16 @@ func TestConformanceBidirectionalCallbacksDuringPrompt(t *testing.T) {
 }
 
 type callbackAgent struct {
+	noopSessionHandler
 	conn *acp.AgentConnection
 }
 
 func (a *callbackAgent) Initialize(context.Context, *acp.InitializeRequest) (*acp.InitializeResponse, error) {
-	return &acp.InitializeResponse{ProtocolVersion: acp.ProtocolVersion, AuthMethods: []acp.AuthMethod{}}, nil
+	return &acp.InitializeResponse{ProtocolVersion: acp.ProtocolVersion(1), AuthMethods: []acp.AuthMethod{}}, nil
 }
 
 func (a *callbackAgent) NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
-	return &acp.NewSessionResponse{SessionID: "sess-123"}, nil
+	return &acp.NewSessionResponse{SessionID: acp.SessionId("sess-123")}, nil
 }
 
 func (a *callbackAgent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.PromptResponse, error) {
@@ -69,7 +70,7 @@ func (a *callbackAgent) Prompt(ctx context.Context, req *acp.PromptRequest) (*ac
 	permission, err := a.conn.RequestPermission(ctx, &acp.RequestPermissionRequest{
 		SessionID: req.SessionID,
 		ToolCall:  acp.ToolCallUpdate{ToolCallID: "call-1", Title: stringPtr("Write File")},
-		Options:   []acp.PermissionOption{{OptionID: "allow", Name: "Allow", Kind: acp.PermissionAllowOnce}},
+		Options:   []acp.PermissionOption{{OptionID: "allow", Name: "Allow", Kind: acp.PermissionOptionKindAllowOnce}},
 	})
 	if err != nil {
 		return nil, err
@@ -84,7 +85,7 @@ func (a *callbackAgent) Prompt(ctx context.Context, req *acp.PromptRequest) (*ac
 	if terminal.TerminalID != "term-1" {
 		return nil, fmt.Errorf("terminal ID = %q", terminal.TerminalID)
 	}
-	if err := a.conn.SessionUpdate(ctx, &acp.SessionNotification{SessionID: req.SessionID, Update: acp.SessionUpdate{SessionUpdate: "agent_message_chunk", Content: acp.ContentBlock{Type: acp.ContentTypeText, Text: "done"}}}); err != nil {
+	if err := a.conn.SessionUpdate(ctx, &acp.SessionNotification{SessionID: req.SessionID, Update: acp.SessionUpdate{SessionUpdate: "agent_message_chunk", Content: acp.ContentBlock{Type: acp.ContentBlockTypeText, Text: "done"}}}); err != nil {
 		return nil, err
 	}
 	return &acp.PromptResponse{StopReason: acp.StopReasonEndTurn}, nil

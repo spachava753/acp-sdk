@@ -16,7 +16,7 @@ import (
 
 type clientHandler struct{}
 
-func (clientHandler) SessionUpdate(_ context.Context, params *acp.SessionNotification) error {
+func (clientHandler) Update(_ context.Context, params *acp.SessionNotification) error {
 	fmt.Printf("session %s update: %s\n", params.SessionID, params.Update.SessionUpdate)
 	if content, ok := params.Update.Content.(map[string]any); ok {
 		if text, ok := content["text"].(string); ok {
@@ -37,16 +37,16 @@ func main() {
 	}
 	defer client.Close()
 
-	if _, err := client.Initialize(ctx, &acp.InitializeRequest{ProtocolVersion: acp.ProtocolVersion}); err != nil {
+	if _, err := client.Initialize(ctx, &acp.InitializeRequest{ProtocolVersion: acp.ProtocolVersion(1)}); err != nil {
 		log.Fatal(err)
 	}
-	session, err := client.NewSession(ctx, &acp.NewSessionRequest{CWD: mustGetwd(), MCPServers: []acp.MCPServer{}})
+	session, err := client.NewSession(ctx, &acp.NewSessionRequest{Cwd: mustGetwd(), McpServers: []acp.McpServer{}})
 	if err != nil {
 		log.Fatal(err)
 	}
 	result, err := client.Prompt(ctx, &acp.PromptRequest{
 		SessionID: session.SessionID,
-		Prompt:    []acp.ContentBlock{{Type: acp.ContentTypeText, Text: "Hello"}},
+		Prompt:    []acp.ContentBlock{{Type: acp.ContentBlockTypeText, Text: "Hello"}},
 	})
 	if err != nil {
 		log.Fatal(err)

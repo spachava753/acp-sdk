@@ -49,7 +49,7 @@ func (a *agent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.Prompt
         SessionID: req.SessionID,
         Update: acp.SessionUpdate{
             SessionUpdate: "agent_message_chunk",
-            Content: acp.ContentBlock{Type: acp.ContentTypeText, Text: "Hello from ACP."},
+            Content: acp.ContentBlock{Type: acp.ContentBlockTypeText, Text: "Hello from ACP."},
         },
     })
     if err != nil {

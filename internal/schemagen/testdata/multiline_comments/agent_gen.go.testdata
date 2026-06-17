@@ -21,7 +21,7 @@ type DocsHandler interface {
 	GenerateDocs(context.Context, *GenerateDocsRequest) (*GenerateDocsResponse, error)
 }
 
-func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) (any, error) {
+func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
 	if agent == nil {
 		return nil, methodNotFound(req.Method)

@@ -18,12 +18,12 @@ func TestRequiredArraysMarshalAsEmptyArrays(t *testing.T) {
 	}{
 		{
 			name: "new session mcp servers",
-			in:   NewSessionRequest{CWD: "/repo"},
+			in:   NewSessionRequest{Cwd: "/repo"},
 			want: `{"cwd":"/repo","mcpServers":[]}`,
 		},
 		{
 			name: "load session mcp servers",
-			in:   LoadSessionRequest{SessionID: "s1", CWD: "/repo"},
+			in:   LoadSessionRequest{SessionID: "s1", Cwd: "/repo"},
 			want: `{"sessionId":"s1","cwd":"/repo","mcpServers":[]}`,
 		},
 		{
@@ -38,17 +38,17 @@ func TestRequiredArraysMarshalAsEmptyArrays(t *testing.T) {
 		},
 		{
 			name: "stdio mcp server args and env",
-			in:   MCPServer{Name: "tools", Command: "tools-server"},
-			want: `{"name":"tools","command":"tools-server","args":[],"env":[]}`,
+			in:   McpServer{Name: "tools", Command: "tools-server"},
+			want: `{"name":"tools","command":"tools-server"}`,
 		},
 		{
 			name: "http mcp server headers",
-			in:   MCPServer{Type: "http", Name: "tools", URL: "https://example.test/mcp"},
+			in:   McpServer{Type: "http", Name: "tools", Url: "https://example.test/mcp"},
 			want: `{"type":"http","name":"tools","url":"https://example.test/mcp","headers":[]}`,
 		},
 		{
 			name: "sse mcp server headers",
-			in:   MCPServer{Type: "sse", Name: "tools", URL: "https://example.test/sse"},
+			in:   McpServer{Type: "sse", Name: "tools", Url: "https://example.test/sse"},
 			want: `{"type":"sse","name":"tools","url":"https://example.test/sse","headers":[]}`,
 		},
 		{
@@ -86,13 +86,8 @@ func TestRequiredArraysMarshalAsEmptyArrays(t *testing.T) {
 		},
 		{
 			name: "select config option options",
-			in: SessionConfigOption{
-				Type:         "select",
-				ID:           "model",
-				Name:         "Model",
-				CurrentValue: "fast",
-			},
-			want: `{"type":"select","id":"model","name":"Model","currentValue":"fast","options":[]}`,
+			in:   SelectSessionConfigOption("fast", SessionConfigSelectOptions{}),
+			want: `{"type":"select","currentValue":"fast","options":null}`,
 		},
 		{
 			name: "select config group options",
@@ -122,21 +117,21 @@ func TestContentBlockWireShapes(t *testing.T) {
 	}{
 		{
 			name: "text",
-			in:   ContentBlock{Type: ContentTypeText, Text: "hello"},
+			in:   ContentBlock{Type: ContentBlockTypeText, Text: "hello"},
 			want: `{"type":"text","text":"hello"}`,
 		},
 		{
 			name: "image data base64",
-			in:   ContentBlock{Type: ContentTypeImage, Data: []byte{1, 2, 3}, MIMEType: "image/png"},
+			in:   ContentBlock{Type: ContentBlockTypeImage, Data: "AQID", MimeType: "image/png"},
 			want: `{"type":"image","data":"AQID","mimeType":"image/png"}`,
 		},
 		{
 			name: "embedded resource",
 			in: ContentBlock{
-				Type: ContentTypeResource,
-				Resource: &ResourceContents{
+				Type: ContentBlockTypeResource,
+				Resource: EmbeddedResourceResource{
 					URI:      "file:///repo/main.go",
-					MIMEType: "text/x-go",
+					MimeType: ptr("text/x-go"),
 					Text:     "package main\n",
 				},
 			},
@@ -160,10 +155,10 @@ func TestSessionUpdateWireShapes(t *testing.T) {
 		SessionUpdate: "tool_call_update",
 		ToolCallID:    "call-1",
 		Title:         &title,
-		Status:        ToolCallCompleted,
+		Status:        ToolCallStatusCompleted,
 		Content: []ToolCallContent{{
 			Type:    ToolCallContentTypeContent,
-			Content: &ContentBlock{Type: ContentTypeText, Text: "ok"},
+			Content: ContentBlock{Type: ContentBlockTypeText, Text: "ok"},
 		}},
 	})
 	if err != nil {

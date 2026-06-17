@@ -13,66 +13,132 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 )
 
+type unionField struct {
+	jsonName string
+	goName   string
+	typeCode jen.Code
+	typeText string
+	schema   *jsonschema.Schema
+}
+
+type unionRequiredSlice struct {
+	discriminatorValue string
+	field              unionField
+}
+
 func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, schema *jsonschema.Schema) []jen.Code {
 	branches := unionBranches(schema)
 	discriminator := discriminatorField(defs, branches)
 	requiredCount := map[string]int{}
 	fieldOrder := []string{}
 
-	type field struct {
-		goName   string
-		typeCode jen.Code
-	}
-	fieldsByJSON := map[string]field{}
+	fieldsByJSON := map[string]unionField{}
+	var requiredSlices []unionRequiredSlice
 	for _, branch := range branches {
+		value, _ := variantConst(defs, branch)
 		for _, req := range variantRequired(defs, branch) {
 			requiredCount[req]++
 		}
 		for jsonName, prop := range variantProperties(defs, branch) {
+			if contains(variantRequired(defs, branch), jsonName) {
+				typ, text := schemaType(defs, prop, false)
+				if strings.HasPrefix(text, "[]") {
+					requiredSlices = append(requiredSlices, unionRequiredSlice{discriminatorValue: value, field: unionField{jsonName: jsonName, goName: fieldName(jsonName), typeCode: typ, typeText: text, schema: prop}})
+				}
+			}
 			if prop.Const != nil || jsonName == discriminator {
 				continue
 			}
-			if _, ok := fieldsByJSON[jsonName]; ok {
+			if existing, ok := fieldsByJSON[jsonName]; ok {
+				_, text := schemaType(defs, prop, false)
+				if existing.typeText != text && schemaKind(defs, prop) != schemaKind(defs, existing.schema) {
+					existing.typeCode = jen.Any()
+					existing.typeText = "any"
+				}
+				fieldsByJSON[jsonName] = existing
 				continue
 			}
-			typ, _ := schemaType(defs, prop, false)
-			fieldsByJSON[jsonName] = field{goName: fieldName(jsonName), typeCode: typ}
+			typ, text := schemaType(defs, prop, false)
+			fieldsByJSON[jsonName] = unionField{jsonName: jsonName, goName: fieldName(jsonName), typeCode: typ, typeText: text, schema: prop}
 			fieldOrder = append(fieldOrder, jsonName)
 		}
 	}
 	sort.Strings(fieldOrder)
 
 	var structFields []jen.Code
-	structFields = append(structFields, jen.Id(fieldName(discriminator)).Id(name+"Type").Tag(map[string]string{"json": jsonTag(discriminator, requiredCount[discriminator] != len(branches), false)}))
+	if discriminator != "" {
+		structFields = append(structFields, jen.Id(fieldName(discriminator)).Id(name+"Type").Tag(map[string]string{"json": jsonTag(discriminator, requiredCount[discriminator] != len(branches), false)}))
+	}
 	for _, jsonName := range fieldOrder {
 		field := fieldsByJSON[jsonName]
 		requiredInAllVariants := requiredCount[jsonName] == len(branches)
-		structFields = append(structFields, jen.Id(field.goName).Add(field.typeCode).Tag(map[string]string{"json": jsonTag(jsonName, !requiredInAllVariants, false)}))
+		structFields = append(structFields, jen.Id(field.goName).Add(field.typeCode).Tag(map[string]string{"json": jsonTag(jsonName, !requiredInAllVariants, !requiredInAllVariants && needsOmitZero(defs, field.schema))}))
 	}
 
 	var codes []jen.Code
 	codes = append(codes, commented(name, schema.Description, jen.Type().Id(name).Struct(structFields...)), jen.Line())
-	codes = append(codes, jen.Commentf("%sType is the discriminator for %s variants.", name, name).Line().Type().Id(name+"Type").String(), jen.Line())
+	if discriminator != "" {
+		codes = append(codes, jen.Commentf("%sType is the discriminator for %s variants.", name, name).Line().Type().Id(name+"Type").String(), jen.Line())
 
-	var consts []jen.Code
-	for _, branch := range branches {
-		value, desc := variantConst(defs, branch)
-		if value == "" {
-			continue
+		var consts []jen.Code
+		for _, branch := range branches {
+			value, desc := variantConst(defs, branch)
+			if value == "" {
+				continue
+			}
+			constName := fmt.Sprintf("%sType%s", name, pascalIdentifier(value))
+			consts = append(consts, commented(constName, desc, jen.Id(constName).Id(name+"Type").Op("=").Lit(value)))
 		}
-		constName := fmt.Sprintf("%sType%s", name, pascalIdentifier(value))
-		consts = append(consts, commented(constName, desc, jen.Id(constName).Id(name+"Type").Op("=").Lit(value)))
+		codes = append(codes, jen.Const().Defs(consts...), jen.Line())
 	}
-	codes = append(codes, jen.Const().Defs(consts...), jen.Line())
 
 	inline := inlineUnion(branches)
 	for _, branch := range branches {
-		codes = append(codes, unionConstructorCode(defs, name, discriminator, branch, inline), jen.Line())
+		codes = append(codes, unionConstructorCode(defs, name, discriminator, branch, inline, fieldsByJSON), jen.Line())
+	}
+	if discriminator != "" && len(requiredSlices) > 0 {
+		codes = append(codes, discriminatorUnionMarshalCode(name, discriminator, requiredSlices), jen.Line())
 	}
 	return codes
 }
 
-func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discriminator string, branch *jsonschema.Schema, inline bool) jen.Code {
+func discriminatorUnionMarshalCode(name, discriminator string, requiredSlices []unionRequiredSlice) jen.Code {
+	receiver := receiverName(name)
+	fieldNames := map[string]bool{}
+	var wireFields []jen.Code
+	for _, required := range requiredSlices {
+		if required.discriminatorValue == "" || fieldNames[required.field.goName] {
+			continue
+		}
+		fieldNames[required.field.goName] = true
+		wireFields = append(wireFields, jen.Id(required.field.goName).Op("*").Add(required.field.typeCode).Tag(map[string]string{"json": jsonTag(required.field.jsonName, true, false)}))
+	}
+
+	var cases []jen.Code
+	for _, required := range requiredSlices {
+		if required.discriminatorValue == "" {
+			continue
+		}
+		cases = append(cases, jen.Case(jen.Id(name+"Type"+pascalIdentifier(required.discriminatorValue))).Block(
+			jen.Id(required.field.goName).Op(":=").Id(receiver).Dot(required.field.goName),
+			jen.If(jen.Id(required.field.goName).Op("==").Nil()).Block(
+				jen.Id(required.field.goName).Op("=").Add(required.field.typeCode).Values(),
+			),
+			jen.Id("w").Dot(required.field.goName).Op("=").Op("&").Id(required.field.goName),
+		))
+	}
+	return jen.Comment("MarshalJSON implements json.Marshaler.").Line().Func().Params(jen.Id(receiver).Id(name)).Id("MarshalJSON").Params().Params(jen.Index().Byte(), jen.Error()).Block(
+		jen.Type().Id("alias").Id(name),
+		jen.Type().Id("wire").Struct(
+			append([]jen.Code{jen.Op("*").Id("alias")}, wireFields...)...,
+		),
+		jen.Id("w").Op(":=").Id("wire").Values(jen.Id("alias").Op(":").Parens(jen.Op("*").Id("alias")).Call(jen.Op("&").Id(receiver))),
+		jen.Switch(jen.Id(receiver).Dot(fieldName(discriminator))).Block(cases...),
+		jen.Return(jen.Qual("encoding/json", "Marshal").Call(jen.Id("w"))),
+	)
+}
+
+func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discriminator string, branch *jsonschema.Schema, inline bool, fieldsByJSON map[string]unionField) jen.Code {
 	constructorName := pascalIdentifier(branch.Title)
 	value, _ := variantConst(defs, branch)
 	ref := variantRef(branch)
@@ -83,21 +149,26 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 		constructorName = strings.TrimPrefix(ref, unionName)
 	}
 	constructorName += unionName
+	if ref != "" && constructorName == ref {
+		constructorName = "New" + constructorName
+	}
 
 	properties := variantProperties(defs, branch)
 	required := variantRequired(defs, branch)
 	var params []jen.Code
+	paramTypes := map[string]string{}
 	for _, req := range required {
 		prop := properties[req]
 		if prop == nil || prop.Const != nil {
 			continue
 		}
-		typ, _ := schemaType(defs, prop, false)
+		typ, text := schemaType(defs, prop, false)
+		paramTypes[req] = text
 		params = append(params, jen.Id(parameterName(req)).Add(typ))
 	}
 
 	var literalFields []jen.Code
-	if value != "" {
+	if value != "" && discriminator != "" {
 		literalFields = append(literalFields, jen.Id(fieldName(discriminator)).Op(":").Id(unionName+"Type"+pascalIdentifier(value)))
 	}
 	for _, jsonName := range sortedPropertyNames(properties) {
@@ -105,7 +176,8 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 		if prop.Const != nil || !contains(required, jsonName) {
 			continue
 		}
-		literalFields = append(literalFields, jen.Id(fieldName(jsonName)).Op(":").Id(parameterName(jsonName)))
+		field := fieldsByJSON[jsonName]
+		literalFields = append(literalFields, jen.Id(fieldName(jsonName)).Op(":").Add(assignUnionField(field.typeText, paramTypes[jsonName], parameterName(jsonName))))
 	}
 
 	fn := jen.Func().Id(constructorName).Params(params...).Id(unionName).Block(jen.Return(jen.Id(unionName).Values(multilineValues(literalFields)...)))
@@ -114,6 +186,48 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 		return functionCommented(constructorName, "creates ", lowerFirstSentence(description)+".", fn)
 	}
 	return functionCommented(constructorName, fmt.Sprintf("creates an %s variant: ", unionName), branch.Description, fn)
+}
+
+func needsOmitZero(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) bool {
+	if schema == nil {
+		return false
+	}
+	if schema.Ref != "" {
+		def := defs[refName(schema.Ref)]
+		return isObjectSchema(def) || isDiscriminatorUnion(defs, def)
+	}
+	if len(schema.AllOf) == 1 && schema.AllOf[0].Ref != "" {
+		return needsOmitZero(defs, schema.AllOf[0])
+	}
+	return isObjectSchema(schema) || isDiscriminatorUnion(defs, schema)
+}
+
+func schemaKind(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) string {
+	if schema == nil {
+		return ""
+	}
+	if schema.Ref != "" {
+		return schemaKind(defs, defs[refName(schema.Ref)])
+	}
+	if len(schema.AllOf) == 1 && schema.AllOf[0].Ref != "" {
+		return schemaKind(defs, defs[refName(schema.AllOf[0].Ref)])
+	}
+	return schemaTypeName(schema)
+}
+
+func assignUnionField(fieldType, paramType, paramName string) jen.Code {
+	value := jen.Id(paramName)
+	if fieldType == paramType || fieldType == "" || fieldType == "any" || paramType == "" {
+		return value
+	}
+	if strings.HasPrefix(fieldType, "*") && strings.TrimPrefix(fieldType, "*") == paramType {
+		return jen.Op("&").Id(paramName)
+	}
+	if strings.HasPrefix(fieldType, "*") {
+		target := strings.TrimPrefix(fieldType, "*")
+		return jen.Func().Params(jen.Id("v").Id(paramType)).Op("*").Id(target).Block(jen.Return(jen.Op("&").Id("v"))).Call(value)
+	}
+	return jen.Id(fieldType).Call(value)
 }
 
 func arrayUnionCode(defs map[string]*jsonschema.Schema, name string, schema *jsonschema.Schema) []jen.Code {
@@ -285,7 +399,7 @@ func discriminatorField(defs map[string]*jsonschema.Schema, branches []*jsonsche
 			}
 		}
 	}
-	return "type"
+	return ""
 }
 
 func inlineUnion(branches []*jsonschema.Schema) bool {

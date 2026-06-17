@@ -19,20 +19,20 @@ func TestBinaryContentMarshalsAsBase64Strings(t *testing.T) {
 	}{
 		{
 			name: "image data",
-			in:   acp.ContentBlock{Type: acp.ContentTypeImage, MIMEType: "image/png", Data: []byte{1, 2, 3}},
+			in:   acp.ContentBlock{Type: acp.ContentBlockTypeImage, MimeType: "image/png", Data: "AQID"},
 			want: `{"type":"image","data":"AQID","mimeType":"image/png"}`,
 		},
 		{
 			name: "audio data",
-			in:   acp.ContentBlock{Type: acp.ContentTypeAudio, MIMEType: "audio/wav", Data: []byte{4, 5, 6}},
+			in:   acp.ContentBlock{Type: acp.ContentBlockTypeAudio, MimeType: "audio/wav", Data: "BAUG"},
 			want: `{"type":"audio","data":"BAUG","mimeType":"audio/wav"}`,
 		},
 		{
 			name: "resource blob",
-			in: acp.ContentBlock{Type: acp.ContentTypeResource, Resource: &acp.ResourceContents{
+			in: acp.ContentBlock{Type: acp.ContentBlockTypeResource, Resource: acp.EmbeddedResourceResource{
 				URI:      "file:///data.bin",
-				MIMEType: "application/octet-stream",
-				Blob:     []byte{7, 8, 9},
+				MimeType: stringPtr("application/octet-stream"),
+				Blob:     "BwgJ",
 			}},
 			want: `{"type":"resource","resource":{"uri":"file:///data.bin","mimeType":"application/octet-stream","blob":"BwgJ"}}`,
 		},

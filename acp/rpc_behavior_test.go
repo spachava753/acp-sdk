@@ -44,13 +44,9 @@ func (a *optionalAgent) Logout(_ context.Context, params *LogoutRequest) (*Logou
 
 func (a *optionalAgent) LoadSession(_ context.Context, params *LoadSessionRequest) (*LoadSessionResponse, error) {
 	a.record(MethodSessionLoad, *params)
-	return &LoadSessionResponse{ConfigOptions: []SessionConfigOption{{
-		Type:         "select",
-		ID:           "model",
-		Name:         "Model",
-		CurrentValue: "fast",
-		Options:      SessionConfigSelectOptions{Flat: []SessionConfigSelectOption{{Value: "fast", Name: "Fast"}}},
-	}}}, nil
+	return &LoadSessionResponse{ConfigOptions: &[]SessionConfigOption{
+		SelectSessionConfigOption("fast", SessionConfigSelectOptions{Ungrouped: ptr(UngroupedSessionConfigSelectOptions{{Value: "fast", Name: "Fast"}})}),
+	}}, nil
 }
 
 func (a *optionalAgent) ResumeSession(_ context.Context, params *ResumeSessionRequest) (*ResumeSessionResponse, error) {
@@ -60,7 +56,7 @@ func (a *optionalAgent) ResumeSession(_ context.Context, params *ResumeSessionRe
 
 func (a *optionalAgent) ListSessions(_ context.Context, params *ListSessionsRequest) (*ListSessionsResponse, error) {
 	a.record(MethodSessionList, *params)
-	return &ListSessionsResponse{Sessions: []SessionInfo{{SessionID: "s1", CWD: "/repo"}}}, nil
+	return &ListSessionsResponse{Sessions: []SessionInfo{{SessionID: "s1", Cwd: "/repo"}}}, nil
 }
 
 func (a *optionalAgent) CloseSession(_ context.Context, params *CloseSessionRequest) (*CloseSessionResponse, error) {
@@ -75,18 +71,14 @@ func (a *optionalAgent) SetSessionMode(_ context.Context, params *SetSessionMode
 
 func (a *optionalAgent) SetSessionConfigOption(_ context.Context, params *SetSessionConfigOptionRequest) (*SetSessionConfigOptionResponse, error) {
 	a.record(MethodSessionSetConfigOption, *params)
-	return &SetSessionConfigOptionResponse{ConfigOptions: []SessionConfigOption{{
-		Type:         "select",
-		ID:           "mode",
-		Name:         "Mode",
-		CurrentValue: "code",
-		Options:      SessionConfigSelectOptions{Flat: []SessionConfigSelectOption{{Value: "code", Name: "Code"}}},
-	}}}, nil
+	return &SetSessionConfigOptionResponse{ConfigOptions: []SessionConfigOption{
+		SelectSessionConfigOption("code", SessionConfigSelectOptions{Ungrouped: ptr(UngroupedSessionConfigSelectOptions{{Value: "code", Name: "Code"}})}),
+	}}, nil
 }
 
 func TestOptionalAgentMethods(t *testing.T) {
 	agent := &optionalAgent{}
-	client, done := connectTestClient(t, func(conn *AgentConnection) Agent {
+	client, done := connectTestClient(t, func(conn *AgentConnection) any {
 		agent.testAgent = &testAgent{conn: conn}
 		return agent
 	})
@@ -99,17 +91,21 @@ func TestOptionalAgentMethods(t *testing.T) {
 	if _, err := client.Logout(ctx, &LogoutRequest{}); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := client.LoadSession(ctx, &LoadSessionRequest{SessionID: "s1", CWD: "/repo"}); err != nil {
+	if got, err := client.LoadSession(ctx, &LoadSessionRequest{SessionID: "s1", Cwd: "/repo"}); err != nil {
 		t.Fatal(err)
-	} else if len(got.ConfigOptions) != 1 {
-		t.Fatalf("load config options = %d, want 1", len(got.ConfigOptions))
+	} else if got.ConfigOptions == nil || len(*got.ConfigOptions) != 1 {
+		count := 0
+		if got.ConfigOptions != nil {
+			count = len(*got.ConfigOptions)
+		}
+		t.Fatalf("load config options = %d, want 1", count)
 	}
-	if got, err := client.ResumeSession(ctx, &ResumeSessionRequest{SessionID: "s1", CWD: "/repo"}); err != nil {
+	if got, err := client.ResumeSession(ctx, &ResumeSessionRequest{SessionID: "s1", Cwd: "/repo"}); err != nil {
 		t.Fatal(err)
 	} else if got.Modes == nil || got.Modes.CurrentModeID != "code" {
 		t.Fatalf("resume modes = %#v, want code mode", got.Modes)
 	}
-	if got, err := client.ListSessions(ctx, &ListSessionsRequest{CWD: "/repo"}); err != nil {
+	if got, err := client.ListSessions(ctx, &ListSessionsRequest{Cwd: ptr("/repo")}); err != nil {
 		t.Fatal(err)
 	} else if len(got.Sessions) != 1 || got.Sessions[0].SessionID != "s1" {
 		t.Fatalf("sessions = %#v, want s1", got.Sessions)
@@ -120,7 +116,7 @@ func TestOptionalAgentMethods(t *testing.T) {
 	if _, err := client.SetSessionMode(ctx, &SetSessionModeRequest{SessionID: "s1", ModeID: "code"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.SetSessionConfigOption(ctx, &SetSessionConfigOptionRequest{SessionID: "s1", ConfigID: "mode", Value: "code"}); err != nil {
+	if _, err := client.SetSessionConfigOption(ctx, &SetSessionConfigOptionRequest{Value: "code"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -130,11 +126,11 @@ func TestOptionalAgentMethods(t *testing.T) {
 	if got := recordedCall[LoadSessionRequest](t, agent, MethodSessionLoad).SessionID; got != "s1" {
 		t.Fatalf("load session ID = %q, want s1", got)
 	}
-	if got := recordedCall[ResumeSessionRequest](t, agent, MethodSessionResume).CWD; got != "/repo" {
+	if got := recordedCall[ResumeSessionRequest](t, agent, MethodSessionResume).Cwd; got != "/repo" {
 		t.Fatalf("resume cwd = %q, want /repo", got)
 	}
-	if got := recordedCall[ListSessionsRequest](t, agent, MethodSessionList).CWD; got != "/repo" {
-		t.Fatalf("list cwd = %q, want /repo", got)
+	if got := recordedCall[ListSessionsRequest](t, agent, MethodSessionList).Cwd; got == nil || *got != "/repo" {
+		t.Fatalf("list cwd = %v, want /repo", got)
 	}
 	if got := recordedCall[CloseSessionRequest](t, agent, MethodSessionClose).SessionID; got != "s1" {
 		t.Fatalf("close session ID = %q, want s1", got)
@@ -163,14 +159,14 @@ func recordedCall[T any](t *testing.T, agent *optionalAgent, method string) T {
 }
 
 func TestUnsupportedOptionalAgentMethodReturnsMethodNotFound(t *testing.T) {
-	client, done := connectTestClient(t, func(conn *AgentConnection) Agent {
+	client, done := connectTestClient(t, func(conn *AgentConnection) any {
 		return &testAgent{conn: conn}
 	})
 	defer closeClient(t, client, done)
 
-	_, err := client.LoadSession(t.Context(), &LoadSessionRequest{SessionID: "s1", CWD: "/repo"})
+	_, err := client.Authenticate(t.Context(), &AuthenticateRequest{MethodID: "agent"})
 	if err == nil {
-		t.Fatal("LoadSession succeeded, want method not found")
+		t.Fatal("Authenticate succeeded, want method not found")
 	}
 	var wireErr *jsonrpc.Error
 	if !errors.As(err, &wireErr) {
@@ -187,13 +183,13 @@ type cancelAgent struct {
 }
 
 func (a *cancelAgent) Cancel(_ context.Context, params *CancelNotification) error {
-	a.cancelled <- params.SessionID
+	a.cancelled <- string(params.SessionID)
 	return nil
 }
 
 func TestCancelNotificationDispatchesToAgent(t *testing.T) {
 	cancelled := make(chan string, 1)
-	client, done := connectTestClient(t, func(conn *AgentConnection) Agent {
+	client, done := connectTestClient(t, func(conn *AgentConnection) any {
 		return &cancelAgent{testAgent: &testAgent{conn: conn}, cancelled: cancelled}
 	})
 	defer closeClient(t, client, done)
@@ -223,7 +219,7 @@ func (a *countingAgent) Prompt(context.Context, *PromptRequest) (*PromptResponse
 
 func TestMultipleClientRequestsComplete(t *testing.T) {
 	agent := &countingAgent{}
-	client, done := connectTestClient(t, func(conn *AgentConnection) Agent {
+	client, done := connectTestClient(t, func(conn *AgentConnection) any {
 		agent.testAgent = &testAgent{conn: conn}
 		return agent
 	})
@@ -235,7 +231,7 @@ func TestMultipleClientRequestsComplete(t *testing.T) {
 	var wg sync.WaitGroup
 	for range n {
 		wg.Go(func() {
-			_, err := client.Prompt(ctx, &PromptRequest{SessionID: "s1", Prompt: []ContentBlock{{Type: ContentTypeText, Text: "hi"}}})
+			_, err := client.Prompt(ctx, &PromptRequest{SessionID: "s1", Prompt: []ContentBlock{{Type: ContentBlockTypeText, Text: "hi"}}})
 			errs <- err
 		})
 	}
@@ -252,12 +248,12 @@ func TestMultipleClientRequestsComplete(t *testing.T) {
 }
 
 func TestClientCallbackTypedNilErrorsDoNotProduceResults(t *testing.T) {
-	client, done := connectTestClientWithHandler(t, &failingFileHandler{}, func(conn *AgentConnection) Agent {
+	client, done := connectTestClientWithHandler(t, &failingFileHandler{}, func(conn *AgentConnection) any {
 		return &readFileAgent{conn: conn}
 	})
 	defer closeClient(t, client, done)
 
-	_, err := client.Prompt(t.Context(), &PromptRequest{SessionID: "s1", Prompt: []ContentBlock{{Type: ContentTypeText, Text: "read"}}})
+	_, err := client.Prompt(t.Context(), &PromptRequest{SessionID: "s1", Prompt: []ContentBlock{{Type: ContentBlockTypeText, Text: "read"}}})
 	if err == nil {
 		t.Fatal("Prompt succeeded, want callback error")
 	}
@@ -268,7 +264,7 @@ func TestClientCallbackTypedNilErrorsDoNotProduceResults(t *testing.T) {
 
 type failingFileHandler struct{}
 
-func (*failingFileHandler) SessionUpdate(context.Context, *SessionNotification) error { return nil }
+func (*failingFileHandler) Update(context.Context, *SessionNotification) error { return nil }
 
 func (*failingFileHandler) ReadTextFile(context.Context, *ReadTextFileRequest) (*ReadTextFileResponse, error) {
 	return nil, errReadTextFileFailed
@@ -281,12 +277,12 @@ func (*failingFileHandler) WriteTextFile(context.Context, *WriteTextFileRequest)
 var errReadTextFileFailed = errors.New("read text file failed")
 
 func TestClientRejectsRequestsAfterClose(t *testing.T) {
-	client, done := connectTestClient(t, func(conn *AgentConnection) Agent {
+	client, done := connectTestClient(t, func(conn *AgentConnection) any {
 		return &testAgent{conn: conn}
 	})
 	closeClient(t, client, done)
 
-	_, err := client.NewSession(t.Context(), &NewSessionRequest{CWD: "/repo"})
+	_, err := client.NewSession(t.Context(), &NewSessionRequest{Cwd: "/repo"})
 	if err == nil {
 		t.Fatal("NewSession after close succeeded")
 	}
@@ -296,12 +292,12 @@ func TestClientRejectsRequestsAfterClose(t *testing.T) {
 }
 
 func TestMissingClientCallbackReturnsMethodNotFound(t *testing.T) {
-	client, done := connectTestClientWithHandler(t, &sessionOnlyHandler{}, func(conn *AgentConnection) Agent {
+	client, done := connectTestClientWithHandler(t, &sessionOnlyHandler{}, func(conn *AgentConnection) any {
 		return &readFileAgent{conn: conn}
 	})
 	defer closeClient(t, client, done)
 
-	_, err := client.Prompt(t.Context(), &PromptRequest{SessionID: "s1", Prompt: []ContentBlock{{Type: ContentTypeText, Text: "read"}}})
+	_, err := client.Prompt(t.Context(), &PromptRequest{SessionID: "s1", Prompt: []ContentBlock{{Type: ContentBlockTypeText, Text: "read"}}})
 	if err == nil {
 		t.Fatal("Prompt succeeded, want method not found from missing client callback")
 	}
@@ -316,14 +312,15 @@ func TestMissingClientCallbackReturnsMethodNotFound(t *testing.T) {
 
 type sessionOnlyHandler struct{}
 
-func (*sessionOnlyHandler) SessionUpdate(context.Context, *SessionNotification) error { return nil }
+func (*sessionOnlyHandler) Update(context.Context, *SessionNotification) error { return nil }
 
 type readFileAgent struct {
+	noopSessionHandler
 	conn *AgentConnection
 }
 
 func (a *readFileAgent) Initialize(context.Context, *InitializeRequest) (*InitializeResponse, error) {
-	return &InitializeResponse{ProtocolVersion: ProtocolVersion}, nil
+	return &InitializeResponse{ProtocolVersion: ProtocolVersion(1)}, nil
 }
 
 func (a *readFileAgent) NewSession(context.Context, *NewSessionRequest) (*NewSessionResponse, error) {
@@ -345,7 +342,7 @@ func connectTestClient(t *testing.T, newAgent AgentFactory) (*Client, chan error
 	return connectTestClientWithHandler(t, newTestClientHandler(), newAgent)
 }
 
-func connectTestClientWithHandler(t *testing.T, handler ClientHandler, newAgent AgentFactory) (*Client, chan error) {
+func connectTestClientWithHandler(t *testing.T, handler any, newAgent AgentFactory) (*Client, chan error) {
 	t.Helper()
 	clientTransport, agentTransport := NewInMemoryTransports()
 	done := make(chan error, 1)

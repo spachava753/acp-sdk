@@ -30,7 +30,7 @@ func (c *AgentConnection) WriteTask(ctx context.Context, params *WriteTaskReques
 	return call[WriteTaskResponse](ctx, c.rpc.conn, MethodTaskWrite, params)
 }
 
-func handleAgentRequest(ctx context.Context, agent Agent, req *jsonrpc.Request) (any, error) {
+func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
 	if agent == nil {
 		return nil, methodNotFound(req.Method)

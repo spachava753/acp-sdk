@@ -2,6 +2,12 @@ package acp
 
 import "encoding/json"
 
+// AliasA: First named string alias.
+type AliasA string
+
+// AliasB: Second named string alias.
+type AliasB string
+
 // AuthMethod: Authentication method union with a default variant.
 type AuthMethod struct {
 	Type    AuthMethodType `json:"type,omitempty"`
@@ -69,8 +75,107 @@ type AuthMethodTerminal struct {
 	Name    string `json:"name"`
 }
 
+// Collision: Union whose constructor name would collide with a referenced variant type.
+type Collision struct {
+	Value string `json:"value"`
+}
+
+// NewSpecialCollision creates an Collision variant: Collision variant branch.
+func NewSpecialCollision(value string) Collision {
+	return Collision{
+		Value: value,
+	}
+}
+
 // ElicitationContentValue: Primitive or string-array elicitation content.
 type ElicitationContentValue = json.RawMessage
+
+// NestedObject: Nested object that must disappear when its flattened union field is zero.
+type NestedObject struct {
+	URI string `json:"uri"`
+}
+
+// ObjectFieldUnion: Flattened union with an optional object-valued variant field.
+type ObjectFieldUnion struct {
+	Type   ObjectFieldUnionType `json:"type"`
+	Items  []string             `json:"items,omitempty"`
+	Nested NestedObject         `json:"nested,omitempty,omitzero"`
+	Text   string               `json:"text,omitempty"`
+}
+
+// ObjectFieldUnionType is the discriminator for ObjectFieldUnion variants.
+type ObjectFieldUnionType string
+
+const (
+	ObjectFieldUnionTypeText   ObjectFieldUnionType = "text"
+	ObjectFieldUnionTypeNested ObjectFieldUnionType = "nested"
+)
+
+// TextObjectFieldUnion creates text branch.
+func TextObjectFieldUnion(text string, items []string) ObjectFieldUnion {
+	return ObjectFieldUnion{
+		Type:  ObjectFieldUnionTypeText,
+		Items: items,
+		Text:  text,
+	}
+}
+
+// NestedObjectFieldUnion creates nested object branch.
+func NestedObjectFieldUnion(nested NestedObject) ObjectFieldUnion {
+	return ObjectFieldUnion{
+		Type:   ObjectFieldUnionTypeNested,
+		Nested: nested,
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (u ObjectFieldUnion) MarshalJSON() ([]byte, error) {
+	type alias ObjectFieldUnion
+	type wire struct {
+		*alias
+		Items *[]string `json:"items,omitempty"`
+	}
+	w := wire{alias: (*alias)(&u)}
+	switch u.Type {
+	case ObjectFieldUnionTypeText:
+		Items := u.Items
+		if Items == nil {
+			Items = []string{}
+		}
+		w.Items = &Items
+	}
+	return json.Marshal(w)
+}
+
+// PlainLeft: Left variant without a discriminator.
+type PlainLeft struct {
+	Left string `json:"left"`
+}
+
+// PlainRight: Right variant without a discriminator.
+type PlainRight struct {
+	Right string `json:"right"`
+}
+
+// PlainUnion: Titled referenced object union without a const discriminator.
+type PlainUnion struct {
+	Left  string `json:"left,omitempty"`
+	Right string `json:"right,omitempty"`
+}
+
+// LeftPlainUnion creates an PlainUnion variant: Left branch.
+func LeftPlainUnion(left string) PlainUnion {
+	return PlainUnion{
+		Left: left,
+	}
+}
+
+// RightPlainUnion creates an PlainUnion variant: Right branch.
+func RightPlainUnion(right string) PlainUnion {
+	return PlainUnion{
+		Right: right,
+	}
+}
 
 // RequestId: JSON-RPC request identifier.
 type RequestId = json.RawMessage
@@ -157,10 +262,58 @@ func (o *SelectOptions) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// SharedFieldUnion: Flattened union with repeated fields that use compatible aliases and incompatible primitive kinds.
+type SharedFieldUnion struct {
+	Kind  SharedFieldUnionType `json:"kind"`
+	Value any                  `json:"value"`
+}
+
+// SharedFieldUnionType is the discriminator for SharedFieldUnion variants.
+type SharedFieldUnionType string
+
+const (
+	SharedFieldUnionTypeAliasOne SharedFieldUnionType = "alias_one"
+	SharedFieldUnionTypeAliasTwo SharedFieldUnionType = "alias_two"
+	SharedFieldUnionTypeBoolean  SharedFieldUnionType = "boolean"
+)
+
+// AliasOneSharedFieldUnion creates alias string branch.
+func AliasOneSharedFieldUnion(value AliasA) SharedFieldUnion {
+	return SharedFieldUnion{
+		Kind:  SharedFieldUnionTypeAliasOne,
+		Value: value,
+	}
+}
+
+// AliasTwoSharedFieldUnion creates second alias string branch.
+func AliasTwoSharedFieldUnion(value AliasB) SharedFieldUnion {
+	return SharedFieldUnion{
+		Kind:  SharedFieldUnionTypeAliasTwo,
+		Value: value,
+	}
+}
+
+// BooleanSharedFieldUnion creates boolean branch sharing the same value field name.
+func BooleanSharedFieldUnion(value bool) SharedFieldUnion {
+	return SharedFieldUnion{
+		Kind:  SharedFieldUnionTypeBoolean,
+		Value: value,
+	}
+}
+
+// SpecialCollision: Referenced variant whose name would collide with the generated constructor.
+type SpecialCollision struct {
+	Value string `json:"value"`
+}
+
 // UnionContainer: Object that references hard union shapes.
 type UnionContainer struct {
 	Auth          AuthMethod              `json:"auth"`
+	Collision     *Collision              `json:"collision,omitempty"`
 	Content       ElicitationContentValue `json:"content,omitempty"`
+	ObjectField   *ObjectFieldUnion       `json:"objectField,omitempty"`
+	Plain         *PlainUnion             `json:"plain,omitempty"`
 	RequestID     RequestId               `json:"requestId"`
 	SelectOptions SelectOptions           `json:"selectOptions"`
+	Shared        *SharedFieldUnion       `json:"shared,omitempty"`
 }

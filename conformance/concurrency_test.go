@@ -17,7 +17,7 @@ import (
 
 func TestConformanceConcurrentPrompts(t *testing.T) {
 	agent := &concurrentAgent{}
-	client, done := connectConformanceClient(t, newConformanceClient(), func(*acp.AgentConnection) acp.Agent {
+	client, done := connectConformanceClient(t, newConformanceClient(), func(*acp.AgentConnection) any {
 		return agent
 	})
 	defer closeConformanceClient(t, client, done)
@@ -28,8 +28,8 @@ func TestConformanceConcurrentPrompts(t *testing.T) {
 	for i := range n {
 		wg.Go(func() {
 			_, err := client.Prompt(t.Context(), &acp.PromptRequest{
-				SessionID: fmt.Sprintf("sess-%d", i),
-				Prompt:    []acp.ContentBlock{{Type: acp.ContentTypeText, Text: "hello"}},
+				SessionID: acp.SessionId(fmt.Sprintf("sess-%d", i)),
+				Prompt:    []acp.ContentBlock{{Type: acp.ContentBlockTypeText, Text: "hello"}},
 			})
 			errs <- err
 		})
@@ -47,15 +47,16 @@ func TestConformanceConcurrentPrompts(t *testing.T) {
 }
 
 type concurrentAgent struct {
+	noopSessionHandler
 	prompts atomic.Int64
 }
 
 func (a *concurrentAgent) Initialize(context.Context, *acp.InitializeRequest) (*acp.InitializeResponse, error) {
-	return &acp.InitializeResponse{ProtocolVersion: acp.ProtocolVersion, AuthMethods: []acp.AuthMethod{}}, nil
+	return &acp.InitializeResponse{ProtocolVersion: acp.ProtocolVersion(1), AuthMethods: []acp.AuthMethod{}}, nil
 }
 
 func (a *concurrentAgent) NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
-	return &acp.NewSessionResponse{SessionID: "sess-123"}, nil
+	return &acp.NewSessionResponse{SessionID: acp.SessionId("sess-123")}, nil
 }
 
 func (a *concurrentAgent) Prompt(context.Context, *acp.PromptRequest) (*acp.PromptResponse, error) {
