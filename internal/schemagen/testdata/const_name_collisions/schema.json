@@ -1,0 +1,51 @@
+{
+  "$defs": {
+    "CollisionConstEnum": {
+      "description": "String constants whose values normalize to the same Go suffix.",
+      "oneOf": [
+        {
+          "description": "Hyphenated status.",
+          "type": "string",
+          "const": "in-progress"
+        },
+        {
+          "description": "Underscored status.",
+          "type": "string",
+          "const": "in_progress"
+        },
+        {
+          "description": "Spaced status.",
+          "type": "string",
+          "const": "in progress"
+        }
+      ]
+    },
+    "CollisionEnum": {
+      "description": "A string enum whose values normalize to the same Go suffix.",
+      "type": "string",
+      "enum": ["in-progress", "in_progress", "in progress"]
+    },
+    "OpenStatus": {
+      "description": "Open string constants whose known values normalize to the same Go suffix.",
+      "anyOf": [
+        {
+          "description": "Known hyphenated status.",
+          "type": "string",
+          "const": "in-progress"
+        },
+        {
+          "description": "Known underscored status.",
+          "type": "string",
+          "const": "in_progress"
+        },
+        {
+          "title": "Other",
+          "description": "Any other status.",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Const Name Collisions Test Fixture"
+}

@@ -1,0 +1,32 @@
+package acp
+
+// CollisionConstEnum: String constants whose values normalize to the same Go suffix.
+type CollisionConstEnum string
+
+const (
+	// CollisionConstEnumInProgress: Hyphenated status.
+	CollisionConstEnumInProgress CollisionConstEnum = "in-progress"
+	// CollisionConstEnumInProgress2: Underscored status.
+	CollisionConstEnumInProgress2 CollisionConstEnum = "in_progress"
+	// CollisionConstEnumInProgress3: Spaced status.
+	CollisionConstEnumInProgress3 CollisionConstEnum = "in progress"
+)
+
+// CollisionEnum: A string enum whose values normalize to the same Go suffix.
+type CollisionEnum string
+
+const (
+	CollisionEnumInProgress  CollisionEnum = "in-progress"
+	CollisionEnumInProgress2 CollisionEnum = "in_progress"
+	CollisionEnumInProgress3 CollisionEnum = "in progress"
+)
+
+// OpenStatus: Open string constants whose known values normalize to the same Go suffix.
+type OpenStatus string
+
+const (
+	// OpenStatusInProgress: Known hyphenated status.
+	OpenStatusInProgress OpenStatus = "in-progress"
+	// OpenStatusInProgress2: Known underscored status.
+	OpenStatusInProgress2 OpenStatus = "in_progress"
+)

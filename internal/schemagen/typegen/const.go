@@ -15,13 +15,14 @@ import (
 
 func stringConstEnumCode(name string, schema *jsonschema.Schema) []jen.Code {
 	var values []jen.Code
+	usedNames := map[string]bool{}
 	branches := schema.OneOf
 	if len(branches) == 0 {
 		branches = schema.AnyOf
 	}
 	for _, branch := range branches {
 		text, _ := constString(branch)
-		constName := name + primitiveConstName(branch)
+		constName := uniqueConstName(name+primitiveConstName(branch), usedNames)
 		values = append(values, commented(constName, branch.Description, jen.Id(constName).Id(name).Op("=").Lit(text)))
 	}
 	return []jen.Code{
@@ -54,11 +55,12 @@ func isStringConstEnum(schema *jsonschema.Schema) bool {
 func primitiveConstUnionCode(name string, schema *jsonschema.Schema) []jen.Code {
 	kind, format, _ := primitiveConstUnionKind(schema)
 	var values []jen.Code
+	usedNames := map[string]bool{}
 	for _, branch := range unionBranches(schema) {
 		if branch.Const == nil {
 			continue
 		}
-		constName := name + primitiveConstName(branch)
+		constName := uniqueConstName(name+primitiveConstName(branch), usedNames)
 		values = append(values, commented(constName, branch.Description, jen.Id(constName).Id(name).Op("=").Add(primitiveConstLiteral(kind, *branch.Const))))
 	}
 	return []jen.Code{
@@ -183,6 +185,20 @@ func constValueName(value any) string {
 		return "Value"
 	}
 	return name
+}
+
+func uniqueConstName(name string, used map[string]bool) string {
+	if !used[name] {
+		used[name] = true
+		return name
+	}
+	for suffix := 2; ; suffix++ {
+		candidate := fmt.Sprintf("%s%d", name, suffix)
+		if !used[candidate] {
+			used[candidate] = true
+			return candidate
+		}
+	}
 }
 
 func constString(schema *jsonschema.Schema) (string, bool) {

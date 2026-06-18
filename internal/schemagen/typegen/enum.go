@@ -11,12 +11,14 @@ import (
 
 func stringEnumCode(name string, schema *jsonschema.Schema) []jen.Code {
 	var values []jen.Code
+	usedNames := map[string]bool{}
 	for _, value := range schema.Enum {
 		text, ok := value.(string)
 		if !ok {
 			continue
 		}
-		values = append(values, jen.Id(name+constValueName(text)).Id(name).Op("=").Lit(text))
+		constName := uniqueConstName(name+constValueName(text), usedNames)
+		values = append(values, jen.Id(constName).Id(name).Op("=").Lit(text))
 	}
 	return []jen.Code{
 		commented(name, schema.Description, jen.Type().Id(name).String()),
