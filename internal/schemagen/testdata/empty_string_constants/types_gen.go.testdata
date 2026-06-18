@@ -1,0 +1,29 @@
+package acp
+
+// EmptyConstEnum: String constants including the empty string.
+type EmptyConstEnum string
+
+const (
+	// EmptyConstEnumEmpty: No status was provided.
+	EmptyConstEnumEmpty EmptyConstEnum = ""
+	// EmptyConstEnumActive: The status is active.
+	EmptyConstEnumActive EmptyConstEnum = "active"
+)
+
+// EmptyEnum: String enum including the empty string.
+type EmptyEnum string
+
+const (
+	EmptyEnumEmpty EmptyEnum = ""
+	EmptyEnumReady EmptyEnum = "ready"
+)
+
+// OpenStatus: Open string constants including the empty string.
+type OpenStatus string
+
+const (
+	// OpenStatusEmpty: No explicit status.
+	OpenStatusEmpty OpenStatus = ""
+	// OpenStatusInProgress: Work is in progress.
+	OpenStatusInProgress OpenStatus = "in-progress"
+)

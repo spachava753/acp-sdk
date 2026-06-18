@@ -1,0 +1,46 @@
+{
+  "$defs": {
+    "EmptyConstEnum": {
+      "description": "String constants including the empty string.",
+      "oneOf": [
+        {
+          "description": "No status was provided.",
+          "type": "string",
+          "const": ""
+        },
+        {
+          "description": "The status is active.",
+          "type": "string",
+          "const": "active"
+        }
+      ]
+    },
+    "EmptyEnum": {
+      "description": "String enum including the empty string.",
+      "type": "string",
+      "enum": ["", "ready"]
+    },
+    "OpenStatus": {
+      "description": "Open string constants including the empty string.",
+      "anyOf": [
+        {
+          "description": "No explicit status.",
+          "type": "string",
+          "const": ""
+        },
+        {
+          "description": "Work is in progress.",
+          "type": "string",
+          "const": "in-progress"
+        },
+        {
+          "title": "Other",
+          "description": "Any other status.",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Empty String Constants Test Fixture"
+}

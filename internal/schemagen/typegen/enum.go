@@ -16,7 +16,7 @@ func stringEnumCode(name string, schema *jsonschema.Schema) []jen.Code {
 		if !ok {
 			continue
 		}
-		values = append(values, jen.Id(name+pascalIdentifier(text)).Id(name).Op("=").Lit(text))
+		values = append(values, jen.Id(name+constValueName(text)).Id(name).Op("=").Lit(text))
 	}
 	return []jen.Code{
 		commented(name, schema.Description, jen.Type().Id(name).String()),

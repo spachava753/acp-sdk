@@ -21,7 +21,7 @@ func stringConstEnumCode(name string, schema *jsonschema.Schema) []jen.Code {
 	}
 	for _, branch := range branches {
 		text, _ := constString(branch)
-		constName := name + pascalIdentifier(text)
+		constName := name + primitiveConstName(branch)
 		values = append(values, commented(constName, branch.Description, jen.Id(constName).Id(name).Op("=").Lit(text)))
 	}
 	return []jen.Code{
@@ -163,12 +163,26 @@ func primitiveConstLiteral(kind string, value any) jen.Code {
 
 func primitiveConstName(branch *jsonschema.Schema) string {
 	if branch.Title != "" {
-		return pascalIdentifier(branch.Title)
+		name := pascalIdentifier(branch.Title)
+		if name != "" {
+			return name
+		}
 	}
 	if branch.Const == nil {
 		return ""
 	}
-	return pascalIdentifier(fmt.Sprint(*branch.Const))
+	return constValueName(*branch.Const)
+}
+
+func constValueName(value any) string {
+	if text, ok := value.(string); ok && text == "" {
+		return "Empty"
+	}
+	name := pascalIdentifier(fmt.Sprint(value))
+	if name == "" {
+		return "Value"
+	}
+	return name
 }
 
 func constString(schema *jsonschema.Schema) (string, bool) {
