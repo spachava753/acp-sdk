@@ -17,9 +17,15 @@ type deserializeField struct {
 	typeCode         jen.Code
 	typeText         string
 	itemTypeCode     jen.Code
+	itemValidator    *skipInvalidItemValidator
 	enumValues       []string
 	defaultOnError   bool
 	skipInvalidItems bool
+}
+
+type skipInvalidItemValidator struct {
+	discriminator string
+	cases         []jen.Code
 }
 
 func newDeserializeField(defs map[string]*jsonschema.Schema, jsonName string, prop *jsonschema.Schema, typeCode jen.Code, typeText string) deserializeField {
@@ -35,6 +41,7 @@ func newDeserializeField(defs map[string]*jsonschema.Schema, jsonName string, pr
 	if _, ok := skipInvalidItemsTarget(field); ok {
 		if itemSchema := deserializeItemSchema(prop); itemSchema != nil {
 			field.itemTypeCode, _ = schemaType(defs, itemSchema, false)
+			field.itemValidator = skipInvalidItemsValidator(defs, itemSchema)
 		}
 	}
 	return field
@@ -51,6 +58,53 @@ func deserializeItemSchema(schema *jsonschema.Schema) *jsonschema.Schema {
 		return schema.Items
 	}
 	return nil
+}
+
+func skipInvalidItemsValidator(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) *skipInvalidItemValidator {
+	name := referencedDefinitionName(schema)
+	if name == "" {
+		return nil
+	}
+	def := defs[name]
+	if def == nil || !isDiscriminatorUnion(defs, def) {
+		return nil
+	}
+	branches := unionBranches(def)
+	discriminator := discriminatorField(defs, branches)
+	if discriminator == "" {
+		return nil
+	}
+	seen := map[string]bool{}
+	var cases []jen.Code
+	for _, branch := range branches {
+		value, _ := variantConst(defs, branch)
+		if seen[value] {
+			continue
+		}
+		seen[value] = true
+		if value == "" {
+			cases = append(cases, jen.Lit(""))
+			continue
+		}
+		cases = append(cases, jen.Id(name+"Type"+pascalIdentifier(value)))
+	}
+	if len(cases) == 0 {
+		return nil
+	}
+	return &skipInvalidItemValidator{discriminator: fieldName(discriminator), cases: cases}
+}
+
+func referencedDefinitionName(schema *jsonschema.Schema) string {
+	if schema == nil {
+		return ""
+	}
+	if schema.Ref != "" {
+		return refName(schema.Ref)
+	}
+	if len(schema.AllOf) == 1 && schema.AllOf[0].Ref != "" {
+		return refName(schema.AllOf[0].Ref)
+	}
+	return ""
 }
 
 func stringEnumValues(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) []string {
@@ -112,6 +166,9 @@ func mergeDeserializeRules(existing, field deserializeField) deserializeField {
 	}
 	if existing.itemTypeCode == nil {
 		existing.itemTypeCode = field.itemTypeCode
+	}
+	if existing.itemValidator == nil {
+		existing.itemValidator = field.itemValidator
 	}
 	return existing
 }
@@ -232,24 +289,34 @@ func skipInvalidItemsCode(field deserializeField, pointer bool) []jen.Code {
 
 func skipInvalidItemsDecodeValues(field deserializeField, pointer bool) []jen.Code {
 	if pointer {
+		appendItem := jen.Id("items").Op("=").Append(jen.Id("items"), jen.Id("item"))
 		return []jen.Code{
 			jen.Id("items").Op(":=").Index().Add(field.itemTypeCode).Values(),
 			jen.For(jen.List(jen.Id("_"), jen.Id("value")).Op(":=").Range().Id("values")).Block(
 				jen.Var().Id("item").Add(field.itemTypeCode),
-				jen.If(jen.Err().Op(":=").Qual("encoding/json", "Unmarshal").Call(jen.Id("value"), jen.Op("&").Id("item")), jen.Err().Op("==").Nil()).Block(
-					jen.Id("items").Op("=").Append(jen.Id("items"), jen.Id("item")),
-				),
+				skipInvalidItemDecodeCode(field, appendItem),
 			),
 			jen.Id("decoded").Dot(field.goName).Op("=").Op("&").Id("items"),
 		}
 	}
+	appendItem := jen.Id("decoded").Dot(field.goName).Op("=").Append(jen.Id("decoded").Dot(field.goName), jen.Id("item"))
 	return []jen.Code{
 		jen.Id("decoded").Dot(field.goName).Op("=").Add(field.typeCode).Values(),
 		jen.For(jen.List(jen.Id("_"), jen.Id("value")).Op(":=").Range().Id("values")).Block(
 			jen.Var().Id("item").Add(field.itemTypeCode),
-			jen.If(jen.Err().Op(":=").Qual("encoding/json", "Unmarshal").Call(jen.Id("value"), jen.Op("&").Id("item")), jen.Err().Op("==").Nil()).Block(
-				jen.Id("decoded").Dot(field.goName).Op("=").Append(jen.Id("decoded").Dot(field.goName), jen.Id("item")),
-			),
+			skipInvalidItemDecodeCode(field, appendItem),
 		),
 	}
+}
+
+func skipInvalidItemDecodeCode(field deserializeField, appendItem jen.Code) jen.Code {
+	body := []jen.Code{appendItem}
+	if field.itemValidator != nil {
+		body = []jen.Code{
+			jen.Switch(jen.Id("item").Dot(field.itemValidator.discriminator)).Block(
+				jen.Case(field.itemValidator.cases...).Block(appendItem),
+			),
+		}
+	}
+	return jen.If(jen.Err().Op(":=").Qual("encoding/json", "Unmarshal").Call(jen.Id("value"), jen.Op("&").Id("item")), jen.Err().Op("==").Nil()).Block(body...)
 }

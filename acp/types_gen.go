@@ -587,7 +587,10 @@ func (u *ConfigOptionUpdate) UnmarshalJSON(data []byte) error {
 			for _, value := range values {
 				var item SessionConfigOption
 				if err := json.Unmarshal(value, &item); err == nil {
-					decoded.ConfigOptions = append(decoded.ConfigOptions, item)
+					switch item.Type {
+					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
+						decoded.ConfigOptions = append(decoded.ConfigOptions, item)
+					}
 				}
 			}
 		}
@@ -1427,7 +1430,10 @@ func (r *ForkSessionResponse) UnmarshalJSON(data []byte) error {
 			for _, value := range values {
 				var item SessionConfigOption
 				if err := json.Unmarshal(value, &item); err == nil {
-					items = append(items, item)
+					switch item.Type {
+					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
+						items = append(items, item)
+					}
 				}
 			}
 			decoded.ConfigOptions = &items
@@ -1549,7 +1555,10 @@ func (r *InitializeResponse) UnmarshalJSON(data []byte) error {
 			for _, value := range values {
 				var item AuthMethod
 				if err := json.Unmarshal(value, &item); err == nil {
-					decoded.AuthMethods = append(decoded.AuthMethods, item)
+					switch item.Type {
+					case AuthMethodTypeEnvVar, AuthMethodTypeTerminal, "":
+						decoded.AuthMethods = append(decoded.AuthMethods, item)
+					}
 				}
 			}
 		}
@@ -1726,7 +1735,10 @@ func (r *LoadSessionResponse) UnmarshalJSON(data []byte) error {
 			for _, value := range values {
 				var item SessionConfigOption
 				if err := json.Unmarshal(value, &item); err == nil {
-					items = append(items, item)
+					switch item.Type {
+					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
+						items = append(items, item)
+					}
 				}
 			}
 			decoded.ConfigOptions = &items
@@ -2734,7 +2746,10 @@ func (r *NewSessionResponse) UnmarshalJSON(data []byte) error {
 			for _, value := range values {
 				var item SessionConfigOption
 				if err := json.Unmarshal(value, &item); err == nil {
-					items = append(items, item)
+					switch item.Type {
+					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
+						items = append(items, item)
+					}
 				}
 			}
 			decoded.ConfigOptions = &items
@@ -3422,7 +3437,10 @@ func (r *ResumeSessionResponse) UnmarshalJSON(data []byte) error {
 			for _, value := range values {
 				var item SessionConfigOption
 				if err := json.Unmarshal(value, &item); err == nil {
-					items = append(items, item)
+					switch item.Type {
+					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
+						items = append(items, item)
+					}
 				}
 			}
 			decoded.ConfigOptions = &items
@@ -4100,7 +4118,10 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 			for _, value := range values {
 				var item SessionConfigOption
 				if err := json.Unmarshal(value, &item); err == nil {
-					decoded.ConfigOptions = append(decoded.ConfigOptions, item)
+					switch item.Type {
+					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
+						decoded.ConfigOptions = append(decoded.ConfigOptions, item)
+					}
 				}
 			}
 		}
@@ -4255,7 +4276,10 @@ func (r *SetSessionConfigOptionResponse) UnmarshalJSON(data []byte) error {
 			for _, value := range values {
 				var item SessionConfigOption
 				if err := json.Unmarshal(value, &item); err == nil {
-					decoded.ConfigOptions = append(decoded.ConfigOptions, item)
+					switch item.Type {
+					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
+						decoded.ConfigOptions = append(decoded.ConfigOptions, item)
+					}
 				}
 			}
 		}
@@ -4447,7 +4471,10 @@ func (r *SuggestNesResponse) UnmarshalJSON(data []byte) error {
 			for _, value := range values {
 				var item NesSuggestion
 				if err := json.Unmarshal(value, &item); err == nil {
-					decoded.Suggestions = append(decoded.Suggestions, item)
+					switch item.Kind {
+					case NesSuggestionTypeEdit, NesSuggestionTypeJump, NesSuggestionTypeRename, NesSuggestionTypeSearchAndReplace:
+						decoded.Suggestions = append(decoded.Suggestions, item)
+					}
 				}
 			}
 		}
@@ -4594,7 +4621,10 @@ func (c *ToolCall) UnmarshalJSON(data []byte) error {
 			for _, value := range values {
 				var item ToolCallContent
 				if err := json.Unmarshal(value, &item); err == nil {
-					decoded.Content = append(decoded.Content, item)
+					switch item.Type {
+					case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
+						decoded.Content = append(decoded.Content, item)
+					}
 				}
 			}
 		}
@@ -4742,7 +4772,10 @@ func (u *ToolCallUpdate) UnmarshalJSON(data []byte) error {
 			for _, value := range values {
 				var item ToolCallContent
 				if err := json.Unmarshal(value, &item); err == nil {
-					items = append(items, item)
+					switch item.Type {
+					case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
+						items = append(items, item)
+					}
 				}
 			}
 			decoded.Content = &items

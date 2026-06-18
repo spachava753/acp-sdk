@@ -1,0 +1,115 @@
+package acp
+
+import "encoding/json"
+
+// FallbackItem: Tagged item with a default branch when type is absent.
+type FallbackItem struct {
+	Type FallbackItemType `json:"type,omitempty"`
+	Path string           `json:"path,omitempty"`
+	Url  string           `json:"url,omitempty"`
+}
+
+// FallbackItemType is the discriminator for FallbackItem variants.
+type FallbackItemType string
+
+const (
+	FallbackItemTypeRemote FallbackItemType = "remote"
+)
+
+// RemoteFallbackItem creates remote item.
+func RemoteFallbackItem(url string) FallbackItem {
+	return FallbackItem{
+		Type: FallbackItemTypeRemote,
+		Url:  url,
+	}
+}
+
+// LocalFallbackItem creates local item used when no type is present.
+func LocalFallbackItem(path string) FallbackItem {
+	return FallbackItem{
+		Path: path,
+	}
+}
+
+// Payload: Object with tolerant arrays of union items.
+type Payload struct {
+	FallbackItems []FallbackItem `json:"fallbackItems,omitempty"`
+	Items         []TaggedItem   `json:"items,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *Payload) UnmarshalJSON(data []byte) error {
+	type alias Payload
+	decoded := alias{}
+	raw := struct {
+		FallbackItems json.RawMessage `json:"fallbackItems"`
+		Items         json.RawMessage `json:"items"`
+		*alias
+	}{alias: &decoded}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.FallbackItems) > 0 {
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.FallbackItems, &values); err == nil {
+			decoded.FallbackItems = []FallbackItem{}
+			for _, value := range values {
+				var item FallbackItem
+				if err := json.Unmarshal(value, &item); err == nil {
+					switch item.Type {
+					case FallbackItemTypeRemote, "":
+						decoded.FallbackItems = append(decoded.FallbackItems, item)
+					}
+				}
+			}
+		}
+	}
+	if len(raw.Items) > 0 {
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Items, &values); err == nil {
+			decoded.Items = []TaggedItem{}
+			for _, value := range values {
+				var item TaggedItem
+				if err := json.Unmarshal(value, &item); err == nil {
+					switch item.Kind {
+					case TaggedItemTypeText, TaggedItemTypeImage:
+						decoded.Items = append(decoded.Items, item)
+					}
+				}
+			}
+		}
+	}
+	*p = Payload(decoded)
+	return nil
+}
+
+// TaggedItem: Tagged item with closed discriminator values.
+type TaggedItem struct {
+	Kind TaggedItemType `json:"kind"`
+	Text string         `json:"text,omitempty"`
+	URI  string         `json:"uri,omitempty"`
+}
+
+// TaggedItemType is the discriminator for TaggedItem variants.
+type TaggedItemType string
+
+const (
+	TaggedItemTypeText  TaggedItemType = "text"
+	TaggedItemTypeImage TaggedItemType = "image"
+)
+
+// TextTaggedItem creates text item.
+func TextTaggedItem(text string) TaggedItem {
+	return TaggedItem{
+		Kind: TaggedItemTypeText,
+		Text: text,
+	}
+}
+
+// ImageTaggedItem creates image item.
+func ImageTaggedItem(uri string) TaggedItem {
+	return TaggedItem{
+		Kind: TaggedItemTypeImage,
+		URI:  uri,
+	}
+}

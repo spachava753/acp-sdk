@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Skip Invalid Union Items",
+  "$defs": {
+    "Payload": {
+      "description": "Object with tolerant arrays of union items.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "description": "Tagged items that skip invalid discriminator values.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TaggedItem"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "fallbackItems": {
+          "description": "Tagged items with a fallback variant.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FallbackItem"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        }
+      }
+    },
+    "TaggedItem": {
+      "description": "Tagged item with closed discriminator values.",
+      "oneOf": [
+        {
+          "title": "Text",
+          "description": "Text item.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "text"
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": ["kind", "text"]
+        },
+        {
+          "title": "Image",
+          "description": "Image item.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "image"
+            },
+            "uri": {
+              "type": "string"
+            }
+          },
+          "required": ["kind", "uri"]
+        }
+      ],
+      "discriminator": {
+        "propertyName": "kind"
+      }
+    },
+    "FallbackItem": {
+      "description": "Tagged item with a default branch when type is absent.",
+      "oneOf": [
+        {
+          "title": "Remote",
+          "description": "Remote item.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "remote"
+            },
+            "url": {
+              "type": "string"
+            }
+          },
+          "required": ["type", "url"]
+        },
+        {
+          "title": "Local",
+          "description": "Local item used when no type is present.",
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": ["path"]
+        }
+      ],
+      "discriminator": {
+        "propertyName": "type"
+      }
+    }
+  }
+}
