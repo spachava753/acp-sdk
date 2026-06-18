@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Discriminatorless Union Slices",
+  "$defs": {
+    "Items": {
+      "description": "Untagged item options with required slice fields.",
+      "anyOf": [
+        {
+          "title": "Plain",
+          "description": "Plain values with a mode label.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlainItems"
+            }
+          ]
+        },
+        {
+          "title": "Titled",
+          "description": "Titled values with display labels.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/TitledItems"
+            }
+          ]
+        }
+      ]
+    },
+    "PlainItems": {
+      "description": "Plain item values.",
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["mode", "values"]
+    },
+    "TitledItems": {
+      "description": "Titled item values.",
+      "type": "object",
+      "properties": {
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TitledOption"
+          }
+        }
+      },
+      "required": ["options"]
+    },
+    "TitledOption": {
+      "description": "Option with a display label.",
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": ["label", "value"]
+    }
+  }
+}

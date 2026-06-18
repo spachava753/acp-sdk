@@ -2034,6 +2034,9 @@ type MultiSelectItems struct {
 
 // NewUntitledMultiSelectItems creates an MultiSelectItems variant: Untitled multi-select items with plain string values.
 func NewUntitledMultiSelectItems(type_ ElicitationStringType, enum []string) MultiSelectItems {
+	if enum == nil {
+		enum = []string{}
+	}
 	return MultiSelectItems{
 		Enum: enum,
 		Type: type_,
@@ -2042,9 +2045,32 @@ func NewUntitledMultiSelectItems(type_ ElicitationStringType, enum []string) Mul
 
 // NewTitledMultiSelectItems creates an MultiSelectItems variant: Titled multi-select items with human-readable labels.
 func NewTitledMultiSelectItems(anyOf []EnumOption) MultiSelectItems {
+	if anyOf == nil {
+		anyOf = []EnumOption{}
+	}
 	return MultiSelectItems{
 		AnyOf: anyOf,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (i MultiSelectItems) MarshalJSON() ([]byte, error) {
+	type alias MultiSelectItems
+	type wire struct {
+		*alias
+		AnyOf *[]EnumOption `json:"anyOf,omitempty"`
+		Enum  *[]string     `json:"enum,omitempty"`
+	}
+	w := wire{alias: (*alias)(&i)}
+	AnyOf := i.AnyOf
+	if AnyOf != nil {
+		w.AnyOf = &AnyOf
+	}
+	Enum := i.Enum
+	if Enum != nil {
+		w.Enum = &Enum
+	}
+	return json.Marshal(w)
 }
 
 // MultiSelectPropertySchema: Schema for multi-select (array) properties in an elicitation form.

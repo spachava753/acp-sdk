@@ -146,6 +146,13 @@
 // variant. Required slice fields on that default variant still need the same
 // nil-as-empty-array marshal handling as const-tagged variants.
 //
+// Untagged flattened unions can also have variant-required slice fields. Without
+// a discriminator, the marshaler cannot infer a variant from a nil slice alone,
+// so constructors for those variants should normalize nil required-slice
+// arguments to empty slices. The union MarshalJSON method should then preserve
+// non-nil empty slices by overlaying pointer fields, avoiding omitempty dropping
+// a selected empty array.
+//
 // Primitive const unions with a single scalar kind and an open fallback branch,
 // such as LlmProtocol or ErrorCode, should be represented as named primitive
 // types with constants for the known values. Primitive or mixed scalar unions
@@ -270,6 +277,9 @@
 //   - testdata/fallback_union_slices: partially tagged flattened unions apply
 //     required nil-slice marshal handling to a no-const default variant and emit
 //     one grouped switch case for that fallback branch.
+//   - testdata/discriminatorless_union_slices: untagged flattened unions preserve
+//     constructor-selected empty required arrays instead of letting omitempty
+//     drop those variant-defining fields.
 //   - testdata/deserialize_extensions: x-deserialize-default-on-error and
 //     x-deserialize-skip-invalid-items generate tolerant UnmarshalJSON methods
 //     for object structs and flattened tagged unions.

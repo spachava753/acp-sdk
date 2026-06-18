@@ -1,0 +1,88 @@
+package acp
+
+import "encoding/json"
+
+// Items: Untagged item options with required slice fields.
+type Items struct {
+	Mode    string         `json:"mode,omitempty"`
+	Options []TitledOption `json:"options,omitempty"`
+	Values  []string       `json:"values,omitempty"`
+}
+
+// NewPlainItems creates an Items variant: Plain values with a mode label.
+func NewPlainItems(mode string, values []string) Items {
+	if values == nil {
+		values = []string{}
+	}
+	return Items{
+		Mode:   mode,
+		Values: values,
+	}
+}
+
+// NewTitledItems creates an Items variant: Titled values with display labels.
+func NewTitledItems(options []TitledOption) Items {
+	if options == nil {
+		options = []TitledOption{}
+	}
+	return Items{
+		Options: options,
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (i Items) MarshalJSON() ([]byte, error) {
+	type alias Items
+	type wire struct {
+		*alias
+		Options *[]TitledOption `json:"options,omitempty"`
+		Values  *[]string       `json:"values,omitempty"`
+	}
+	w := wire{alias: (*alias)(&i)}
+	Options := i.Options
+	if Options != nil {
+		w.Options = &Options
+	}
+	Values := i.Values
+	if Values != nil {
+		w.Values = &Values
+	}
+	return json.Marshal(w)
+}
+
+// PlainItems: Plain item values.
+type PlainItems struct {
+	Mode   string   `json:"mode"`
+	Values []string `json:"values"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (i PlainItems) MarshalJSON() ([]byte, error) {
+	type alias PlainItems
+	a := alias(i)
+	if a.Values == nil {
+		a.Values = []string{}
+	}
+	return json.Marshal(a)
+}
+
+// TitledItems: Titled item values.
+type TitledItems struct {
+	Options []TitledOption `json:"options"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (i TitledItems) MarshalJSON() ([]byte, error) {
+	type alias TitledItems
+	a := alias(i)
+	if a.Options == nil {
+		a.Options = []TitledOption{}
+	}
+	return json.Marshal(a)
+}
+
+// TitledOption: Option with a display label.
+type TitledOption struct {
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
