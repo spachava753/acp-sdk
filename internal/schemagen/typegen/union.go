@@ -419,8 +419,9 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 func discriminatorTypeName(defs map[string]*jsonschema.Schema, unionName string) string {
 	used := map[string]bool{}
 	for name := range defs {
-		if name != unionName {
-			used[name] = true
+		goName := goDefinitionName(defs, name)
+		if goName != unionName {
+			used[goName] = true
 		}
 	}
 	return uniqueConstName(unionName+"Type", used)
@@ -455,14 +456,15 @@ func unionConstructorName(defs map[string]*jsonschema.Schema, unionName, discrim
 	constructorName := pascalIdentifier(branch.Title)
 	value, _ := variantConst(defs, branch, discriminator)
 	ref := variantRef(branch)
+	refName := goDefinitionName(defs, ref)
 	if constructorName == "" && value != "" {
 		constructorName = constValueName(value)
 	}
-	if constructorName == "" && ref != "" {
-		constructorName = strings.TrimPrefix(ref, unionName)
+	if constructorName == "" && refName != "" {
+		constructorName = strings.TrimPrefix(refName, unionName)
 	}
 	constructorName += unionName
-	if ref != "" && constructorName == ref {
+	if refName != "" && constructorName == refName {
 		constructorName = "New" + constructorName
 	}
 	return constructorName
@@ -827,7 +829,7 @@ func arrayUnionVariants(defs map[string]*jsonschema.Schema, name string, branche
 	usedFields := map[string]bool{}
 	usedTypes := map[string]bool{}
 	for defName := range defs {
-		usedTypes[defName] = true
+		usedTypes[goDefinitionName(defs, defName)] = true
 	}
 	for _, branch := range branches {
 		fieldName := arrayUnionBaseFieldName(branch.Title)

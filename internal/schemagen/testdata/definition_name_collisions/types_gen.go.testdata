@@ -1,0 +1,17 @@
+package acp
+
+// VisiblePayload: A public object that references non-Go-shaped definitions.
+type VisiblePayload struct {
+	First  ChildPayload  `json:"first"`
+	Second ChildPayload2 `json:"second"`
+}
+
+// ChildPayload: A hyphenated definition name.
+type ChildPayload struct {
+	Value string `json:"value"`
+}
+
+// ChildPayload2: An underscored definition name that collides after normalization.
+type ChildPayload2 struct {
+	Count int32 `json:"count"`
+}

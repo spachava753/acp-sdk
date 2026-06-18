@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "VisiblePayload": {
+      "description": "A public object that references non-Go-shaped definitions.",
+      "type": "object",
+      "properties": {
+        "first": {
+          "$ref": "#/$defs/child-payload"
+        },
+        "second": {
+          "$ref": "#/$defs/child_payload"
+        }
+      },
+      "required": ["first", "second"]
+    },
+    "child-payload": {
+      "description": "A hyphenated definition name.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": ["value"]
+    },
+    "child_payload": {
+      "description": "An underscored definition name that collides after normalization.",
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "required": ["count"]
+    }
+  }
+}

@@ -26,12 +26,13 @@ func Generate(schema *jsonschema.Schema) []byte {
 
 	ignoredProtocolRefs := ignoredTopLevelProtocolRefs(schema)
 	publicRefs := publicDefinitionRefs(schema, ignoredProtocolRefs)
+	goNames := goDefinitionNames(schema.Defs)
 	for _, name := range sortedDefNames(schema.Defs) {
 		def := schema.Defs[name]
 		if ignoredProtocolRefs[name] || (docsIgnored(def) && !publicRefs[name]) {
 			continue
 		}
-		codes, meta, tail := definition(schema.Defs, name, def)
+		codes, meta, tail := definition(schema.Defs, goNames[name], def)
 		definitions = append(definitions, codes...)
 		trailing = append(trailing, tail...)
 		needsMeta = needsMeta || meta

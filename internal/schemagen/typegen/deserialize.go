@@ -74,7 +74,7 @@ func skipInvalidItemsValidator(defs map[string]*jsonschema.Schema, schema *jsons
 	if discriminator == "" {
 		return nil
 	}
-	discriminatorType := discriminatorTypeName(defs, name)
+	discriminatorType := discriminatorTypeName(defs, goDefinitionName(defs, name))
 	constNames := discriminatorConstNames(defs, discriminatorType, discriminator, branches)
 	seen := map[string]bool{}
 	var cases []jen.Code

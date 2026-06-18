@@ -272,6 +272,33 @@ func uniqueParameterNames(jsonNames []string) map[string]string {
 	return names
 }
 
+func goDefinitionNames(defs map[string]*jsonschema.Schema) map[string]string {
+	names := make(map[string]string, len(defs))
+	used := map[string]bool{}
+	for _, rawName := range sortedDefNames(defs) {
+		name := pascalIdentifier(rawName)
+		if name == "" {
+			name = "Definition"
+		}
+		names[rawName] = uniqueConstName(name, used)
+	}
+	return names
+}
+
+func goDefinitionName(defs map[string]*jsonschema.Schema, rawName string) string {
+	if rawName == "" {
+		return ""
+	}
+	if name := goDefinitionNames(defs)[rawName]; name != "" {
+		return name
+	}
+	name := pascalIdentifier(rawName)
+	if name == "" {
+		return "Definition"
+	}
+	return name
+}
+
 func pascalIdentifier(value string) string {
 	var words []string
 	var word strings.Builder

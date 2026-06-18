@@ -76,11 +76,12 @@ func integerType(format string) (jen.Code, string) {
 }
 
 func refType(defs map[string]*jsonschema.Schema, ref string, optional bool) (jen.Code, string) {
-	name := refName(ref)
-	if !optional || name == "" {
+	rawName := refName(ref)
+	name := goDefinitionName(defs, rawName)
+	if !optional || rawName == "" {
 		return jen.Id(name), name
 	}
-	def := defs[name]
+	def := defs[rawName]
 	if def == nil {
 		return jen.Id(name), name
 	}
