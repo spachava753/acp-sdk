@@ -1,0 +1,66 @@
+{
+  "$defs": {
+    "ProtocolNotification": {
+      "description": "Protocol-level notification that should not generate a public ACP payload type.",
+      "properties": {
+        "requestId": {
+          "description": "The JSON-RPC request to cancel.",
+          "type": "string"
+        }
+      },
+      "required": ["requestId"],
+      "type": "object",
+      "x-method": "$/cancel_request",
+      "x-side": "protocol"
+    },
+    "VisiblePayload": {
+      "description": "Normal payload that should still generate.",
+      "properties": {
+        "name": {
+          "description": "Visible name.",
+          "type": "string"
+        }
+      },
+      "required": ["name"],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "title": "Visible",
+      "description": "A non-protocol schema branch.",
+      "type": "object"
+    },
+    {
+      "title": "ProtocolLevel",
+      "description": "Docs-ignored protocol-level envelope.",
+      "type": "object",
+      "properties": {
+        "params": {
+          "anyOf": [
+            {
+              "description": "General protocol-level notifications.",
+              "anyOf": [
+                {
+                  "title": "ProtocolNotification",
+                  "description": "Cancels an in-flight JSON-RPC request.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ProtocolNotification"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "x-docs-ignore": true
+    }
+  ],
+  "title": "Mixed Protocol Side Test Fixture"
+}

@@ -422,18 +422,6 @@ type CancelNotification struct {
 	SessionID SessionId `json:"sessionId"`
 }
 
-// CancelRequestNotification: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Notification to cancel an ongoing request.
-//
-// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
-type CancelRequestNotification struct {
-	Meta      Meta      `json:"_meta,omitzero"`
-	RequestID RequestId `json:"requestId"`
-}
-
 // ClientCapabilities: Capabilities supported by the client.
 //
 // Advertised during initialization to inform the agent about

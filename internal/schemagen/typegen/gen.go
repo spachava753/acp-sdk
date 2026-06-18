@@ -24,9 +24,10 @@ func Generate(schema *jsonschema.Schema) []byte {
 	var trailing []jen.Code
 	needsMeta := false
 
+	ignoredProtocolRefs := ignoredTopLevelProtocolRefs(schema)
 	for _, name := range sortedDefNames(schema.Defs) {
 		def := schema.Defs[name]
-		if docsIgnored(def) {
+		if docsIgnored(def) || ignoredProtocolRefs[name] {
 			continue
 		}
 		codes, meta, tail := definition(schema.Defs, name, def)
@@ -166,6 +167,42 @@ func docsIgnored(schema *jsonschema.Schema) bool {
 	}
 	ignored, _ := schema.Extra["x-docs-ignore"].(bool)
 	return ignored
+}
+
+func ignoredTopLevelProtocolRefs(schema *jsonschema.Schema) map[string]bool {
+	refs := map[string]bool{}
+	if schema == nil {
+		return refs
+	}
+	for _, branch := range schema.AnyOf {
+		if branch.Title == "ProtocolLevel" && docsIgnored(branch) {
+			collectRefs(branch, refs)
+		}
+	}
+	return refs
+}
+
+func collectRefs(schema *jsonschema.Schema, refs map[string]bool) {
+	if schema == nil {
+		return
+	}
+	if schema.Ref != "" {
+		refs[refName(schema.Ref)] = true
+	}
+	for _, branch := range schema.AnyOf {
+		collectRefs(branch, refs)
+	}
+	for _, branch := range schema.OneOf {
+		collectRefs(branch, refs)
+	}
+	for _, branch := range schema.AllOf {
+		collectRefs(branch, refs)
+	}
+	for _, prop := range schema.Properties {
+		collectRefs(prop, refs)
+	}
+	collectRefs(schema.Items, refs)
+	collectRefs(schema.AdditionalProperties, refs)
 }
 
 func contains[S ~[]E, E comparable](slice S, value E) bool {
