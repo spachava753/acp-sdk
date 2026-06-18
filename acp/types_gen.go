@@ -106,7 +106,17 @@ func (a *Annotations) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(raw.Audience) > 0 {
-		_ = json.Unmarshal(raw.Audience, &decoded.Audience)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Audience, &values); err == nil && values != nil {
+			items := []Role{}
+			for _, value := range values {
+				var item Role
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.Audience = &items
+		}
 	}
 	*a = Annotations(decoded)
 	return nil
@@ -1414,7 +1424,17 @@ func (r *ForkSessionResponse) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(raw.ConfigOptions) > 0 {
-		_ = json.Unmarshal(raw.ConfigOptions, &decoded.ConfigOptions)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.ConfigOptions, &values); err == nil && values != nil {
+			items := []SessionConfigOption{}
+			for _, value := range values {
+				var item SessionConfigOption
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.ConfigOptions = &items
+		}
 	}
 	if len(raw.Modes) > 0 {
 		_ = json.Unmarshal(raw.Modes, &decoded.Modes)
@@ -1703,7 +1723,17 @@ func (r *LoadSessionResponse) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(raw.ConfigOptions) > 0 {
-		_ = json.Unmarshal(raw.ConfigOptions, &decoded.ConfigOptions)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.ConfigOptions, &values); err == nil && values != nil {
+			items := []SessionConfigOption{}
+			for _, value := range values {
+				var item SessionConfigOption
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.ConfigOptions = &items
+		}
 	}
 	if len(raw.Modes) > 0 {
 		_ = json.Unmarshal(raw.Modes, &decoded.Modes)
@@ -2413,22 +2443,82 @@ func (c *NesSuggestContext) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(raw.Diagnostics) > 0 {
-		_ = json.Unmarshal(raw.Diagnostics, &decoded.Diagnostics)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Diagnostics, &values); err == nil && values != nil {
+			items := []NesDiagnostic{}
+			for _, value := range values {
+				var item NesDiagnostic
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.Diagnostics = &items
+		}
 	}
 	if len(raw.EditHistory) > 0 {
-		_ = json.Unmarshal(raw.EditHistory, &decoded.EditHistory)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.EditHistory, &values); err == nil && values != nil {
+			items := []NesEditHistoryEntry{}
+			for _, value := range values {
+				var item NesEditHistoryEntry
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.EditHistory = &items
+		}
 	}
 	if len(raw.OpenFiles) > 0 {
-		_ = json.Unmarshal(raw.OpenFiles, &decoded.OpenFiles)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.OpenFiles, &values); err == nil && values != nil {
+			items := []NesOpenFile{}
+			for _, value := range values {
+				var item NesOpenFile
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.OpenFiles = &items
+		}
 	}
 	if len(raw.RecentFiles) > 0 {
-		_ = json.Unmarshal(raw.RecentFiles, &decoded.RecentFiles)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.RecentFiles, &values); err == nil && values != nil {
+			items := []NesRecentFile{}
+			for _, value := range values {
+				var item NesRecentFile
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.RecentFiles = &items
+		}
 	}
 	if len(raw.RelatedSnippets) > 0 {
-		_ = json.Unmarshal(raw.RelatedSnippets, &decoded.RelatedSnippets)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.RelatedSnippets, &values); err == nil && values != nil {
+			items := []NesRelatedSnippet{}
+			for _, value := range values {
+				var item NesRelatedSnippet
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.RelatedSnippets = &items
+		}
 	}
 	if len(raw.UserActions) > 0 {
-		_ = json.Unmarshal(raw.UserActions, &decoded.UserActions)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.UserActions, &values); err == nil && values != nil {
+			items := []NesUserAction{}
+			for _, value := range values {
+				var item NesUserAction
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.UserActions = &items
+		}
 	}
 	*c = NesSuggestContext(decoded)
 	return nil
@@ -2615,7 +2705,17 @@ func (r *NewSessionResponse) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(raw.ConfigOptions) > 0 {
-		_ = json.Unmarshal(raw.ConfigOptions, &decoded.ConfigOptions)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.ConfigOptions, &values); err == nil && values != nil {
+			items := []SessionConfigOption{}
+			for _, value := range values {
+				var item SessionConfigOption
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.ConfigOptions = &items
+		}
 	}
 	if len(raw.Modes) > 0 {
 		_ = json.Unmarshal(raw.Modes, &decoded.Modes)
@@ -3287,7 +3387,17 @@ func (r *ResumeSessionResponse) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(raw.ConfigOptions) > 0 {
-		_ = json.Unmarshal(raw.ConfigOptions, &decoded.ConfigOptions)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.ConfigOptions, &values); err == nil && values != nil {
+			items := []SessionConfigOption{}
+			for _, value := range values {
+				var item SessionConfigOption
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.ConfigOptions = &items
+		}
 	}
 	if len(raw.Modes) > 0 {
 		_ = json.Unmarshal(raw.Modes, &decoded.Modes)
@@ -3988,7 +4098,17 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		_ = json.Unmarshal(raw.Kind, &decoded.Kind)
 	}
 	if len(raw.Locations) > 0 {
-		_ = json.Unmarshal(raw.Locations, &decoded.Locations)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Locations, &values); err == nil && values != nil {
+			items := []ToolCallLocation{}
+			for _, value := range values {
+				var item ToolCallLocation
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.Locations = &items
+		}
 	}
 	if len(raw.Status) > 0 {
 		_ = json.Unmarshal(raw.Status, &decoded.Status)
@@ -4139,7 +4259,17 @@ func (r *StartNesRequest) UnmarshalJSON(data []byte) error {
 		_ = json.Unmarshal(raw.Repository, &decoded.Repository)
 	}
 	if len(raw.WorkspaceFolders) > 0 {
-		_ = json.Unmarshal(raw.WorkspaceFolders, &decoded.WorkspaceFolders)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.WorkspaceFolders, &values); err == nil && values != nil {
+			items := []WorkspaceFolder{}
+			for _, value := range values {
+				var item WorkspaceFolder
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.WorkspaceFolders = &items
+		}
 	}
 	*r = StartNesRequest(decoded)
 	return nil
@@ -4565,13 +4695,33 @@ func (u *ToolCallUpdate) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(raw.Content) > 0 {
-		_ = json.Unmarshal(raw.Content, &decoded.Content)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Content, &values); err == nil && values != nil {
+			items := []ToolCallContent{}
+			for _, value := range values {
+				var item ToolCallContent
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.Content = &items
+		}
 	}
 	if len(raw.Kind) > 0 {
 		_ = json.Unmarshal(raw.Kind, &decoded.Kind)
 	}
 	if len(raw.Locations) > 0 {
-		_ = json.Unmarshal(raw.Locations, &decoded.Locations)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Locations, &values); err == nil && values != nil {
+			items := []ToolCallLocation{}
+			for _, value := range values {
+				var item ToolCallLocation
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.Locations = &items
+		}
 	}
 	if len(raw.Status) > 0 {
 		_ = json.Unmarshal(raw.Status, &decoded.Status)

@@ -30,10 +30,25 @@ func newDeserializeField(defs map[string]*jsonschema.Schema, jsonName string, pr
 		defaultOnError:   schemaBoolExtra(prop, "x-deserialize-default-on-error"),
 		skipInvalidItems: schemaBoolExtra(prop, "x-deserialize-skip-invalid-items"),
 	}
-	if strings.HasPrefix(typeText, "[]") && prop != nil && prop.Items != nil {
-		field.itemTypeCode, _ = schemaType(defs, prop.Items, false)
+	if _, ok := skipInvalidItemsTarget(field); ok {
+		if itemSchema := deserializeItemSchema(prop); itemSchema != nil {
+			field.itemTypeCode, _ = schemaType(defs, itemSchema, false)
+		}
 	}
 	return field
+}
+
+func deserializeItemSchema(schema *jsonschema.Schema) *jsonschema.Schema {
+	if schema == nil {
+		return nil
+	}
+	if nonNull, nullable := nullableSchema(schema); nullable {
+		return deserializeItemSchema(nonNull)
+	}
+	if schemaTypeName(schema) == "array" {
+		return schema.Items
+	}
+	return nil
 }
 
 func schemaBoolExtra(schema *jsonschema.Schema, key string) bool {
@@ -92,8 +107,10 @@ func deserializeUnmarshalCode(name string, fields []deserializeField) (jen.Code,
 }
 
 func deserializeFieldUnmarshalCode(field deserializeField) jen.Code {
-	if field.skipInvalidItems && strings.HasPrefix(field.typeText, "[]") && field.itemTypeCode != nil {
-		return jen.If(jen.Len(jen.Id("raw").Dot(field.goName)).Op(">").Lit(0)).Block(skipInvalidItemsCode(field)...)
+	if field.skipInvalidItems && field.itemTypeCode != nil {
+		if pointer, ok := skipInvalidItemsTarget(field); ok {
+			return jen.If(jen.Len(jen.Id("raw").Dot(field.goName)).Op(">").Lit(0)).Block(skipInvalidItemsCode(field, pointer)...)
+		}
 	}
 	if field.defaultOnError {
 		return jen.If(jen.Len(jen.Id("raw").Dot(field.goName)).Op(">").Lit(0)).Block(
@@ -105,8 +122,57 @@ func deserializeFieldUnmarshalCode(field deserializeField) jen.Code {
 	)
 }
 
-func skipInvalidItemsCode(field deserializeField) []jen.Code {
-	decodeValues := []jen.Code{
+func skipInvalidItemsTarget(field deserializeField) (bool, bool) {
+	if strings.HasPrefix(field.typeText, "[]") {
+		return false, true
+	}
+	if strings.HasPrefix(field.typeText, "*[]") {
+		return true, true
+	}
+	return false, false
+}
+
+func skipInvalidItemsCode(field deserializeField, pointer bool) []jen.Code {
+	decodeValues := skipInvalidItemsDecodeValues(field, pointer)
+	if field.defaultOnError {
+		condition := jen.Err().Op(":=").Qual("encoding/json", "Unmarshal").Call(jen.Id("raw").Dot(field.goName), jen.Op("&").Id("values"))
+		if pointer {
+			return []jen.Code{
+				jen.Var().Id("values").Index().Qual("encoding/json", "RawMessage"),
+				jen.If(condition, jen.Err().Op("==").Nil().Op("&&").Id("values").Op("!=").Nil()).Block(decodeValues...),
+			}
+		}
+		return []jen.Code{
+			jen.Var().Id("values").Index().Qual("encoding/json", "RawMessage"),
+			jen.If(condition, jen.Err().Op("==").Nil()).Block(decodeValues...),
+		}
+	}
+	if pointer {
+		return []jen.Code{
+			jen.Var().Id("values").Index().Qual("encoding/json", "RawMessage"),
+			jen.If(jen.Err().Op(":=").Qual("encoding/json", "Unmarshal").Call(jen.Id("raw").Dot(field.goName), jen.Op("&").Id("values")), jen.Err().Op("!=").Nil()).Block(jen.Return(jen.Err())).Else().If(jen.Id("values").Op("!=").Nil()).Block(decodeValues...),
+		}
+	}
+	return []jen.Code{
+		jen.Var().Id("values").Index().Qual("encoding/json", "RawMessage"),
+		jen.If(jen.Err().Op(":=").Qual("encoding/json", "Unmarshal").Call(jen.Id("raw").Dot(field.goName), jen.Op("&").Id("values")), jen.Err().Op("!=").Nil()).Block(jen.Return(jen.Err())).Else().Block(decodeValues...),
+	}
+}
+
+func skipInvalidItemsDecodeValues(field deserializeField, pointer bool) []jen.Code {
+	if pointer {
+		return []jen.Code{
+			jen.Id("items").Op(":=").Index().Add(field.itemTypeCode).Values(),
+			jen.For(jen.List(jen.Id("_"), jen.Id("value")).Op(":=").Range().Id("values")).Block(
+				jen.Var().Id("item").Add(field.itemTypeCode),
+				jen.If(jen.Err().Op(":=").Qual("encoding/json", "Unmarshal").Call(jen.Id("value"), jen.Op("&").Id("item")), jen.Err().Op("==").Nil()).Block(
+					jen.Id("items").Op("=").Append(jen.Id("items"), jen.Id("item")),
+				),
+			),
+			jen.Id("decoded").Dot(field.goName).Op("=").Op("&").Id("items"),
+		}
+	}
+	return []jen.Code{
 		jen.Id("decoded").Dot(field.goName).Op("=").Add(field.typeCode).Values(),
 		jen.For(jen.List(jen.Id("_"), jen.Id("value")).Op(":=").Range().Id("values")).Block(
 			jen.Var().Id("item").Add(field.itemTypeCode),
@@ -114,15 +180,5 @@ func skipInvalidItemsCode(field deserializeField) []jen.Code {
 				jen.Id("decoded").Dot(field.goName).Op("=").Append(jen.Id("decoded").Dot(field.goName), jen.Id("item")),
 			),
 		),
-	}
-	if field.defaultOnError {
-		return []jen.Code{
-			jen.Var().Id("values").Index().Qual("encoding/json", "RawMessage"),
-			jen.If(jen.Err().Op(":=").Qual("encoding/json", "Unmarshal").Call(jen.Id("raw").Dot(field.goName), jen.Op("&").Id("values")), jen.Err().Op("==").Nil()).Block(decodeValues...),
-		}
-	}
-	return []jen.Code{
-		jen.Var().Id("values").Index().Qual("encoding/json", "RawMessage"),
-		jen.If(jen.Err().Op(":=").Qual("encoding/json", "Unmarshal").Call(jen.Id("raw").Dot(field.goName), jen.Op("&").Id("values")), jen.Err().Op("!=").Nil()).Block(jen.Return(jen.Err())).Else().Block(decodeValues...),
 	}
 }

@@ -1,0 +1,118 @@
+package acp
+
+import "encoding/json"
+
+// AnnotationSet: Object with nullable arrays that skip invalid entries.
+type AnnotationSet struct {
+	Audience *[]Role   `json:"audience,omitempty"`
+	Labels   *[]string `json:"labels,omitempty"`
+	Strict   string    `json:"strict"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AnnotationSet) UnmarshalJSON(data []byte) error {
+	type alias AnnotationSet
+	decoded := alias{}
+	raw := struct {
+		Audience json.RawMessage `json:"audience"`
+		Labels   json.RawMessage `json:"labels"`
+		*alias
+	}{alias: &decoded}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Audience) > 0 {
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Audience, &values); err == nil && values != nil {
+			items := []Role{}
+			for _, value := range values {
+				var item Role
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.Audience = &items
+		}
+	}
+	if len(raw.Labels) > 0 {
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Labels, &values); err == nil && values != nil {
+			items := []string{}
+			for _, value := range values {
+				var item string
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.Labels = &items
+		}
+	}
+	*s = AnnotationSet(decoded)
+	return nil
+}
+
+// Role: The sender or recipient of messages and data.
+type Role string
+
+const (
+	RoleAssistant Role = "assistant"
+	RoleUser      Role = "user"
+)
+
+// TaggedAnnotation: Flattened union with a nullable array that skips invalid entries.
+type TaggedAnnotation struct {
+	Kind     TaggedAnnotationType `json:"kind"`
+	Audience *[]Role              `json:"audience,omitempty"`
+	Title    string               `json:"title,omitempty"`
+}
+
+// TaggedAnnotationType is the discriminator for TaggedAnnotation variants.
+type TaggedAnnotationType string
+
+const (
+	TaggedAnnotationTypeKnown TaggedAnnotationType = "known"
+	TaggedAnnotationTypeOther TaggedAnnotationType = "other"
+)
+
+// KnownTaggedAnnotation creates known branch.
+func KnownTaggedAnnotation() TaggedAnnotation {
+	return TaggedAnnotation{
+		Kind: TaggedAnnotationTypeKnown,
+	}
+}
+
+// OtherTaggedAnnotation creates other branch.
+func OtherTaggedAnnotation(title string) TaggedAnnotation {
+	return TaggedAnnotation{
+		Kind:  TaggedAnnotationTypeOther,
+		Title: title,
+	}
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (a *TaggedAnnotation) UnmarshalJSON(data []byte) error {
+	type alias TaggedAnnotation
+	decoded := alias{}
+	raw := struct {
+		Audience json.RawMessage `json:"audience"`
+		*alias
+	}{alias: &decoded}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Audience) > 0 {
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Audience, &values); err == nil && values != nil {
+			items := []Role{}
+			for _, value := range values {
+				var item Role
+				if err := json.Unmarshal(value, &item); err == nil {
+					items = append(items, item)
+				}
+			}
+			decoded.Audience = &items
+		}
+	}
+	*a = TaggedAnnotation(decoded)
+	return nil
+}

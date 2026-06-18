@@ -102,7 +102,8 @@
 // handling that leaves the field at its Go zero value when only that field fails
 // to decode. Array fields also marked x-deserialize-skip-invalid-items should
 // decode each item independently and keep the valid items while preserving normal
-// errors for unmarked fields.
+// errors for unmarked fields. Nullable arrays should get the same item-level
+// filtering while preserving JSON null as a nil pointer.
 //
 // # Union generation
 //
@@ -245,6 +246,9 @@
 //   - testdata/nullable_union_fields: flattened unions keep a precise pointer
 //     field when the same JSON field is non-nullable in one variant and
 //     nullable in another, instead of broadening to any.
+//   - testdata/nullable_skip_invalid_items: nullable array fields marked with
+//     x-deserialize-skip-invalid-items preserve valid items using pointer-to-slice
+//     assignment instead of dropping the whole field on one invalid item.
 //   - testdata/fallback_union_slices: partially tagged flattened unions apply
 //     required nil-slice marshal handling to a no-const default variant and emit
 //     one grouped switch case for that fallback branch.

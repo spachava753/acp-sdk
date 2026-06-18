@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nullable Skip Invalid Items",
+  "$defs": {
+    "AnnotationSet": {
+      "description": "Object with nullable arrays that skip invalid entries.",
+      "type": "object",
+      "properties": {
+        "audience": {
+          "description": "Audience entries that skip invalid values.",
+          "type": ["array", "null"],
+          "items": {
+            "$ref": "#/$defs/Role"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "labels": {
+          "description": "String labels that skip invalid values.",
+          "type": ["array", "null"],
+          "items": {
+            "type": "string"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "strict": {
+          "description": "Strict field that still rejects invalid values.",
+          "type": "string"
+        }
+      },
+      "required": ["strict"]
+    },
+    "Role": {
+      "description": "The sender or recipient of messages and data.",
+      "type": "string",
+      "enum": ["assistant", "user"]
+    },
+    "TaggedAnnotation": {
+      "description": "Flattened union with a nullable array that skips invalid entries.",
+      "oneOf": [
+        {
+          "description": "Known branch.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "known"
+            },
+            "audience": {
+              "description": "Audience entries that skip invalid values.",
+              "type": ["array", "null"],
+              "items": {
+                "$ref": "#/$defs/Role"
+              },
+              "x-deserialize-default-on-error": true,
+              "x-deserialize-skip-invalid-items": true
+            }
+          },
+          "required": ["kind"]
+        },
+        {
+          "description": "Other branch.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "other"
+            },
+            "title": {
+              "description": "Strict title.",
+              "type": "string"
+            }
+          },
+          "required": ["kind", "title"]
+        }
+      ],
+      "discriminator": {
+        "propertyName": "kind"
+      }
+    }
+  }
+}
