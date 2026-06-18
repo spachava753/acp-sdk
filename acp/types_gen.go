@@ -77,7 +77,13 @@ func (c *AgentCapabilities) UnmarshalJSON(data []byte) error {
 		_ = json.Unmarshal(raw.Nes, &decoded.Nes)
 	}
 	if len(raw.PositionEncoding) > 0 {
-		_ = json.Unmarshal(raw.PositionEncoding, &decoded.PositionEncoding)
+		var value PositionEncodingKind
+		if err := json.Unmarshal(raw.PositionEncoding, &value); err == nil {
+			switch string(value) {
+			case "utf-16", "utf-32", "utf-8":
+				decoded.PositionEncoding = &value
+			}
+		}
 	}
 	if len(raw.Providers) > 0 {
 		_ = json.Unmarshal(raw.Providers, &decoded.Providers)
@@ -3230,7 +3236,13 @@ func (n *RejectNesNotification) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(raw.Reason) > 0 {
-		_ = json.Unmarshal(raw.Reason, &decoded.Reason)
+		var value NesRejectReason
+		if err := json.Unmarshal(raw.Reason, &value); err == nil {
+			switch string(value) {
+			case "rejected", "ignored", "replaced", "cancelled":
+				decoded.Reason = &value
+			}
+		}
 	}
 	*n = RejectNesNotification(decoded)
 	return nil
@@ -4095,7 +4107,13 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.Kind) > 0 {
-		_ = json.Unmarshal(raw.Kind, &decoded.Kind)
+		var value ToolKind
+		if err := json.Unmarshal(raw.Kind, &value); err == nil {
+			switch string(value) {
+			case "read", "edit", "delete", "move", "search", "execute", "think", "fetch", "switch_mode", "other":
+				decoded.Kind = &value
+			}
+		}
 	}
 	if len(raw.Locations) > 0 {
 		var values []json.RawMessage
@@ -4111,7 +4129,13 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.Status) > 0 {
-		_ = json.Unmarshal(raw.Status, &decoded.Status)
+		var value ToolCallStatus
+		if err := json.Unmarshal(raw.Status, &value); err == nil {
+			switch string(value) {
+			case "pending", "in_progress", "completed", "failed":
+				decoded.Status = &value
+			}
+		}
 	}
 	*u = SessionUpdate(decoded)
 	return nil
@@ -4708,7 +4732,13 @@ func (u *ToolCallUpdate) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.Kind) > 0 {
-		_ = json.Unmarshal(raw.Kind, &decoded.Kind)
+		var value ToolKind
+		if err := json.Unmarshal(raw.Kind, &value); err == nil {
+			switch string(value) {
+			case "read", "edit", "delete", "move", "search", "execute", "think", "fetch", "switch_mode", "other":
+				decoded.Kind = &value
+			}
+		}
 	}
 	if len(raw.Locations) > 0 {
 		var values []json.RawMessage
@@ -4724,7 +4754,13 @@ func (u *ToolCallUpdate) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.Status) > 0 {
-		_ = json.Unmarshal(raw.Status, &decoded.Status)
+		var value ToolCallStatus
+		if err := json.Unmarshal(raw.Status, &value); err == nil {
+			switch string(value) {
+			case "pending", "in_progress", "completed", "failed":
+				decoded.Status = &value
+			}
+		}
 	}
 	*u = ToolCallUpdate(decoded)
 	return nil

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Enum Default On Error",
+  "$defs": {
+    "Status": {
+      "description": "Known status values.",
+      "oneOf": [
+        {
+          "const": "queued",
+          "description": "The item is queued.",
+          "type": "string"
+        },
+        {
+          "const": "running",
+          "description": "The item is running.",
+          "type": "string"
+        }
+      ]
+    },
+    "Role": {
+      "description": "Known participant roles.",
+      "type": "string",
+      "enum": ["assistant", "user"]
+    },
+    "Payload": {
+      "description": "Object with tolerant enum fields.",
+      "type": "object",
+      "properties": {
+        "role": {
+          "description": "Role that defaults when unknown.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/Role"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "status": {
+          "description": "Nullable status that defaults when unknown.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Status"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "strictStatus": {
+          "description": "Strict status keeps the normal generated shape.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/Status"
+            }
+          ]
+        }
+      },
+      "required": ["strictStatus"]
+    }
+  }
+}

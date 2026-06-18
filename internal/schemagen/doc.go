@@ -100,7 +100,9 @@
 // as empty JSON arrays, matching the hand-written behavior in acp/protocol_json.go.
 // Fields marked x-deserialize-default-on-error should get custom UnmarshalJSON
 // handling that leaves the field at its Go zero value when only that field fails
-// to decode. Array fields also marked x-deserialize-skip-invalid-items should
+// to decode. For closed string enum fields, unknown enum strings should count as
+// field decode failures so schema-marked tolerant enum fields actually default.
+// Array fields also marked x-deserialize-skip-invalid-items should
 // decode each item independently and keep the valid items while preserving normal
 // errors for unmarked fields. Nullable arrays should get the same item-level
 // filtering while preserving JSON null as a nil pointer.
@@ -249,6 +251,9 @@
 //   - testdata/nullable_skip_invalid_items: nullable array fields marked with
 //     x-deserialize-skip-invalid-items preserve valid items using pointer-to-slice
 //     assignment instead of dropping the whole field on one invalid item.
+//   - testdata/enum_default_on_error: closed string enum fields marked with
+//     x-deserialize-default-on-error reject unknown enum strings and retain the
+//     Go zero value instead of preserving unknown protocol values.
 //   - testdata/fallback_union_slices: partially tagged flattened unions apply
 //     required nil-slice marshal handling to a no-const default variant and emit
 //     one grouped switch case for that fallback branch.

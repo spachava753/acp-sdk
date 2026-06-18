@@ -1,0 +1,62 @@
+package acp
+
+import "encoding/json"
+
+// Payload: Object with tolerant enum fields.
+type Payload struct {
+	Role         Role    `json:"role,omitempty"`
+	Status       *Status `json:"status,omitempty"`
+	StrictStatus Status  `json:"strictStatus"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *Payload) UnmarshalJSON(data []byte) error {
+	type alias Payload
+	decoded := alias{}
+	raw := struct {
+		Role   json.RawMessage `json:"role"`
+		Status json.RawMessage `json:"status"`
+		*alias
+	}{alias: &decoded}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Role) > 0 {
+		var value Role
+		if err := json.Unmarshal(raw.Role, &value); err == nil {
+			switch string(value) {
+			case "assistant", "user":
+				decoded.Role = value
+			}
+		}
+	}
+	if len(raw.Status) > 0 {
+		var value Status
+		if err := json.Unmarshal(raw.Status, &value); err == nil {
+			switch string(value) {
+			case "queued", "running":
+				decoded.Status = &value
+			}
+		}
+	}
+	*p = Payload(decoded)
+	return nil
+}
+
+// Role: Known participant roles.
+type Role string
+
+const (
+	RoleAssistant Role = "assistant"
+	RoleUser      Role = "user"
+)
+
+// Status: Known status values.
+type Status string
+
+const (
+	// StatusQueued: The item is queued.
+	StatusQueued Status = "queued"
+	// StatusRunning: The item is running.
+	StatusRunning Status = "running"
+)
