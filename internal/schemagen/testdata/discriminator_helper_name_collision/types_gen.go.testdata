@@ -1,0 +1,35 @@
+package acp
+
+// CollisionUnion: A discriminator union whose helper type name collides with a top-level definition.
+type CollisionUnion struct {
+	Kind  CollisionUnionType2 `json:"kind"`
+	Count int32               `json:"count,omitempty"`
+	Text  string              `json:"text,omitempty"`
+}
+
+// CollisionUnionType2 is the discriminator for CollisionUnion variants.
+type CollisionUnionType2 string
+
+const (
+	CollisionUnionType2Text  CollisionUnionType2 = "text"
+	CollisionUnionType2Count CollisionUnionType2 = "count"
+)
+
+// TextCollisionUnion creates text variant.
+func TextCollisionUnion(text string) CollisionUnion {
+	return CollisionUnion{
+		Kind: CollisionUnionType2Text,
+		Text: text,
+	}
+}
+
+// CountCollisionUnion creates count variant.
+func CountCollisionUnion(count int32) CollisionUnion {
+	return CollisionUnion{
+		Kind:  CollisionUnionType2Count,
+		Count: count,
+	}
+}
+
+// CollisionUnionType: A top-level definition whose name collides with the discriminator helper type.
+type CollisionUnionType string

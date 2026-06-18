@@ -33,7 +33,8 @@ type arrayUnionVariant struct {
 func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, schema *jsonschema.Schema) ([]jen.Code, bool) {
 	branches := unionBranches(schema)
 	discriminator := discriminatorField(defs, schema, branches)
-	constNames := discriminatorConstNames(defs, name, discriminator, branches)
+	discriminatorType := discriminatorTypeName(defs, name)
+	constNames := discriminatorConstNames(defs, discriminatorType, discriminator, branches)
 	parentRequired := requiredMap(schema.Required)
 	requiredCount := map[string]int{}
 	fieldOrder := []string{}
@@ -113,7 +114,7 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 
 	var structFields []jen.Code
 	if discriminator != "" {
-		structFields = append(structFields, jen.Id(discriminatorGoName).Id(name+"Type").Tag(map[string]string{"json": jsonTag(discriminator, !isRequiredInAllVariants(parentRequired, requiredCount, discriminator, len(branches)), false)}))
+		structFields = append(structFields, jen.Id(discriminatorGoName).Id(discriminatorType).Tag(map[string]string{"json": jsonTag(discriminator, !isRequiredInAllVariants(parentRequired, requiredCount, discriminator, len(branches)), false)}))
 	}
 	for _, jsonName := range fieldOrder {
 		field := fieldsByJSON[jsonName]
@@ -130,7 +131,7 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 	var codes []jen.Code
 	codes = append(codes, commented(name, schema.Description, jen.Type().Id(name).Struct(structFields...)), jen.Line())
 	if discriminator != "" {
-		codes = append(codes, jen.Commentf("%sType is the discriminator for %s variants.", name, name).Line().Type().Id(name+"Type").String(), jen.Line())
+		codes = append(codes, jen.Commentf("%s is the discriminator for %s variants.", discriminatorType, name).Line().Type().Id(discriminatorType).String(), jen.Line())
 
 		var consts []jen.Code
 		for _, branch := range branches {
@@ -139,7 +140,7 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 			if constName == "" {
 				continue
 			}
-			consts = append(consts, commented(constName, desc, jen.Id(constName).Id(name+"Type").Op("=").Lit(value)))
+			consts = append(consts, commented(constName, desc, jen.Id(constName).Id(discriminatorType).Op("=").Lit(value)))
 		}
 		codes = append(codes, jen.Const().Defs(consts...), jen.Line())
 	}
@@ -415,7 +416,17 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 	return functionCommented(constructorName, fmt.Sprintf("creates an %s variant: ", unionName), branch.Description, fn)
 }
 
-func discriminatorConstNames(defs map[string]*jsonschema.Schema, unionName, discriminator string, branches []*jsonschema.Schema) map[string]string {
+func discriminatorTypeName(defs map[string]*jsonschema.Schema, unionName string) string {
+	used := map[string]bool{}
+	for name := range defs {
+		if name != unionName {
+			used[name] = true
+		}
+	}
+	return uniqueConstName(unionName+"Type", used)
+}
+
+func discriminatorConstNames(defs map[string]*jsonschema.Schema, discriminatorType, discriminator string, branches []*jsonschema.Schema) map[string]string {
 	names := map[string]string{}
 	if discriminator == "" {
 		return names
@@ -426,7 +437,7 @@ func discriminatorConstNames(defs map[string]*jsonschema.Schema, unionName, disc
 		if value == "" || names[value] != "" {
 			continue
 		}
-		names[value] = uniqueConstName(unionName+"Type"+constValueName(value), used)
+		names[value] = uniqueConstName(discriminatorType+constValueName(value), used)
 	}
 	return names
 }

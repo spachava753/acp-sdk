@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "CollisionUnion": {
+      "description": "A discriminator union whose helper type name collides with a top-level definition.",
+      "oneOf": [
+        {
+          "description": "Text variant.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "text"
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": ["kind", "text"]
+        },
+        {
+          "description": "Count variant.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "count"
+            },
+            "count": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "required": ["kind", "count"]
+        }
+      ],
+      "discriminator": {
+        "propertyName": "kind"
+      }
+    },
+    "CollisionUnionType": {
+      "description": "A top-level definition whose name collides with the discriminator helper type.",
+      "type": "string"
+    }
+  }
+}
