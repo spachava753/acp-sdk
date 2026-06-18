@@ -27,17 +27,20 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 	needsMeta := false
 	var fields []field
 	var structFields []jen.Code
-	for _, jsonName := range sortedPropertyNames(schema.Properties) {
+	propertyNames := sortedPropertyNames(schema.Properties)
+	goNames := uniqueFieldNames(propertyNames)
+	for _, jsonName := range propertyNames {
 		prop := schema.Properties[jsonName]
 		if jsonName == "_meta" {
 			needsMeta = true
-			f := field{deserializeField: deserializeField{jsonName: jsonName, goName: "Meta", typeCode: jen.Id("Meta"), typeText: "Meta"}, tag: jsonTag(jsonName, false, true)}
+			f := field{deserializeField: deserializeField{jsonName: jsonName, goName: goNames[jsonName], typeCode: jen.Id("Meta"), typeText: "Meta"}, tag: jsonTag(jsonName, false, true)}
 			fields = append(fields, f)
 			structFields = append(structFields, jen.Id(f.goName).Add(f.typeCode).Tag(map[string]string{"json": f.tag}))
 			continue
 		}
 		typ, text := schemaType(defs, prop, !required[jsonName])
 		deserialize := newDeserializeField(defs, jsonName, prop, typ, text)
+		deserialize.goName = goNames[jsonName]
 		f := field{deserializeField: deserialize, tag: jsonTag(jsonName, !required[jsonName], false), required: required[jsonName]}
 		fields = append(fields, f)
 		structFields = append(structFields, jen.Id(f.goName).Add(f.typeCode).Tag(map[string]string{"json": f.tag}))

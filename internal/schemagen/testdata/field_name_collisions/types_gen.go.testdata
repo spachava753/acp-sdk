@@ -1,0 +1,7 @@
+package acp
+
+// CollidingFields: Object with JSON fields that normalize to the same Go field name.
+type CollidingFields struct {
+	FooBar  string `json:"foo-bar"`
+	FooBar2 int32  `json:"foo_bar,omitempty"`
+}

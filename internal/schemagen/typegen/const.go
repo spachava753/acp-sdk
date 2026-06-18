@@ -237,6 +237,19 @@ func fieldName(jsonName string) string {
 	return name
 }
 
+func uniqueFieldNames(jsonNames []string) map[string]string {
+	names := make(map[string]string, len(jsonNames))
+	used := map[string]bool{}
+	for _, jsonName := range jsonNames {
+		name := fieldName(jsonName)
+		if name == "" {
+			name = "Field"
+		}
+		names[jsonName] = uniqueConstName(name, used)
+	}
+	return names
+}
+
 func pascalIdentifier(value string) string {
 	var words []string
 	var word strings.Builder

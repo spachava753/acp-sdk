@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "CollidingFields": {
+      "description": "Object with JSON fields that normalize to the same Go field name.",
+      "type": "object",
+      "properties": {
+        "foo-bar": {
+          "description": "Hyphenated value.",
+          "type": "string"
+        },
+        "foo_bar": {
+          "description": "Underscored value.",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "required": ["foo-bar"]
+    }
+  }
+}
