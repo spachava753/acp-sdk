@@ -494,13 +494,15 @@ func arrayUnionMarshalCode(name string, branches []*jsonschema.Schema) jen.Code 
 }
 
 func arrayUnionUnmarshalCode(defs map[string]*jsonschema.Schema, name string, branches []*jsonschema.Schema) jen.Code {
-	flatType := pascalIdentifier(branches[0].Title) + name
-	flatField := arrayUnionFieldName(branches[0].Title)
+	flatBranch := branches[0]
+	flatType := pascalIdentifier(flatBranch.Title) + name
+	flatField := arrayUnionFieldName(flatBranch.Title)
+	flatItem := defs[refName(flatBranch.Items.Ref)]
 	groupBranch := branches[len(branches)-1]
 	groupType := pascalIdentifier(groupBranch.Title) + name
 	groupField := arrayUnionFieldName(groupBranch.Title)
 	groupItem := defs[refName(groupBranch.Items.Ref)]
-	probeField := firstRequiredObjectField(groupItem)
+	probeField := arrayUnionProbeField(flatItem, groupItem)
 	probeFieldType := jen.String()
 	probeCondition := jen.Id("probe").Dot(fieldName(probeField)).Op("!=").Lit("")
 	if arrayUnionProbeUsesPresence(defs, groupItem, probeField) {
@@ -723,6 +725,23 @@ func arrayUnionFieldName(title string) string {
 		return "Groups"
 	}
 	return pascalIdentifier(title)
+}
+
+func arrayUnionProbeField(flatItem, groupItem *jsonschema.Schema) string {
+	flatProperties := map[string]bool{}
+	if flatItem != nil {
+		for name := range flatItem.Properties {
+			flatProperties[name] = true
+		}
+	}
+	if groupItem != nil {
+		for _, field := range groupItem.Required {
+			if !flatProperties[field] {
+				return field
+			}
+		}
+	}
+	return firstRequiredObjectField(groupItem)
 }
 
 func firstRequiredObjectField(schema *jsonschema.Schema) string {
