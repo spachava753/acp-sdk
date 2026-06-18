@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "CollisionUnion": {
+      "description": "A discriminator union whose values normalize to the same Go suffix.",
+      "oneOf": [
+        {
+          "description": "Hyphen status.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "in-progress"
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": ["kind", "text"]
+        },
+        {
+          "description": "Underscore status.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "in_progress"
+            },
+            "count": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "required": ["kind", "count"]
+        },
+        {
+          "description": "Spaced status.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "in progress"
+            },
+            "ok": {
+              "type": "boolean"
+            }
+          },
+          "required": ["kind", "ok"]
+        }
+      ],
+      "discriminator": {
+        "propertyName": "kind"
+      }
+    },
+    "Payload": {
+      "description": "Object with a tolerant array of colliding union items.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "description": "Items with colliding discriminator constants.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CollisionUnion"
+          },
+          "x-deserialize-skip-invalid-items": true
+        }
+      }
+    }
+  }
+}

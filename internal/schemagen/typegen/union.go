@@ -27,6 +27,7 @@ type unionRequiredSlice struct {
 func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, schema *jsonschema.Schema) ([]jen.Code, bool) {
 	branches := unionBranches(schema)
 	discriminator := discriminatorField(defs, schema, branches)
+	constNames := discriminatorConstNames(defs, name, discriminator, branches)
 	parentRequired := requiredMap(schema.Required)
 	requiredCount := map[string]int{}
 	fieldOrder := []string{}
@@ -112,18 +113,19 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 		var consts []jen.Code
 		for _, branch := range branches {
 			value, desc := variantConst(defs, branch, discriminator)
-			if value == "" {
+			constName := constNames[value]
+			if constName == "" {
 				continue
 			}
-			constName := fmt.Sprintf("%sType%s", name, pascalIdentifier(value))
 			consts = append(consts, commented(constName, desc, jen.Id(constName).Id(name+"Type").Op("=").Lit(value)))
 		}
 		codes = append(codes, jen.Const().Defs(consts...), jen.Line())
 	}
 
 	inline := inlineUnion(branches)
+	constructorNames := unionConstructorNames(defs, name, discriminator, branches)
 	for _, branch := range branches {
-		codes = append(codes, unionConstructorCode(defs, name, discriminator, branch, inline, schema.Properties, schema.Required, fieldsByJSON), jen.Line())
+		codes = append(codes, unionConstructorCode(defs, name, discriminator, branch, constructorNames[branch], inline, schema.Properties, schema.Required, fieldsByJSON, constNames), jen.Line())
 	}
 	var deserializeFields []deserializeField
 	for _, jsonName := range fieldOrder {
@@ -132,7 +134,7 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 	unmarshalMethod, hasUnmarshal := deserializeUnmarshalCode(name, deserializeFields)
 	if len(requiredSlices) > 0 {
 		if discriminator != "" {
-			codes = append(codes, discriminatorUnionMarshalCode(name, discriminator, requiredSlices), jen.Line())
+			codes = append(codes, discriminatorUnionMarshalCode(name, discriminator, requiredSlices, constNames), jen.Line())
 		} else {
 			codes = append(codes, discriminatorlessUnionMarshalCode(name, requiredSlices, len(branches)), jen.Line())
 		}
@@ -191,7 +193,7 @@ func isRequiredInAllVariants(parentRequired map[string]bool, requiredCount map[s
 	return parentRequired[jsonName] || requiredCount[jsonName] == branchCount
 }
 
-func discriminatorUnionMarshalCode(name, discriminator string, requiredSlices []unionRequiredSlice) jen.Code {
+func discriminatorUnionMarshalCode(name, discriminator string, requiredSlices []unionRequiredSlice, constNames map[string]string) jen.Code {
 	receiver := receiverName(name)
 	fieldSeen := map[string]bool{}
 	var orderedFields []unionField
@@ -249,8 +251,8 @@ func discriminatorUnionMarshalCode(name, discriminator string, requiredSlices []
 			assignments = append(assignments, sliceFieldAssignmentCode(receiver, field)...)
 		}
 		var caseValue jen.Code = jen.Lit("")
-		if group.value != "" {
-			caseValue = jen.Id(name + "Type" + pascalIdentifier(group.value))
+		if constName := constNames[group.value]; constName != "" {
+			caseValue = jen.Id(constName)
 		}
 		cases = append(cases, jen.Case(caseValue).Block(assignments...))
 	}
@@ -333,20 +335,8 @@ func sliceFieldAssignmentCode(receiver string, field unionField) []jen.Code {
 	}
 }
 
-func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discriminator string, branch *jsonschema.Schema, inline bool, parentProperties map[string]*jsonschema.Schema, parentRequired []string, fieldsByJSON map[string]unionField) jen.Code {
-	constructorName := pascalIdentifier(branch.Title)
+func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discriminator string, branch *jsonschema.Schema, constructorName string, inline bool, parentProperties map[string]*jsonschema.Schema, parentRequired []string, fieldsByJSON map[string]unionField, constNames map[string]string) jen.Code {
 	value, _ := variantConst(defs, branch, discriminator)
-	ref := variantRef(branch)
-	if constructorName == "" && value != "" {
-		constructorName = pascalIdentifier(value)
-	}
-	if constructorName == "" && ref != "" {
-		constructorName = strings.TrimPrefix(ref, unionName)
-	}
-	constructorName += unionName
-	if ref != "" && constructorName == ref {
-		constructorName = "New" + constructorName
-	}
 
 	properties := mergedProperties(parentProperties, variantProperties(defs, branch))
 	required := mergedRequired(parentRequired, variantRequired(defs, branch))
@@ -371,8 +361,8 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 	}
 
 	var literalFields []jen.Code
-	if value != "" && discriminator != "" {
-		literalFields = append(literalFields, jen.Id(fieldName(discriminator)).Op(":").Id(unionName+"Type"+pascalIdentifier(value)))
+	if constName := constNames[value]; constName != "" && discriminator != "" {
+		literalFields = append(literalFields, jen.Id(fieldName(discriminator)).Op(":").Id(constName))
 	}
 	for _, jsonName := range sortedPropertyNames(properties) {
 		prop := properties[jsonName]
@@ -390,6 +380,48 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 		return functionCommented(constructorName, "creates ", lowerFirstSentence(description)+".", fn)
 	}
 	return functionCommented(constructorName, fmt.Sprintf("creates an %s variant: ", unionName), branch.Description, fn)
+}
+
+func discriminatorConstNames(defs map[string]*jsonschema.Schema, unionName, discriminator string, branches []*jsonschema.Schema) map[string]string {
+	names := map[string]string{}
+	if discriminator == "" {
+		return names
+	}
+	used := map[string]bool{}
+	for _, branch := range branches {
+		value, _ := variantConst(defs, branch, discriminator)
+		if value == "" || names[value] != "" {
+			continue
+		}
+		names[value] = uniqueConstName(unionName+"Type"+constValueName(value), used)
+	}
+	return names
+}
+
+func unionConstructorNames(defs map[string]*jsonschema.Schema, unionName, discriminator string, branches []*jsonschema.Schema) map[*jsonschema.Schema]string {
+	names := map[*jsonschema.Schema]string{}
+	used := map[string]bool{}
+	for _, branch := range branches {
+		names[branch] = uniqueConstName(unionConstructorName(defs, unionName, discriminator, branch), used)
+	}
+	return names
+}
+
+func unionConstructorName(defs map[string]*jsonschema.Schema, unionName, discriminator string, branch *jsonschema.Schema) string {
+	constructorName := pascalIdentifier(branch.Title)
+	value, _ := variantConst(defs, branch, discriminator)
+	ref := variantRef(branch)
+	if constructorName == "" && value != "" {
+		constructorName = constValueName(value)
+	}
+	if constructorName == "" && ref != "" {
+		constructorName = strings.TrimPrefix(ref, unionName)
+	}
+	constructorName += unionName
+	if ref != "" && constructorName == ref {
+		constructorName = "New" + constructorName
+	}
+	return constructorName
 }
 
 func mergedProperties(parent, variant map[string]*jsonschema.Schema) map[string]*jsonschema.Schema {

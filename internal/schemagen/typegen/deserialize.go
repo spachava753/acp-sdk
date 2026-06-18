@@ -74,6 +74,7 @@ func skipInvalidItemsValidator(defs map[string]*jsonschema.Schema, schema *jsons
 	if discriminator == "" {
 		return nil
 	}
+	constNames := discriminatorConstNames(defs, name, discriminator, branches)
 	seen := map[string]bool{}
 	var cases []jen.Code
 	for _, branch := range branches {
@@ -82,11 +83,13 @@ func skipInvalidItemsValidator(defs map[string]*jsonschema.Schema, schema *jsons
 			continue
 		}
 		seen[value] = true
-		if value == "" {
-			cases = append(cases, jen.Lit(""))
+		if constName := constNames[value]; constName != "" {
+			cases = append(cases, jen.Id(constName))
 			continue
 		}
-		cases = append(cases, jen.Id(name+"Type"+pascalIdentifier(value)))
+		if value == "" {
+			cases = append(cases, jen.Lit(""))
+		}
 	}
 	if len(cases) == 0 {
 		return nil

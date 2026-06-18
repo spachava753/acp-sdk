@@ -1,0 +1,81 @@
+package acp
+
+import "encoding/json"
+
+// CollisionUnion: A discriminator union whose values normalize to the same Go suffix.
+type CollisionUnion struct {
+	Kind  CollisionUnionType `json:"kind"`
+	Count int32              `json:"count,omitempty"`
+	Ok    bool               `json:"ok,omitempty"`
+	Text  string             `json:"text,omitempty"`
+}
+
+// CollisionUnionType is the discriminator for CollisionUnion variants.
+type CollisionUnionType string
+
+const (
+	CollisionUnionTypeInProgress  CollisionUnionType = "in-progress"
+	CollisionUnionTypeInProgress2 CollisionUnionType = "in_progress"
+	CollisionUnionTypeInProgress3 CollisionUnionType = "in progress"
+)
+
+// InProgressCollisionUnion creates hyphen status.
+func InProgressCollisionUnion(text string) CollisionUnion {
+	return CollisionUnion{
+		Kind: CollisionUnionTypeInProgress,
+		Text: text,
+	}
+}
+
+// InProgressCollisionUnion2 creates underscore status.
+func InProgressCollisionUnion2(count int32) CollisionUnion {
+	return CollisionUnion{
+		Kind:  CollisionUnionTypeInProgress2,
+		Count: count,
+	}
+}
+
+// InProgressCollisionUnion3 creates spaced status.
+func InProgressCollisionUnion3(ok bool) CollisionUnion {
+	return CollisionUnion{
+		Kind: CollisionUnionTypeInProgress3,
+		Ok:   ok,
+	}
+}
+
+// Payload: Object with a tolerant array of colliding union items.
+type Payload struct {
+	Items []CollisionUnion `json:"items,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *Payload) UnmarshalJSON(data []byte) error {
+	type alias Payload
+	decoded := alias{}
+	raw := struct {
+		Items json.RawMessage `json:"items"`
+		*alias
+	}{alias: &decoded}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Items) > 0 {
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Items, &values); err != nil {
+			return err
+		} else {
+			decoded.Items = []CollisionUnion{}
+			for _, value := range values {
+				var item CollisionUnion
+				if err := json.Unmarshal(value, &item); err == nil {
+					switch item.Kind {
+					case CollisionUnionTypeInProgress, CollisionUnionTypeInProgress2, CollisionUnionTypeInProgress3:
+						decoded.Items = append(decoded.Items, item)
+					}
+				}
+			}
+		}
+	}
+	*p = Payload(decoded)
+	return nil
+}
