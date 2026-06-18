@@ -1,0 +1,86 @@
+package acp
+
+import "encoding/json"
+
+// CollisionGroup: A grouped set of options.
+type CollisionGroup struct {
+	Group   string            `json:"group"`
+	Name    string            `json:"name"`
+	Options []CollisionOption `json:"options"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (g CollisionGroup) MarshalJSON() ([]byte, error) {
+	type alias CollisionGroup
+	a := alias(g)
+	if a.Options == nil {
+		a.Options = []CollisionOption{}
+	}
+	return json.Marshal(a)
+}
+
+// CollisionOption: A selectable option.
+type CollisionOption struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// CollisionOptions: Array union whose branch titles normalize to the same Go name.
+type CollisionOptions struct {
+	Flat  *FlatCollisionOptions
+	Flat2 *FlatCollisionOptions2
+}
+
+// FlatCollisionOptions is the flat variant of CollisionOptions.
+type FlatCollisionOptions []CollisionOption
+
+// FlatCollisionOptions2 is the flat variant of CollisionOptions.
+type FlatCollisionOptions2 []CollisionGroup
+
+// MarshalJSON implements json.Marshaler.
+func (o CollisionOptions) MarshalJSON() ([]byte, error) {
+	if o.Flat2 != nil {
+		return json.Marshal(o.Flat2)
+	}
+	if o.Flat != nil {
+		return json.Marshal(o.Flat)
+	}
+	return []byte("null"), nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *CollisionOptions) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*o = CollisionOptions{}
+		return nil
+	}
+	var raw []json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw) == 0 {
+		flat := FlatCollisionOptions{}
+		*o = CollisionOptions{Flat: &flat}
+		return nil
+	}
+	var probe struct {
+		Options json.RawMessage `json:"options"`
+	}
+	if err := json.Unmarshal(raw[0], &probe); err != nil {
+		return err
+	}
+	if len(probe.Options) > 0 {
+		var groups FlatCollisionOptions2
+		if err := json.Unmarshal(data, &groups); err != nil {
+			return err
+		}
+		*o = CollisionOptions{Flat2: &groups}
+		return nil
+	}
+	var flat FlatCollisionOptions
+	if err := json.Unmarshal(data, &flat); err != nil {
+		return err
+	}
+	*o = CollisionOptions{Flat: &flat}
+	return nil
+}

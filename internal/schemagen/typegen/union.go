@@ -24,6 +24,12 @@ type unionRequiredSlice struct {
 	common             bool
 }
 
+type arrayUnionVariant struct {
+	branch    *jsonschema.Schema
+	fieldName string
+	typeName  string
+}
+
 func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, schema *jsonschema.Schema) ([]jen.Code, bool) {
 	branches := unionBranches(schema)
 	discriminator := discriminatorField(defs, schema, branches)
@@ -522,44 +528,43 @@ func assignUnionField(fieldType, paramType, paramName string) jen.Code {
 
 func arrayUnionCode(defs map[string]*jsonschema.Schema, name string, schema *jsonschema.Schema) []jen.Code {
 	branches := unionBranches(schema)
+	variants := arrayUnionVariants(name, branches)
 	var fields []jen.Code
-	for _, branch := range branches {
-		variantType := pascalIdentifier(branch.Title) + name
-		fields = append(fields, jen.Id(arrayUnionFieldName(branch.Title)).Op("*").Id(variantType))
+	for _, variant := range variants {
+		fields = append(fields, jen.Id(variant.fieldName).Op("*").Id(variant.typeName))
 	}
 
 	var codes []jen.Code
 	codes = append(codes, commented(name, schema.Description, jen.Type().Id(name).Struct(fields...)), jen.Line())
-	for _, branch := range branches {
-		variantType := pascalIdentifier(branch.Title) + name
-		typ, _ := schemaType(defs, branch, false)
+	for _, variant := range variants {
+		typ, _ := schemaType(defs, variant.branch, false)
 		codes = append(codes,
-			jen.Commentf("%s is the %s variant of %s.", variantType, strings.ToLower(branch.Title), name).Line().Type().Id(variantType).Add(typ),
+			jen.Commentf("%s is the %s variant of %s.", variant.typeName, strings.ToLower(variant.branch.Title), name).Line().Type().Id(variant.typeName).Add(typ),
 			jen.Line(),
 		)
 	}
-	codes = append(codes, arrayUnionMarshalCode(name, branches), jen.Line(), arrayUnionUnmarshalCode(defs, name, branches), jen.Line())
+	codes = append(codes, arrayUnionMarshalCode(name, variants), jen.Line(), arrayUnionUnmarshalCode(defs, name, variants), jen.Line())
 	return codes
 }
 
-func arrayUnionMarshalCode(name string, branches []*jsonschema.Schema) jen.Code {
+func arrayUnionMarshalCode(name string, variants []arrayUnionVariant) jen.Code {
 	var body []jen.Code
-	for i := len(branches) - 1; i >= 0; i-- {
-		field := arrayUnionFieldName(branches[i].Title)
+	for i := len(variants) - 1; i >= 0; i-- {
+		field := variants[i].fieldName
 		body = append(body, jen.If(jen.Id("o").Dot(field).Op("!=").Nil()).Block(jen.Return(jen.Qual("encoding/json", "Marshal").Call(jen.Id("o").Dot(field)))))
 	}
 	body = append(body, jen.Return(jen.Index().Byte().Call(jen.Lit("null")), jen.Nil()))
 	return jen.Comment("MarshalJSON implements json.Marshaler.").Line().Func().Params(jen.Id("o").Id(name)).Id("MarshalJSON").Params().Params(jen.Index().Byte(), jen.Error()).Block(body...)
 }
 
-func arrayUnionUnmarshalCode(defs map[string]*jsonschema.Schema, name string, branches []*jsonschema.Schema) jen.Code {
-	flatBranch, groupBranch := arrayUnionDecodeBranches(defs, branches)
-	flatType := pascalIdentifier(flatBranch.Title) + name
-	flatField := arrayUnionFieldName(flatBranch.Title)
-	flatItem := defs[refName(flatBranch.Items.Ref)]
-	groupType := pascalIdentifier(groupBranch.Title) + name
-	groupField := arrayUnionFieldName(groupBranch.Title)
-	groupItem := defs[refName(groupBranch.Items.Ref)]
+func arrayUnionUnmarshalCode(defs map[string]*jsonschema.Schema, name string, variants []arrayUnionVariant) jen.Code {
+	flatVariant, groupVariant := arrayUnionDecodeVariants(defs, variants)
+	flatType := flatVariant.typeName
+	flatField := flatVariant.fieldName
+	flatItem := defs[refName(flatVariant.branch.Items.Ref)]
+	groupType := groupVariant.typeName
+	groupField := groupVariant.fieldName
+	groupItem := defs[refName(groupVariant.branch.Items.Ref)]
 	probeField := arrayUnionProbeField(flatItem, groupItem)
 	probeFieldType := jen.String()
 	probeCondition := jen.Id("probe").Dot(fieldName(probeField)).Op("!=").Lit("")
@@ -806,28 +811,50 @@ func multilineValues(fields []jen.Code) []jen.Code {
 	return []jen.Code{stmt}
 }
 
-func arrayUnionFieldName(title string) string {
+func arrayUnionVariants(name string, branches []*jsonschema.Schema) []arrayUnionVariant {
+	variants := make([]arrayUnionVariant, 0, len(branches))
+	usedFields := map[string]bool{}
+	usedTypes := map[string]bool{}
+	for _, branch := range branches {
+		fieldName := arrayUnionBaseFieldName(branch.Title)
+		if fieldName == "" {
+			fieldName = "Variant"
+		}
+		typePrefix := pascalIdentifier(branch.Title)
+		if typePrefix == "" {
+			typePrefix = "Variant"
+		}
+		variants = append(variants, arrayUnionVariant{
+			branch:    branch,
+			fieldName: uniqueConstName(fieldName, usedFields),
+			typeName:  uniqueConstName(typePrefix+name, usedTypes),
+		})
+	}
+	return variants
+}
+
+func arrayUnionBaseFieldName(title string) string {
 	if title == "Grouped" {
 		return "Groups"
 	}
 	return pascalIdentifier(title)
 }
 
-func arrayUnionDecodeBranches(defs map[string]*jsonschema.Schema, branches []*jsonschema.Schema) (*jsonschema.Schema, *jsonschema.Schema) {
-	flatBranch := branches[0]
-	groupBranch := branches[len(branches)-1]
-	if len(branches) != 2 {
-		return flatBranch, groupBranch
+func arrayUnionDecodeVariants(defs map[string]*jsonschema.Schema, variants []arrayUnionVariant) (arrayUnionVariant, arrayUnionVariant) {
+	flatVariant := variants[0]
+	groupVariant := variants[len(variants)-1]
+	if len(variants) != 2 {
+		return flatVariant, groupVariant
 	}
 
-	firstItem := defs[refName(branches[0].Items.Ref)]
-	secondItem := defs[refName(branches[1].Items.Ref)]
-	firstGrouped := arrayUnionGroupedBranch(defs, branches[0], firstItem, secondItem)
-	secondGrouped := arrayUnionGroupedBranch(defs, branches[1], secondItem, firstItem)
+	firstItem := defs[refName(variants[0].branch.Items.Ref)]
+	secondItem := defs[refName(variants[1].branch.Items.Ref)]
+	firstGrouped := arrayUnionGroupedBranch(defs, variants[0].branch, firstItem, secondItem)
+	secondGrouped := arrayUnionGroupedBranch(defs, variants[1].branch, secondItem, firstItem)
 	if firstGrouped && !secondGrouped {
-		return branches[1], branches[0]
+		return variants[1], variants[0]
 	}
-	return flatBranch, groupBranch
+	return flatVariant, groupVariant
 }
 
 func arrayUnionGroupedBranch(defs map[string]*jsonschema.Schema, branch, item, otherItem *jsonschema.Schema) bool {
