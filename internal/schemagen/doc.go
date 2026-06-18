@@ -271,6 +271,8 @@
 //     nullable in another, instead of broadening to any.
 //   - testdata/nullable_mixed_union_fields: flattened unions broaden shared
 //     nullable fields to any when variants use incompatible non-null kinds.
+//   - testdata/union_branch_meta: flattened unions treat _meta inherited from
+//     variant refs as the SDK Meta type, not as a raw extension map.
 //   - testdata/nested_union_ref_fields: flattened union variants that reference
 //     schemas with their own nested union branches preserve the nested branch
 //     fields on the outer flattened type.

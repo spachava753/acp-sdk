@@ -37,7 +37,7 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 		if prop == nil || prop.Const != nil || jsonName == discriminator {
 			return
 		}
-		if common && jsonName == "_meta" {
+		if jsonName == "_meta" {
 			needsMeta = true
 		}
 		if existing, ok := fieldsByJSON[jsonName]; ok {
@@ -144,7 +144,7 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 }
 
 func newUnionField(defs map[string]*jsonschema.Schema, jsonName string, prop *jsonschema.Schema, common bool) unionField {
-	if common && jsonName == "_meta" {
+	if jsonName == "_meta" {
 		return unionField{deserializeField: deserializeField{jsonName: jsonName, goName: fieldName(jsonName), typeCode: jen.Id("Meta"), typeText: "Meta"}, schema: prop}
 	}
 	typ, text := schemaType(defs, prop, false)

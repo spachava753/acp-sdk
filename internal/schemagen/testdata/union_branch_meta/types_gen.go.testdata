@@ -1,0 +1,48 @@
+package acp
+
+// Meta: Reserved metadata for protocol extensions.
+type Meta map[string]any
+
+// BranchMetaUnion: Flattened union whose variants inherit _meta from referenced objects.
+type BranchMetaUnion struct {
+	Kind BranchMetaUnionType `json:"kind"`
+	Meta Meta                `json:"_meta,omitzero"`
+	Text string              `json:"text,omitempty"`
+	URI  string              `json:"uri,omitempty"`
+}
+
+// BranchMetaUnionType is the discriminator for BranchMetaUnion variants.
+type BranchMetaUnionType string
+
+const (
+	BranchMetaUnionTypeText BranchMetaUnionType = "text"
+	BranchMetaUnionTypeLink BranchMetaUnionType = "link"
+)
+
+// TextBranchMetaUnion creates an BranchMetaUnion variant: Text variant.
+func TextBranchMetaUnion(text string) BranchMetaUnion {
+	return BranchMetaUnion{
+		Kind: BranchMetaUnionTypeText,
+		Text: text,
+	}
+}
+
+// LinkBranchMetaUnion creates an BranchMetaUnion variant: Link variant.
+func LinkBranchMetaUnion(uri string) BranchMetaUnion {
+	return BranchMetaUnion{
+		Kind: BranchMetaUnionTypeLink,
+		URI:  uri,
+	}
+}
+
+// LinkBranch: Link branch payload.
+type LinkBranch struct {
+	Meta Meta   `json:"_meta,omitzero"`
+	URI  string `json:"uri"`
+}
+
+// TextBranch: Text branch payload.
+type TextBranch struct {
+	Meta Meta   `json:"_meta,omitzero"`
+	Text string `json:"text"`
+}

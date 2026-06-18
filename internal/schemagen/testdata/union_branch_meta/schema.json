@@ -1,0 +1,75 @@
+{
+  "$defs": {
+    "BranchMetaUnion": {
+      "description": "Flattened union whose variants inherit _meta from referenced objects.",
+      "oneOf": [
+        {
+          "title": "Text",
+          "description": "Text variant.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "text"
+            }
+          },
+          "required": ["kind"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/TextBranch"
+            }
+          ]
+        },
+        {
+          "title": "Link",
+          "description": "Link variant.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "link"
+            }
+          },
+          "required": ["kind"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/LinkBranch"
+            }
+          ]
+        }
+      ]
+    },
+    "TextBranch": {
+      "description": "Text branch payload.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "_meta": {
+          "description": "Reserved metadata.",
+          "type": ["object", "null"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["text"]
+    },
+    "LinkBranch": {
+      "description": "Link branch payload.",
+      "type": "object",
+      "properties": {
+        "uri": {
+          "type": "string"
+        },
+        "_meta": {
+          "description": "Reserved metadata.",
+          "type": ["object", "null"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["uri"]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Union Branch Meta Fixture"
+}

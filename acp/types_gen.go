@@ -187,7 +187,7 @@ type AuthEnvVar struct {
 // When no `type` is present, the method is treated as `agent`.
 type AuthMethod struct {
 	Type        AuthMethodType    `json:"type,omitempty"`
-	Meta        map[string]any    `json:"_meta,omitempty"`
+	Meta        Meta              `json:"_meta,omitzero"`
 	Args        []string          `json:"args,omitempty"`
 	Description *string           `json:"description,omitempty"`
 	Env         map[string]string `json:"env,omitempty"`
@@ -344,8 +344,8 @@ func (c *AvailableCommand) UnmarshalJSON(data []byte) error {
 
 // AvailableCommandInput: The input specification for a command.
 type AvailableCommandInput struct {
-	Meta map[string]any `json:"_meta,omitempty"`
-	Hint string         `json:"hint"`
+	Meta Meta   `json:"_meta,omitzero"`
+	Hint string `json:"hint"`
 }
 
 // UnstructuredAvailableCommandInput creates an AvailableCommandInput variant: All text that was typed after the command name is provided as input.
@@ -650,7 +650,7 @@ type Content struct {
 // See protocol docs: [Content](https://agentclientprotocol.com/protocol/content)
 type ContentBlock struct {
 	Type        ContentBlockType         `json:"type"`
-	Meta        map[string]any           `json:"_meta,omitempty"`
+	Meta        Meta                     `json:"_meta,omitzero"`
 	Annotations *Annotations             `json:"annotations,omitempty"`
 	Data        string                   `json:"data,omitempty"`
 	Description *string                  `json:"description,omitempty"`
@@ -1088,7 +1088,7 @@ type ElicitationId string
 // Multi-select enums use the `Array` variant.
 type ElicitationPropertySchema struct {
 	Type        ElicitationPropertySchemaType `json:"type"`
-	Meta        map[string]any                `json:"_meta,omitempty"`
+	Meta        Meta                          `json:"_meta,omitzero"`
 	Default     any                           `json:"default,omitempty"`
 	Description *string                       `json:"description,omitempty"`
 	Enum        *[]string                     `json:"enum,omitempty"`
@@ -1273,11 +1273,11 @@ func (r *EmbeddedResource) UnmarshalJSON(data []byte) error {
 
 // EmbeddedResourceResource: Resource content that can be embedded in a message.
 type EmbeddedResourceResource struct {
-	Meta     map[string]any `json:"_meta,omitempty"`
-	Blob     string         `json:"blob,omitempty"`
-	MimeType *string        `json:"mimeType,omitempty"`
-	Text     string         `json:"text,omitempty"`
-	URI      string         `json:"uri"`
+	Meta     Meta    `json:"_meta,omitzero"`
+	Blob     string  `json:"blob,omitempty"`
+	MimeType *string `json:"mimeType,omitempty"`
+	Text     string  `json:"text,omitempty"`
+	URI      string  `json:"uri"`
 }
 
 // TextResourceContentsEmbeddedResourceResource creates an EmbeddedResourceResource variant:
@@ -1793,7 +1793,7 @@ type McpConnectionId string
 // See protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)
 type McpServer struct {
 	Type    McpServerType  `json:"type,omitempty"`
-	Meta    map[string]any `json:"_meta,omitempty"`
+	Meta    Meta           `json:"_meta,omitzero"`
 	Args    []string       `json:"args,omitempty"`
 	Command string         `json:"command,omitempty"`
 	Env     []EnvVariable  `json:"env,omitempty"`
@@ -2026,7 +2026,7 @@ type MessageMcpResponse any
 
 // MultiSelectItems: Items for a multi-select (array) property schema.
 type MultiSelectItems struct {
-	Meta  map[string]any        `json:"_meta,omitempty"`
+	Meta  Meta                  `json:"_meta,omitzero"`
 	AnyOf []EnumOption          `json:"anyOf,omitempty"`
 	Enum  []string              `json:"enum,omitempty"`
 	Type  ElicitationStringType `json:"type,omitempty"`
@@ -2562,7 +2562,7 @@ func (c *NesSuggestContext) UnmarshalJSON(data []byte) error {
 // NesSuggestion: A suggestion returned by the agent.
 type NesSuggestion struct {
 	Kind           NesSuggestionType `json:"kind"`
-	Meta           map[string]any    `json:"_meta,omitempty"`
+	Meta           Meta              `json:"_meta,omitzero"`
 	CursorPosition *Position         `json:"cursorPosition,omitempty"`
 	Edits          []NesTextEdit     `json:"edits,omitempty"`
 	ID             string            `json:"id"`
@@ -3001,7 +3001,7 @@ type PlanUpdate struct {
 // Updated content for a plan.
 type PlanUpdateContent struct {
 	Type    PlanUpdateContentType `json:"type"`
-	Meta    map[string]any        `json:"_meta,omitempty"`
+	Meta    Meta                  `json:"_meta,omitzero"`
 	Content string                `json:"content,omitempty"`
 	Entries []PlanEntry           `json:"entries,omitempty"`
 	ID      PlanId                `json:"id"`
@@ -3303,7 +3303,7 @@ type RequestId = json.RawMessage
 // RequestPermissionOutcome: The outcome of a permission request.
 type RequestPermissionOutcome struct {
 	Outcome  RequestPermissionOutcomeType `json:"outcome"`
-	Meta     map[string]any               `json:"_meta,omitempty"`
+	Meta     Meta                         `json:"_meta,omitzero"`
 	OptionID PermissionOptionId           `json:"optionId,omitempty"`
 }
 
@@ -3885,7 +3885,7 @@ type SessionResumeCapabilities struct {
 // See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
 type SessionUpdate struct {
 	SessionUpdate     SessionUpdateType     `json:"sessionUpdate"`
-	Meta              map[string]any        `json:"_meta,omitempty"`
+	Meta              Meta                  `json:"_meta,omitzero"`
 	AvailableCommands []AvailableCommand    `json:"availableCommands,omitempty"`
 	ConfigOptions     []SessionConfigOption `json:"configOptions,omitempty"`
 	Content           any                   `json:"content,omitempty,omitzero"`
@@ -4635,7 +4635,7 @@ func (c *ToolCall) UnmarshalJSON(data []byte) error {
 // See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
 type ToolCallContent struct {
 	Type       ToolCallContentType `json:"type"`
-	Meta       map[string]any      `json:"_meta,omitempty"`
+	Meta       Meta                `json:"_meta,omitzero"`
 	Content    ContentBlock        `json:"content,omitempty,omitzero"`
 	NewText    string              `json:"newText,omitempty"`
 	OldText    *string             `json:"oldText,omitempty"`
