@@ -804,6 +804,22 @@ func UrlCreateElicitationRequest(message string, elicitationID ElicitationId, ur
 	}
 }
 
+// MarshalJSON implements json.Marshaler.
+func (r CreateElicitationRequest) MarshalJSON() ([]byte, error) {
+	type alias CreateElicitationRequest
+	type wire struct {
+		*alias
+		RequestedSchema *ElicitationSchema `json:"requestedSchema,omitempty"`
+	}
+	w := wire{alias: (*alias)(&r)}
+	switch r.Mode {
+	case CreateElicitationRequestTypeForm:
+		RequestedSchema := r.RequestedSchema
+		w.RequestedSchema = &RequestedSchema
+	}
+	return json.Marshal(w)
+}
+
 // CreateElicitationResponse: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.

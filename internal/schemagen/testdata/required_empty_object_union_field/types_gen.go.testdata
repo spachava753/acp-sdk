@@ -1,0 +1,68 @@
+package acp
+
+import "encoding/json"
+
+// Choice: Union with a branch-required empty object payload.
+type Choice struct {
+	Mode    ChoiceType  `json:"mode"`
+	Message string      `json:"message"`
+	Schema  EmptySchema `json:"schema,omitempty,omitzero"`
+	Text    string      `json:"text,omitempty"`
+}
+
+// ChoiceType is the discriminator for Choice variants.
+type ChoiceType string
+
+const (
+	ChoiceTypeForm ChoiceType = "form"
+	ChoiceTypeText ChoiceType = "text"
+)
+
+// FormChoice creates an Choice variant: Form branch.
+func FormChoice(message string, schema EmptySchema) Choice {
+	return Choice{
+		Mode:    ChoiceTypeForm,
+		Message: message,
+		Schema:  schema,
+	}
+}
+
+// TextChoice creates an Choice variant: Text branch.
+func TextChoice(message string, text string) Choice {
+	return Choice{
+		Mode:    ChoiceTypeText,
+		Message: message,
+		Text:    text,
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (c Choice) MarshalJSON() ([]byte, error) {
+	type alias Choice
+	type wire struct {
+		*alias
+		Schema *EmptySchema `json:"schema,omitempty"`
+	}
+	w := wire{alias: (*alias)(&c)}
+	switch c.Mode {
+	case ChoiceTypeForm:
+		Schema := c.Schema
+		w.Schema = &Schema
+	}
+	return json.Marshal(w)
+}
+
+// EmptySchema: Object payload with no required fields.
+type EmptySchema struct {
+	Title string `json:"title,omitempty"`
+}
+
+// FormMode: Form branch data.
+type FormMode struct {
+	Schema EmptySchema `json:"schema"`
+}
+
+// TextMode: Text branch data.
+type TextMode struct {
+	Text string `json:"text"`
+}

@@ -1,0 +1,98 @@
+{
+  "$defs": {
+    "Choice": {
+      "description": "Union with a branch-required empty object payload.",
+      "type": "object",
+      "properties": {
+        "message": {
+          "description": "Message shown with the choice.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message"
+      ],
+      "oneOf": [
+        {
+          "description": "Form branch.",
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "form"
+            }
+          },
+          "required": [
+            "mode"
+          ],
+          "allOf": [
+            {
+              "$ref": "#/$defs/FormMode"
+            }
+          ]
+        },
+        {
+          "description": "Text branch.",
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "text"
+            }
+          },
+          "required": [
+            "mode"
+          ],
+          "allOf": [
+            {
+              "$ref": "#/$defs/TextMode"
+            }
+          ]
+        }
+      ],
+      "discriminator": {
+        "propertyName": "mode"
+      }
+    },
+    "EmptySchema": {
+      "description": "Object payload with no required fields.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "description": "Display title.",
+          "type": "string"
+        }
+      }
+    },
+    "FormMode": {
+      "description": "Form branch data.",
+      "type": "object",
+      "properties": {
+        "schema": {
+          "description": "Form schema.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/EmptySchema"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema"
+      ]
+    },
+    "TextMode": {
+      "description": "Text branch data.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "description": "Text value.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ]
+    }
+  }
+}
