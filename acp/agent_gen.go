@@ -402,6 +402,13 @@ type McpHandler interface {
 	//
 	// Receives an MCP-over-ACP notification.
 	Message(context.Context, *MessageMcpNotification) error
+
+	// MessageMcp: **UNSTABLE**
+	//
+	// This capability is not part of the spec yet, and may be removed or changed at any point.
+	//
+	// Exchanges an MCP-over-ACP message.
+	MessageMcp(context.Context, *MessageMcpRequest) (*MessageMcpResponse, error)
 }
 
 // NesHandler handles all nes related agent methods.
@@ -644,6 +651,15 @@ func (c *AgentConnection) Message(ctx context.Context, params *MessageMcpNotific
 	return notify(ctx, c.rpc.conn, MethodMcpMessage, params)
 }
 
+// MessageMcp: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Exchanges an MCP-over-ACP message.
+func (c *AgentConnection) MessageMcp(ctx context.Context, params *MessageMcpRequest) (*MessageMcpResponse, error) {
+	return call[MessageMcpResponse](ctx, c.rpc.conn, MethodMcpMessage, params)
+}
+
 // RequestPermission: Requests permission from the user for a tool call operation.
 //
 // Called by the agent when it needs user authorization before executing
@@ -830,6 +846,13 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		handler, ok := agent.(McpHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
+		}
+		if req.IsCall() {
+			params, err := decodeParams[MessageMcpRequest](req)
+			if err != nil {
+				return nil, err
+			}
+			return rpcResult(handler.MessageMcp(ctx, params))
 		}
 		params, err := decodeParams[MessageMcpNotification](req)
 		if err != nil {

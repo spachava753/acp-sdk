@@ -1,0 +1,27 @@
+package acp
+
+// Error: A JSON-RPC error response.
+type Error struct {
+	Code    int64  `json:"code"`
+	Message string `json:"message"`
+}
+
+// MessageMcpNotification: Notification parameters for an MCP message.
+type MessageMcpNotification struct {
+	ConnectionID string `json:"connectionId"`
+	Method       string `json:"method"`
+}
+
+// MessageMcpRequest: Request parameters for an MCP message.
+type MessageMcpRequest struct {
+	ConnectionID string `json:"connectionId"`
+	Method       string `json:"method"`
+}
+
+// MessageMcpResponse: Response for an MCP message request.
+type MessageMcpResponse struct {
+	Ok bool `json:"ok"`
+}
+
+// RequestId: A JSON-RPC request identifier.
+type RequestId string

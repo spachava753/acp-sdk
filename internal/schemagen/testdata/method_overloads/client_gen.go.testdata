@@ -1,0 +1,48 @@
+package acp
+
+// McpClientHandler handles all mcp related client methods.
+type McpClientHandler interface {
+	// Message: Sends an MCP-over-ACP notification.
+	Message(context.Context, *MessageMcpNotification) error
+
+	// MessageMcp: Asks the peer to process an MCP message.
+	MessageMcp(context.Context, *MessageMcpRequest) (*MessageMcpResponse, error)
+}
+
+// Message: Sends an MCP-over-ACP notification.
+func (c *Client) Message(ctx context.Context, params *MessageMcpNotification) error {
+	return notify(ctx, c.rpc.conn, MethodMcpMessage, params)
+}
+
+// MessageMcp: Asks the peer to process an MCP message.
+func (c *Client) MessageMcp(ctx context.Context, params *MessageMcpRequest) (*MessageMcpResponse, error) {
+	return call[MessageMcpResponse](ctx, c.rpc.conn, MethodMcpMessage, params)
+}
+
+func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) {
+	jsonrpc2.Async(ctx)
+	if c.handler == nil {
+		return nil, methodNotFound(req.Method)
+	}
+	switch req.Method {
+	case MethodMcpMessage:
+		handler, ok := c.handler.(McpClientHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		if req.IsCall() {
+			params, err := decodeParams[MessageMcpRequest](req)
+			if err != nil {
+				return nil, err
+			}
+			return rpcResult(handler.MessageMcp(ctx, params))
+		}
+		params, err := decodeParams[MessageMcpNotification](req)
+		if err != nil {
+			return nil, err
+		}
+		return nil, handler.Message(ctx, params)
+	default:
+		return nil, methodNotFound(req.Method)
+	}
+}

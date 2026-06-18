@@ -47,13 +47,14 @@ func operations(schema *jsonschema.Schema) []operation {
 		byType[name] = op
 	}
 
-	byMethod := map[string]operation{}
+	byMethodKind := map[string]operation{}
 	for _, name := range sortedKeys(byType) {
 		op := byType[name]
 		if op.method == "" {
 			continue
 		}
-		merged := byMethod[op.method]
+		key := operationMergeKey(op)
+		merged := byMethodKind[key]
 		if merged.method == "" {
 			merged = op
 		} else {
@@ -73,18 +74,35 @@ func operations(schema *jsonschema.Schema) []operation {
 				merged.notifyType = op.notifyType
 			}
 		}
-		byMethod[op.method] = merged
+		byMethodKind[key] = merged
 	}
 
 	var ops []operation
-	for _, op := range byMethod {
+	for _, key := range sortedKeys(byMethodKind) {
+		op := byMethodKind[key]
 		if op.side == "protocol" || op.method == "" {
 			continue
 		}
 		ops = append(ops, op)
 	}
-	sort.Slice(ops, func(i, j int) bool { return ops[i].constName < ops[j].constName })
+	sort.Slice(ops, func(i, j int) bool {
+		if ops[i].constName != ops[j].constName {
+			return ops[i].constName < ops[j].constName
+		}
+		if ops[i].funcName != ops[j].funcName {
+			return ops[i].funcName < ops[j].funcName
+		}
+		return paramType(ops[i]) < paramType(ops[j])
+	})
 	return ops
+}
+
+func operationMergeKey(op operation) string {
+	kind := "call"
+	if op.notifyType != "" && op.requestType == "" && op.responseType == "" {
+		kind = "notify"
+	}
+	return op.method + "\x00" + kind
 }
 
 func addEnvelopeOps(schema *jsonschema.Schema, byType map[string]operation, envelope string) {

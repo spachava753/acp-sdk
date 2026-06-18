@@ -44,8 +44,11 @@
 // A request/response method is represented by two concrete definitions with the
 // same x-method and x-side: one *Request and one *Response. A notification is
 // represented by one concrete *Notification definition with x-method and x-side.
-// Method grouping is derived from the path segment before '/', so methods like
-// "terminal/create" and "terminal/release" belong to a Terminal handler group.
+// The same x-method can have both a request/response form and a notification
+// form; generated dispatch must distinguish those by whether the JSON-RPC
+// request has an ID. Method grouping is derived from the path segment before
+// '/', so methods like "terminal/create" and "terminal/release" belong to a
+// Terminal handler group.
 //
 // # Method descriptions
 //
@@ -169,6 +172,9 @@
 //     then decode params, then invoke the method.
 //   - Return rpcResult for request/response methods.
 //   - Return nil plus the handler error for notifications.
+//   - When one method name has both a request/response form and a notification
+//     form, emit one switch case and branch on req.IsCall() before decoding
+//     params.
 //   - Return methodNotFound in the default case.
 //
 // Handler assertions must stay inside each switch case. Do not assert a group
@@ -238,6 +244,9 @@
 //     handler methods.
 //   - testdata/both_side: x-side "both" request/response methods that generate
 //     handler interfaces and outbound helpers for both agent and client sides.
+//   - testdata/method_overloads: one JSON-RPC method with both request/response
+//     and notification payloads. This verifies one method constant, separate
+//     call and notify helpers, and dispatch branching on req.IsCall().
 //
 // # Additional test cases to add
 //

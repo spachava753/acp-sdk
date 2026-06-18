@@ -71,6 +71,13 @@ type McpClientHandler interface {
 	//
 	// Receives an MCP-over-ACP notification.
 	Message(context.Context, *MessageMcpNotification) error
+
+	// MessageMcp: **UNSTABLE**
+	//
+	// This capability is not part of the spec yet, and may be removed or changed at any point.
+	//
+	// Exchanges an MCP-over-ACP message.
+	MessageMcp(context.Context, *MessageMcpRequest) (*MessageMcpResponse, error)
 }
 
 // SessionClientHandler handles all session related client methods.
@@ -238,6 +245,15 @@ func (c *Client) Logout(ctx context.Context, params *LogoutRequest) (*LogoutResp
 // Receives an MCP-over-ACP notification.
 func (c *Client) Message(ctx context.Context, params *MessageMcpNotification) error {
 	return notify(ctx, c.rpc.conn, MethodMcpMessage, params)
+}
+
+// MessageMcp: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Exchanges an MCP-over-ACP message.
+func (c *Client) MessageMcp(ctx context.Context, params *MessageMcpRequest) (*MessageMcpResponse, error) {
+	return call[MessageMcpResponse](ctx, c.rpc.conn, MethodMcpMessage, params)
 }
 
 // Accept: **UNSTABLE**
@@ -514,6 +530,13 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		handler, ok := c.handler.(McpClientHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
+		}
+		if req.IsCall() {
+			params, err := decodeParams[MessageMcpRequest](req)
+			if err != nil {
+				return nil, err
+			}
+			return rpcResult(handler.MessageMcp(ctx, params))
 		}
 		params, err := decodeParams[MessageMcpNotification](req)
 		if err != nil {

@@ -1,0 +1,360 @@
+{
+  "$defs": {
+    "AgentNotification": {
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/MessageMcpNotification"
+                    }
+                  ],
+                  "description": "Sends an MCP-over-ACP notification.",
+                  "title": "MessageMcpNotification"
+                }
+              ],
+              "description": "All possible notifications that an agent can send to a client."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["method"],
+      "type": "object",
+      "x-docs-ignore": true
+    },
+    "AgentRequest": {
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/MessageMcpRequest"
+                    }
+                  ],
+                  "description": "Asks the peer to process an MCP message.",
+                  "title": "MessageMcpRequest"
+                }
+              ],
+              "description": "All possible requests that an agent can send to a client."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["id", "method"],
+      "type": "object",
+      "x-docs-ignore": true
+    },
+    "AgentResponse": {
+      "anyOf": [
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            },
+            "result": {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/MessageMcpResponse"
+                    }
+                  ],
+                  "title": "MessageMcpResponse"
+                }
+              ],
+              "description": "All possible responses that an agent can send to a client."
+            }
+          },
+          "required": ["id", "result"],
+          "title": "Result",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "error": {
+              "$ref": "#/$defs/Error"
+            },
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            }
+          },
+          "required": ["id", "error"],
+          "title": "Error",
+          "type": "object"
+        }
+      ],
+      "x-docs-ignore": true
+    },
+    "ClientNotification": {
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/MessageMcpNotification"
+                    }
+                  ],
+                  "description": "Sends an MCP-over-ACP notification.",
+                  "title": "MessageMcpNotification"
+                }
+              ],
+              "description": "All possible notifications that a client can send to an agent."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["method"],
+      "type": "object",
+      "x-docs-ignore": true
+    },
+    "ClientRequest": {
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/MessageMcpRequest"
+                    }
+                  ],
+                  "description": "Asks the peer to process an MCP message.",
+                  "title": "MessageMcpRequest"
+                }
+              ],
+              "description": "All possible requests that a client can send to an agent."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["id", "method"],
+      "type": "object",
+      "x-docs-ignore": true
+    },
+    "ClientResponse": {
+      "anyOf": [
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            },
+            "result": {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/MessageMcpResponse"
+                    }
+                  ],
+                  "title": "MessageMcpResponse"
+                }
+              ],
+              "description": "All possible responses that a client can send to an agent."
+            }
+          },
+          "required": ["id", "result"],
+          "title": "Result",
+          "type": "object"
+        },
+        {
+          "properties": {
+            "error": {
+              "$ref": "#/$defs/Error"
+            },
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            }
+          },
+          "required": ["id", "error"],
+          "title": "Error",
+          "type": "object"
+        }
+      ],
+      "x-docs-ignore": true
+    },
+    "Error": {
+      "description": "A JSON-RPC error response.",
+      "properties": {
+        "code": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": ["code", "message"],
+      "type": "object"
+    },
+    "MessageMcpNotification": {
+      "description": "Notification parameters for an MCP message.",
+      "properties": {
+        "connectionId": {
+          "description": "The MCP connection identifier.",
+          "type": "string"
+        },
+        "method": {
+          "description": "The nested MCP method.",
+          "type": "string"
+        }
+      },
+      "required": ["connectionId", "method"],
+      "type": "object",
+      "x-method": "mcp/message",
+      "x-side": "both"
+    },
+    "MessageMcpRequest": {
+      "description": "Request parameters for an MCP message.",
+      "properties": {
+        "connectionId": {
+          "description": "The MCP connection identifier.",
+          "type": "string"
+        },
+        "method": {
+          "description": "The nested MCP method.",
+          "type": "string"
+        }
+      },
+      "required": ["connectionId", "method"],
+      "type": "object",
+      "x-method": "mcp/message",
+      "x-side": "both"
+    },
+    "MessageMcpResponse": {
+      "description": "Response for an MCP message request.",
+      "properties": {
+        "ok": {
+          "description": "Whether the nested MCP request succeeded.",
+          "type": "boolean"
+        }
+      },
+      "required": ["ok"],
+      "type": "object",
+      "x-method": "mcp/message",
+      "x-side": "both"
+    },
+    "RequestId": {
+      "description": "A JSON-RPC request identifier.",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AgentRequest"
+            }
+          ],
+          "title": "Request"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AgentResponse"
+            }
+          ],
+          "title": "Response"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AgentNotification"
+            }
+          ],
+          "title": "Notification"
+        }
+      ],
+      "description": "A JSON-RPC message sent by the agent.",
+      "properties": {
+        "jsonrpc": {
+          "enum": ["2.0"],
+          "type": "string"
+        }
+      },
+      "required": ["jsonrpc"],
+      "title": "Agent",
+      "type": "object"
+    },
+    {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ClientRequest"
+            }
+          ],
+          "title": "Request"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ClientResponse"
+            }
+          ],
+          "title": "Response"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ClientNotification"
+            }
+          ],
+          "title": "Notification"
+        }
+      ],
+      "description": "A JSON-RPC message sent by the client.",
+      "properties": {
+        "jsonrpc": {
+          "enum": ["2.0"],
+          "type": "string"
+        }
+      },
+      "required": ["jsonrpc"],
+      "title": "Client",
+      "type": "object"
+    }
+  ],
+  "title": "Method Overloads Test Fixture"
+}
