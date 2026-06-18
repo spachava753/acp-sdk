@@ -1,0 +1,91 @@
+package acp
+
+import "encoding/json"
+
+// CollisionGroup: A grouped set of options.
+type CollisionGroup struct {
+	Group   string            `json:"group"`
+	Name    string            `json:"name"`
+	Options []CollisionOption `json:"options"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (g CollisionGroup) MarshalJSON() ([]byte, error) {
+	type alias CollisionGroup
+	a := alias(g)
+	if a.Options == nil {
+		a.Options = []CollisionOption{}
+	}
+	return json.Marshal(a)
+}
+
+// CollisionOption: A selectable option.
+type CollisionOption struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// CollisionOptions: Array union whose generated variant type collides with a top-level type.
+type CollisionOptions struct {
+	Flat   *FlatCollisionOptions2
+	Groups *GroupedCollisionOptions
+}
+
+// FlatCollisionOptions2 is the flat variant of CollisionOptions.
+type FlatCollisionOptions2 []CollisionOption
+
+// GroupedCollisionOptions is the grouped variant of CollisionOptions.
+type GroupedCollisionOptions []CollisionGroup
+
+// MarshalJSON implements json.Marshaler.
+func (o CollisionOptions) MarshalJSON() ([]byte, error) {
+	if o.Groups != nil {
+		return json.Marshal(o.Groups)
+	}
+	if o.Flat != nil {
+		return json.Marshal(o.Flat)
+	}
+	return []byte("null"), nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *CollisionOptions) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*o = CollisionOptions{}
+		return nil
+	}
+	var raw []json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw) == 0 {
+		flat := FlatCollisionOptions2{}
+		*o = CollisionOptions{Flat: &flat}
+		return nil
+	}
+	var probe struct {
+		Options json.RawMessage `json:"options"`
+	}
+	if err := json.Unmarshal(raw[0], &probe); err != nil {
+		return err
+	}
+	if len(probe.Options) > 0 {
+		var groups GroupedCollisionOptions
+		if err := json.Unmarshal(data, &groups); err != nil {
+			return err
+		}
+		*o = CollisionOptions{Groups: &groups}
+		return nil
+	}
+	var flat FlatCollisionOptions2
+	if err := json.Unmarshal(data, &flat); err != nil {
+		return err
+	}
+	*o = CollisionOptions{Flat: &flat}
+	return nil
+}
+
+// FlatCollisionOptions: A normal public type whose name collides with the flat variant helper.
+type FlatCollisionOptions struct {
+	Marker string `json:"marker"`
+}

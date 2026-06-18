@@ -528,7 +528,7 @@ func assignUnionField(fieldType, paramType, paramName string) jen.Code {
 
 func arrayUnionCode(defs map[string]*jsonschema.Schema, name string, schema *jsonschema.Schema) []jen.Code {
 	branches := unionBranches(schema)
-	variants := arrayUnionVariants(name, branches)
+	variants := arrayUnionVariants(defs, name, branches)
 	var fields []jen.Code
 	for _, variant := range variants {
 		fields = append(fields, jen.Id(variant.fieldName).Op("*").Id(variant.typeName))
@@ -811,10 +811,13 @@ func multilineValues(fields []jen.Code) []jen.Code {
 	return []jen.Code{stmt}
 }
 
-func arrayUnionVariants(name string, branches []*jsonschema.Schema) []arrayUnionVariant {
+func arrayUnionVariants(defs map[string]*jsonschema.Schema, name string, branches []*jsonschema.Schema) []arrayUnionVariant {
 	variants := make([]arrayUnionVariant, 0, len(branches))
 	usedFields := map[string]bool{}
 	usedTypes := map[string]bool{}
+	for defName := range defs {
+		usedTypes[defName] = true
+	}
 	for _, branch := range branches {
 		fieldName := arrayUnionBaseFieldName(branch.Title)
 		if fieldName == "" {

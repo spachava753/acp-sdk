@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Array Union Top Level Name Collision",
+  "$defs": {
+    "CollisionOptions": {
+      "description": "Array union whose generated variant type collides with a top-level type.",
+      "anyOf": [
+        {
+          "title": "Flat",
+          "description": "A flat list of options.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CollisionOption"
+          }
+        },
+        {
+          "title": "Grouped",
+          "description": "A grouped list of options.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CollisionGroup"
+          }
+        }
+      ]
+    },
+    "CollisionOption": {
+      "description": "A selectable option.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        },
+        "value": {
+          "description": "Option value.",
+          "type": "string"
+        }
+      },
+      "required": ["name", "value"]
+    },
+    "CollisionGroup": {
+      "description": "A grouped set of options.",
+      "type": "object",
+      "properties": {
+        "group": {
+          "description": "Group identifier.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Group display name.",
+          "type": "string"
+        },
+        "options": {
+          "description": "Options in this group.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CollisionOption"
+          }
+        }
+      },
+      "required": ["name", "options", "group"]
+    },
+    "FlatCollisionOptions": {
+      "description": "A normal public type whose name collides with the flat variant helper.",
+      "type": "object",
+      "properties": {
+        "marker": {
+          "description": "Collision marker.",
+          "type": "string"
+        }
+      },
+      "required": ["marker"]
+    }
+  }
+}
