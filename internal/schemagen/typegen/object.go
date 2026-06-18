@@ -14,9 +14,7 @@ import (
 
 func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonschema.Schema) ([]jen.Code, bool, []jen.Code) {
 	type field struct {
-		goName   string
-		typeCode jen.Code
-		typeText string
+		deserializeField
 		tag      string
 		required bool
 	}
@@ -33,13 +31,14 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 		prop := schema.Properties[jsonName]
 		if jsonName == "_meta" {
 			needsMeta = true
-			f := field{goName: "Meta", typeCode: jen.Id("Meta"), typeText: "Meta", tag: jsonTag(jsonName, false, true)}
+			f := field{deserializeField: deserializeField{jsonName: jsonName, goName: "Meta", typeCode: jen.Id("Meta"), typeText: "Meta"}, tag: jsonTag(jsonName, false, true)}
 			fields = append(fields, f)
 			structFields = append(structFields, jen.Id(f.goName).Add(f.typeCode).Tag(map[string]string{"json": f.tag}))
 			continue
 		}
 		typ, text := schemaType(defs, prop, !required[jsonName])
-		f := field{goName: fieldName(jsonName), typeCode: typ, typeText: text, tag: jsonTag(jsonName, !required[jsonName], false), required: required[jsonName]}
+		deserialize := newDeserializeField(defs, jsonName, prop, typ, text)
+		f := field{deserializeField: deserialize, tag: jsonTag(jsonName, !required[jsonName], false), required: required[jsonName]}
 		fields = append(fields, f)
 		structFields = append(structFields, jen.Id(f.goName).Add(f.typeCode).Tag(map[string]string{"json": f.tag}))
 	}
@@ -67,7 +66,15 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 			hasRequiredMap = true
 		}
 	}
+	var deserializeFields []deserializeField
+	for _, f := range fields {
+		deserializeFields = append(deserializeFields, f.deserializeField)
+	}
+	unmarshalMethod, hasUnmarshal := deserializeUnmarshalCode(name, deserializeFields)
 	if len(requiredSlices) == 0 || hasRequiredMap {
+		if hasUnmarshal {
+			codes = append(codes, unmarshalMethod)
+		}
 		return codes, needsMeta, nil
 	}
 
@@ -84,10 +91,14 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 	}
 	body = append(body, jen.Return(jen.Qual("encoding/json", "Marshal").Call(jen.Id("a"))))
 	method := jen.Comment("MarshalJSON implements json.Marshaler.").Line().Func().Params(jen.Id(receiver).Id(name)).Id("MarshalJSON").Params().Params(jen.Index().Byte(), jen.Error()).Block(body...)
-	if hasOptionalPointer {
-		return codes, needsMeta, []jen.Code{method}
+	methods := []jen.Code{method}
+	if hasUnmarshal {
+		methods = append(methods, jen.Line(), unmarshalMethod)
 	}
-	return append(codes, method), needsMeta, nil
+	if hasOptionalPointer {
+		return codes, needsMeta, methods
+	}
+	return append(codes, methods...), needsMeta, nil
 }
 
 func isObjectSchema(schema *jsonschema.Schema) bool {

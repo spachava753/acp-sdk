@@ -96,6 +96,11 @@
 // to Meta and should use omitzero to match the existing ACP package style.
 // Required slice fields need custom MarshalJSON methods that encode nil slices
 // as empty JSON arrays, matching the hand-written behavior in acp/protocol_json.go.
+// Fields marked x-deserialize-default-on-error should get custom UnmarshalJSON
+// handling that leaves the field at its Go zero value when only that field fails
+// to decode. Array fields also marked x-deserialize-skip-invalid-items should
+// decode each item independently and keep the valid items while preserving normal
+// errors for unmarked fields.
 //
 // # Union generation
 //
@@ -237,6 +242,9 @@
 //   - testdata/nullable_union_fields: flattened unions keep a precise pointer
 //     field when the same JSON field is non-nullable in one variant and
 //     nullable in another, instead of broadening to any.
+//   - testdata/deserialize_extensions: x-deserialize-default-on-error and
+//     x-deserialize-skip-invalid-items generate tolerant UnmarshalJSON methods
+//     for object structs and flattened tagged unions.
 //   - testdata/protocol_side: x-side "protocol" notifications are skipped
 //     entirely by ACP agent/client generation and produce no output files.
 //   - testdata/multiline_comments: multiline Markdown descriptions generate

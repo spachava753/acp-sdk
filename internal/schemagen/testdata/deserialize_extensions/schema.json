@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DeserializeExtensions",
+  "$defs": {
+    "Item": {
+      "description": "A referenced item.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": ["id"]
+    },
+    "Payload": {
+      "description": "Object with tolerant deserialize fields.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "description": "Items that skip invalid entries.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Item"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "name": {
+          "description": "Name that defaults on invalid input.",
+          "type": "string",
+          "x-deserialize-default-on-error": true
+        },
+        "requiredItems": {
+          "description": "Required items that remain arrays when marshaled.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "strict": {
+          "description": "Strict value that should still fail invalid input.",
+          "type": "string"
+        }
+      },
+      "required": ["requiredItems", "strict"]
+    },
+    "Tagged": {
+      "description": "Flattened union with tolerant fields.",
+      "oneOf": [
+        {
+          "description": "Known branch.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "known"
+            },
+            "labels": {
+              "description": "Labels that skip invalid entries.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "x-deserialize-default-on-error": true,
+              "x-deserialize-skip-invalid-items": true
+            }
+          },
+          "required": ["kind"]
+        },
+        {
+          "description": "Other branch.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "other"
+            },
+            "title": {
+              "description": "Title that defaults on invalid input.",
+              "type": "string",
+              "x-deserialize-default-on-error": true
+            }
+          },
+          "required": ["kind", "title"]
+        }
+      ],
+      "discriminator": {
+        "propertyName": "kind"
+      }
+    }
+  }
+}

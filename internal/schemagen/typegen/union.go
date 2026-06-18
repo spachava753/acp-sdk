@@ -14,11 +14,8 @@ import (
 )
 
 type unionField struct {
-	jsonName string
-	goName   string
-	typeCode jen.Code
-	typeText string
-	schema   *jsonschema.Schema
+	deserializeField
+	schema *jsonschema.Schema
 }
 
 type unionRequiredSlice struct {
@@ -69,7 +66,8 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 			if contains(branchRequired, jsonName) {
 				typ, text := schemaType(defs, prop, false)
 				if strings.HasPrefix(text, "[]") {
-					requiredSlices = append(requiredSlices, unionRequiredSlice{discriminatorValue: value, field: unionField{jsonName: jsonName, goName: fieldName(jsonName), typeCode: typ, typeText: text, schema: prop}})
+					deserialize := newDeserializeField(defs, jsonName, prop, typ, text)
+					requiredSlices = append(requiredSlices, unionRequiredSlice{discriminatorValue: value, field: unionField{deserializeField: deserialize, schema: prop}})
 				}
 			}
 			addField(jsonName, prop, false)
@@ -82,7 +80,8 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 		}
 		typ, text := schemaType(defs, prop, false)
 		if strings.HasPrefix(text, "[]") {
-			requiredSlices = append(requiredSlices, unionRequiredSlice{field: unionField{jsonName: req, goName: fieldName(req), typeCode: typ, typeText: text, schema: prop}, common: true})
+			deserialize := newDeserializeField(defs, req, prop, typ, text)
+			requiredSlices = append(requiredSlices, unionRequiredSlice{field: unionField{deserializeField: deserialize, schema: prop}, common: true})
 		}
 	}
 	sort.Strings(fieldOrder)
@@ -124,21 +123,31 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 	for _, branch := range branches {
 		codes = append(codes, unionConstructorCode(defs, name, discriminator, branch, inline, schema.Properties, schema.Required, fieldsByJSON), jen.Line())
 	}
+	var deserializeFields []deserializeField
+	for _, jsonName := range fieldOrder {
+		deserializeFields = append(deserializeFields, fieldsByJSON[jsonName].deserializeField)
+	}
+	unmarshalMethod, hasUnmarshal := deserializeUnmarshalCode(name, deserializeFields)
 	if discriminator != "" && len(requiredSlices) > 0 {
 		codes = append(codes, discriminatorUnionMarshalCode(name, discriminator, requiredSlices), jen.Line())
+	}
+	if hasUnmarshal {
+		codes = append(codes, unmarshalMethod, jen.Line())
 	}
 	return codes, needsMeta
 }
 
 func newUnionField(defs map[string]*jsonschema.Schema, jsonName string, prop *jsonschema.Schema, common bool) unionField {
 	if common && jsonName == "_meta" {
-		return unionField{jsonName: jsonName, goName: fieldName(jsonName), typeCode: jen.Id("Meta"), typeText: "Meta", schema: prop}
+		return unionField{deserializeField: deserializeField{jsonName: jsonName, goName: fieldName(jsonName), typeCode: jen.Id("Meta"), typeText: "Meta"}, schema: prop}
 	}
 	typ, text := schemaType(defs, prop, false)
-	return unionField{jsonName: jsonName, goName: fieldName(jsonName), typeCode: typ, typeText: text, schema: prop}
+	deserialize := newDeserializeField(defs, jsonName, prop, typ, text)
+	return unionField{deserializeField: deserialize, schema: prop}
 }
 
 func mergeUnionField(defs map[string]*jsonschema.Schema, existing, field unionField) unionField {
+	existing.deserializeField = mergeDeserializeRules(existing.deserializeField, field.deserializeField)
 	if existing.typeText == field.typeText {
 		return existing
 	}

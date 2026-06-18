@@ -1,0 +1,131 @@
+package acp
+
+import "encoding/json"
+
+// Item: A referenced item.
+type Item struct {
+	ID string `json:"id"`
+}
+
+// Payload: Object with tolerant deserialize fields.
+type Payload struct {
+	Items         []Item   `json:"items,omitempty"`
+	Name          string   `json:"name,omitempty"`
+	RequiredItems []string `json:"requiredItems"`
+	Strict        string   `json:"strict"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (p Payload) MarshalJSON() ([]byte, error) {
+	type alias Payload
+	a := alias(p)
+	if a.RequiredItems == nil {
+		a.RequiredItems = []string{}
+	}
+	return json.Marshal(a)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *Payload) UnmarshalJSON(data []byte) error {
+	type alias Payload
+	decoded := alias{}
+	raw := struct {
+		Items         json.RawMessage `json:"items"`
+		Name          json.RawMessage `json:"name"`
+		RequiredItems json.RawMessage `json:"requiredItems"`
+		*alias
+	}{alias: &decoded}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Items) > 0 {
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Items, &values); err == nil {
+			decoded.Items = []Item{}
+			for _, value := range values {
+				var item Item
+				if err := json.Unmarshal(value, &item); err == nil {
+					decoded.Items = append(decoded.Items, item)
+				}
+			}
+		}
+	}
+	if len(raw.Name) > 0 {
+		_ = json.Unmarshal(raw.Name, &decoded.Name)
+	}
+	if len(raw.RequiredItems) > 0 {
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.RequiredItems, &values); err == nil {
+			decoded.RequiredItems = []string{}
+			for _, value := range values {
+				var item string
+				if err := json.Unmarshal(value, &item); err == nil {
+					decoded.RequiredItems = append(decoded.RequiredItems, item)
+				}
+			}
+		}
+	}
+	*p = Payload(decoded)
+	return nil
+}
+
+// Tagged: Flattened union with tolerant fields.
+type Tagged struct {
+	Kind   TaggedType `json:"kind"`
+	Labels []string   `json:"labels,omitempty"`
+	Title  string     `json:"title,omitempty"`
+}
+
+// TaggedType is the discriminator for Tagged variants.
+type TaggedType string
+
+const (
+	TaggedTypeKnown TaggedType = "known"
+	TaggedTypeOther TaggedType = "other"
+)
+
+// KnownTagged creates known branch.
+func KnownTagged() Tagged {
+	return Tagged{
+		Kind: TaggedTypeKnown,
+	}
+}
+
+// OtherTagged creates other branch.
+func OtherTagged(title string) Tagged {
+	return Tagged{
+		Kind:  TaggedTypeOther,
+		Title: title,
+	}
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (t *Tagged) UnmarshalJSON(data []byte) error {
+	type alias Tagged
+	decoded := alias{}
+	raw := struct {
+		Labels json.RawMessage `json:"labels"`
+		Title  json.RawMessage `json:"title"`
+		*alias
+	}{alias: &decoded}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Labels) > 0 {
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Labels, &values); err == nil {
+			decoded.Labels = []string{}
+			for _, value := range values {
+				var item string
+				if err := json.Unmarshal(value, &item); err == nil {
+					decoded.Labels = append(decoded.Labels, item)
+				}
+			}
+		}
+	}
+	if len(raw.Title) > 0 {
+		_ = json.Unmarshal(raw.Title, &decoded.Title)
+	}
+	*t = Tagged(decoded)
+	return nil
+}
