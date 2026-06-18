@@ -106,13 +106,15 @@ func nullableSchema(schema *jsonschema.Schema) (*jsonschema.Schema, bool) {
 	}
 	if len(schema.AnyOf) == 2 {
 		var nonNull *jsonschema.Schema
+		hasNull := false
 		for _, branch := range schema.AnyOf {
 			if schemaTypeName(branch) == "null" {
+				hasNull = true
 				continue
 			}
 			nonNull = branch
 		}
-		if nonNull != nil {
+		if hasNull && nonNull != nil {
 			return nonNull, true
 		}
 	}

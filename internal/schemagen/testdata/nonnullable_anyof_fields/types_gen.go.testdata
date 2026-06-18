@@ -1,0 +1,9 @@
+package acp
+
+import "encoding/json"
+
+// Choice: Object with both nullable and non-nullable anyOf fields.
+type Choice struct {
+	Nullable *string         `json:"nullable,omitempty"`
+	Value    json.RawMessage `json:"value"`
+}
