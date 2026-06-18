@@ -1,0 +1,46 @@
+{
+  "$defs": {
+    "MixedDefault": {
+      "description": "Flattened union with a shared nullable field whose kind differs by variant.",
+      "oneOf": [
+        {
+          "description": "Text default variant.",
+          "properties": {
+            "default": {
+              "description": "Optional string default.",
+              "type": ["string", "null"]
+            },
+            "kind": {
+              "const": "text",
+              "type": "string"
+            }
+          },
+          "required": ["kind"],
+          "title": "Text",
+          "type": "object"
+        },
+        {
+          "description": "Toggle default variant.",
+          "properties": {
+            "default": {
+              "description": "Optional boolean default.",
+              "type": ["boolean", "null"]
+            },
+            "kind": {
+              "const": "toggle",
+              "type": "string"
+            }
+          },
+          "required": ["kind"],
+          "title": "Toggle",
+          "type": "object"
+        }
+      ],
+      "discriminator": {
+        "propertyName": "kind"
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nullable Mixed Union Fields Test Fixture"
+}

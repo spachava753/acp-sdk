@@ -1,0 +1,29 @@
+package acp
+
+// MixedDefault: Flattened union with a shared nullable field whose kind differs by variant.
+type MixedDefault struct {
+	Kind    MixedDefaultType `json:"kind"`
+	Default any              `json:"default,omitempty"`
+}
+
+// MixedDefaultType is the discriminator for MixedDefault variants.
+type MixedDefaultType string
+
+const (
+	MixedDefaultTypeText   MixedDefaultType = "text"
+	MixedDefaultTypeToggle MixedDefaultType = "toggle"
+)
+
+// TextMixedDefault creates text default variant.
+func TextMixedDefault() MixedDefault {
+	return MixedDefault{
+		Kind: MixedDefaultTypeText,
+	}
+}
+
+// ToggleMixedDefault creates toggle default variant.
+func ToggleMixedDefault() MixedDefault {
+	return MixedDefault{
+		Kind: MixedDefaultTypeToggle,
+	}
+}

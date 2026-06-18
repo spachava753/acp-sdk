@@ -265,6 +265,8 @@
 //   - testdata/nullable_union_fields: flattened unions keep a precise pointer
 //     field when the same JSON field is non-nullable in one variant and
 //     nullable in another, instead of broadening to any.
+//   - testdata/nullable_mixed_union_fields: flattened unions broaden shared
+//     nullable fields to any when variants use incompatible non-null kinds.
 //   - testdata/nested_union_ref_fields: flattened union variants that reference
 //     schemas with their own nested union branches preserve the nested branch
 //     fields on the outer flattened type.

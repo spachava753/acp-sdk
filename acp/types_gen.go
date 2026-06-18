@@ -1089,17 +1089,17 @@ type ElicitationId string
 type ElicitationPropertySchema struct {
 	Type        ElicitationPropertySchemaType `json:"type"`
 	Meta        map[string]any                `json:"_meta,omitempty"`
-	Default     *string                       `json:"default,omitempty"`
+	Default     any                           `json:"default,omitempty"`
 	Description *string                       `json:"description,omitempty"`
 	Enum        *[]string                     `json:"enum,omitempty"`
 	Format      *StringFormat                 `json:"format,omitempty"`
 	Items       MultiSelectItems              `json:"items,omitempty,omitzero"`
 	MaxItems    *uint64                       `json:"maxItems,omitempty"`
 	MaxLength   *uint32                       `json:"maxLength,omitempty"`
-	Maximum     *float64                      `json:"maximum,omitempty"`
+	Maximum     any                           `json:"maximum,omitempty"`
 	MinItems    *uint64                       `json:"minItems,omitempty"`
 	MinLength   *uint32                       `json:"minLength,omitempty"`
-	Minimum     *float64                      `json:"minimum,omitempty"`
+	Minimum     any                           `json:"minimum,omitempty"`
 	OneOf       *[]EnumOption                 `json:"oneOf,omitempty"`
 	Pattern     *string                       `json:"pattern,omitempty"`
 	Title       *string                       `json:"title,omitempty"`

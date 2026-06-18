@@ -440,6 +440,9 @@ func schemaKind(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) s
 	if len(schema.AllOf) == 1 && schema.AllOf[0].Ref != "" {
 		return schemaKind(defs, defs[refName(schema.AllOf[0].Ref)])
 	}
+	if nonNull, nullable := nullableSchema(schema); nullable {
+		return schemaKind(defs, nonNull)
+	}
 	return schemaTypeName(schema)
 }
 
