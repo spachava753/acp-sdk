@@ -1,0 +1,12 @@
+package acp
+
+// SharedPayload: Payload used by public definitions and ignored protocol envelopes.
+type SharedPayload struct {
+	ID string `json:"id"`
+}
+
+// VisiblePayload: Public payload that references the shared payload.
+type VisiblePayload struct {
+	Name   string        `json:"name"`
+	Shared SharedPayload `json:"shared"`
+}

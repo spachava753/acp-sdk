@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Shared Protocol Refs Test Fixture",
+  "anyOf": [
+    {
+      "title": "Visible",
+      "description": "A non-protocol schema branch.",
+      "type": "object"
+    },
+    {
+      "title": "ProtocolLevel",
+      "description": "Docs-ignored protocol-level envelope that shares a public payload ref.",
+      "type": "object",
+      "properties": {
+        "params": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SharedPayload"
+            }
+          ]
+        }
+      },
+      "x-docs-ignore": true
+    }
+  ],
+  "$defs": {
+    "SharedPayload": {
+      "description": "Payload used by public definitions and ignored protocol envelopes.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Shared identifier.",
+          "type": "string"
+        }
+      },
+      "required": ["id"]
+    },
+    "VisiblePayload": {
+      "description": "Public payload that references the shared payload.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Visible name.",
+          "type": "string"
+        },
+        "shared": {
+          "description": "Shared public payload.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SharedPayload"
+            }
+          ]
+        }
+      },
+      "required": ["name", "shared"]
+    }
+  }
+}

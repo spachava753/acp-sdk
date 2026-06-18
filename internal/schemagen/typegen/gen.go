@@ -170,16 +170,28 @@ func docsIgnored(schema *jsonschema.Schema) bool {
 }
 
 func ignoredTopLevelProtocolRefs(schema *jsonschema.Schema) map[string]bool {
-	refs := map[string]bool{}
+	ignored := map[string]bool{}
+	public := map[string]bool{}
 	if schema == nil {
-		return refs
+		return ignored
 	}
 	for _, branch := range schema.AnyOf {
 		if branch.Title == "ProtocolLevel" && docsIgnored(branch) {
-			collectRefs(branch, refs)
+			collectRefs(branch, ignored)
+			continue
 		}
+		collectRefs(branch, public)
 	}
-	return refs
+	for name, def := range schema.Defs {
+		if docsIgnored(def) || ignored[name] {
+			continue
+		}
+		collectRefs(def, public)
+	}
+	for ref := range public {
+		delete(ignored, ref)
+	}
+	return ignored
 }
 
 func collectRefs(schema *jsonschema.Schema, refs map[string]bool) {
