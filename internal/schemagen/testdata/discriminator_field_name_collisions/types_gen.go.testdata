@@ -1,0 +1,34 @@
+package acp
+
+// CollisionUnion: A discriminator union whose JSON fields normalize to duplicate Go names.
+type CollisionUnion struct {
+	Kind    CollisionUnionType `json:"kind"`
+	FooBar  string             `json:"foo-bar,omitempty"`
+	FooBar2 int32              `json:"foo_bar,omitempty"`
+	Kind2   string             `json:"kind_,omitempty"`
+}
+
+// CollisionUnionType is the discriminator for CollisionUnion variants.
+type CollisionUnionType string
+
+const (
+	CollisionUnionTypePair  CollisionUnionType = "pair"
+	CollisionUnionTypeAlias CollisionUnionType = "alias"
+)
+
+// PairCollisionUnion creates variant with two colliding payload fields.
+func PairCollisionUnion(fooBar string, fooBar2 int32) CollisionUnion {
+	return CollisionUnion{
+		Kind:    CollisionUnionTypePair,
+		FooBar:  fooBar,
+		FooBar2: fooBar2,
+	}
+}
+
+// AliasCollisionUnion creates variant whose payload field collides with the discriminator field.
+func AliasCollisionUnion(kind string) CollisionUnion {
+	return CollisionUnion{
+		Kind:  CollisionUnionTypeAlias,
+		Kind2: kind,
+	}
+}

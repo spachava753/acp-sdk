@@ -88,10 +88,26 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 		}
 	}
 	sort.Strings(fieldOrder)
+	discriminatorGoName := fieldName(discriminator)
+	reservedFieldNames := []string(nil)
+	if discriminator != "" {
+		reservedFieldNames = append(reservedFieldNames, discriminatorGoName)
+	}
+	goNames := uniqueFieldNamesWithReserved(fieldOrder, reservedFieldNames)
+	for _, jsonName := range fieldOrder {
+		field := fieldsByJSON[jsonName]
+		field.goName = goNames[jsonName]
+		fieldsByJSON[jsonName] = field
+	}
+	for i := range requiredSlices {
+		if field, ok := fieldsByJSON[requiredSlices[i].field.jsonName]; ok {
+			requiredSlices[i].field.goName = field.goName
+		}
+	}
 
 	var structFields []jen.Code
 	if discriminator != "" {
-		structFields = append(structFields, jen.Id(fieldName(discriminator)).Id(name+"Type").Tag(map[string]string{"json": jsonTag(discriminator, !isRequiredInAllVariants(parentRequired, requiredCount, discriminator, len(branches)), false)}))
+		structFields = append(structFields, jen.Id(discriminatorGoName).Id(name+"Type").Tag(map[string]string{"json": jsonTag(discriminator, !isRequiredInAllVariants(parentRequired, requiredCount, discriminator, len(branches)), false)}))
 	}
 	for _, jsonName := range fieldOrder {
 		field := fieldsByJSON[jsonName]
@@ -340,17 +356,24 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 
 	properties := mergedProperties(parentProperties, variantProperties(defs, branch))
 	required := mergedRequired(parentRequired, variantRequired(defs, branch))
-	var params []jen.Code
-	var prelude []jen.Code
-	paramTypes := map[string]string{}
+	var paramJSONNames []string
 	for _, req := range required {
 		prop := properties[req]
 		if prop == nil || prop.Const != nil {
 			continue
 		}
+		paramJSONNames = append(paramJSONNames, req)
+	}
+	paramNames := uniqueParameterNames(paramJSONNames)
+
+	var params []jen.Code
+	var prelude []jen.Code
+	paramTypes := map[string]string{}
+	for _, req := range paramJSONNames {
+		prop := properties[req]
 		_, common := parentProperties[req]
 		field := newUnionField(defs, req, prop, common)
-		paramName := parameterName(req)
+		paramName := paramNames[req]
 		paramTypes[req] = field.typeText
 		params = append(params, jen.Id(paramName).Add(field.typeCode))
 		if discriminator == "" && strings.HasPrefix(field.typeText, "[]") {
@@ -370,7 +393,11 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 			continue
 		}
 		field := fieldsByJSON[jsonName]
-		literalFields = append(literalFields, jen.Id(field.goName).Op(":").Add(assignUnionField(field.typeText, paramTypes[jsonName], parameterName(jsonName))))
+		paramName := paramNames[jsonName]
+		if paramName == "" {
+			paramName = parameterName(jsonName)
+		}
+		literalFields = append(literalFields, jen.Id(field.goName).Op(":").Add(assignUnionField(field.typeText, paramTypes[jsonName], paramName)))
 	}
 
 	body := append(prelude, jen.Return(jen.Id(unionName).Values(multilineValues(literalFields)...)))

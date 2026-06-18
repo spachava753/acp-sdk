@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "CollisionUnion": {
+      "description": "A discriminator union whose JSON fields normalize to duplicate Go names.",
+      "oneOf": [
+        {
+          "description": "Variant with two colliding payload fields.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "pair"
+            },
+            "foo-bar": {
+              "type": "string"
+            },
+            "foo_bar": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "required": ["kind", "foo-bar", "foo_bar"]
+        },
+        {
+          "description": "Variant whose payload field collides with the discriminator field.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "alias"
+            },
+            "kind_": {
+              "type": "string"
+            }
+          },
+          "required": ["kind", "kind_"]
+        }
+      ],
+      "discriminator": {
+        "propertyName": "kind"
+      }
+    }
+  }
+}

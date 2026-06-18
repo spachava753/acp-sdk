@@ -238,12 +238,34 @@ func fieldName(jsonName string) string {
 }
 
 func uniqueFieldNames(jsonNames []string) map[string]string {
+	return uniqueFieldNamesWithReserved(jsonNames, nil)
+}
+
+func uniqueFieldNamesWithReserved(jsonNames []string, reserved []string) map[string]string {
 	names := make(map[string]string, len(jsonNames))
 	used := map[string]bool{}
+	for _, name := range reserved {
+		if name != "" {
+			used[name] = true
+		}
+	}
 	for _, jsonName := range jsonNames {
 		name := fieldName(jsonName)
 		if name == "" {
 			name = "Field"
+		}
+		names[jsonName] = uniqueConstName(name, used)
+	}
+	return names
+}
+
+func uniqueParameterNames(jsonNames []string) map[string]string {
+	names := make(map[string]string, len(jsonNames))
+	used := map[string]bool{}
+	for _, jsonName := range jsonNames {
+		name := parameterName(jsonName)
+		if name == "" {
+			name = "field"
 		}
 		names[jsonName] = uniqueConstName(name, used)
 	}
