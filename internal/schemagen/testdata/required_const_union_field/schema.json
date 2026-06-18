@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "LinkWidget": {
+      "description": "Link widget branch.",
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "Link URL.",
+          "type": "string"
+        }
+      },
+      "required": ["url"]
+    },
+    "TextKind": {
+      "description": "Text widget kind.",
+      "oneOf": [
+        {
+          "description": "Text kind.",
+          "type": "string",
+          "const": "text"
+        }
+      ]
+    },
+    "TextWidget": {
+      "description": "Text widget branch.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "description": "The required text kind.",
+          "allOf": [{"$ref": "#/$defs/TextKind"}]
+        },
+        "label": {
+          "description": "Text label.",
+          "type": "string"
+        }
+      },
+      "required": ["kind", "label"]
+    },
+    "Widget": {
+      "description": "Union with a branch-required const field.",
+      "anyOf": [
+        {
+          "title": "Text",
+          "description": "Text branch.",
+          "allOf": [{"$ref": "#/$defs/TextWidget"}]
+        },
+        {
+          "title": "Link",
+          "description": "Link branch.",
+          "allOf": [{"$ref": "#/$defs/LinkWidget"}]
+        }
+      ]
+    }
+  }
+}

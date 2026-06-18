@@ -400,9 +400,14 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 	properties := mergedProperties(parentProperties, variantProperties(defs, branch))
 	required := mergedRequired(parentRequired, variantRequired(defs, branch))
 	var paramJSONNames []string
+	constFields := map[string]string{}
 	for _, req := range required {
 		prop := properties[req]
 		if prop == nil || prop.Const != nil {
+			continue
+		}
+		if constName, ok := constructorConstFieldName(defs, prop); ok {
+			constFields[req] = constName
 			continue
 		}
 		paramJSONNames = append(paramJSONNames, req)
@@ -441,6 +446,10 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 			continue
 		}
 		field := fieldsByJSON[jsonName]
+		if constName := constFields[jsonName]; constName != "" {
+			literalFields = append(literalFields, jen.Id(field.goName).Op(":").Id(constName))
+			continue
+		}
 		paramName := paramNames[jsonName]
 		if paramName == "" {
 			paramName = parameterName(jsonName)
@@ -455,6 +464,32 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 		return functionCommented(constructorName, "creates ", lowerFirstSentence(description)+".", fn)
 	}
 	return functionCommented(constructorName, fmt.Sprintf("creates an %s variant: ", unionName), branch.Description, fn)
+}
+
+func constructorConstFieldName(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) (string, bool) {
+	_, typeText := schemaType(defs, schema, false)
+	branch, ok := constructorConstFieldBranch(defs, schema)
+	if !ok || typeText == "" || strings.HasPrefix(typeText, "*") || typeText == "any" {
+		return "", false
+	}
+	return typeText + primitiveConstName(branch), true
+}
+
+func constructorConstFieldBranch(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) (*jsonschema.Schema, bool) {
+	if schema == nil {
+		return nil, false
+	}
+	if schema.Ref != "" {
+		return constructorConstFieldBranch(defs, defs[refName(schema.Ref)])
+	}
+	if len(schema.AllOf) == 1 && schema.AllOf[0].Ref != "" {
+		return constructorConstFieldBranch(defs, schema.AllOf[0])
+	}
+	branches := unionBranches(schema)
+	if len(branches) != 1 || branches[0].Const == nil || !isPrimitiveConstKind(schemaTypeName(branches[0])) {
+		return nil, false
+	}
+	return branches[0], true
 }
 
 func constructorArrayUnionSchema(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) *jsonschema.Schema {

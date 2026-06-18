@@ -1,0 +1,42 @@
+package acp
+
+// LinkWidget: Link widget branch.
+type LinkWidget struct {
+	Url string `json:"url"`
+}
+
+// TextKind: Text widget kind.
+type TextKind string
+
+const (
+	// TextKindText: Text kind.
+	TextKindText TextKind = "text"
+)
+
+// TextWidget: Text widget branch.
+type TextWidget struct {
+	Kind  TextKind `json:"kind"`
+	Label string   `json:"label"`
+}
+
+// Widget: Union with a branch-required const field.
+type Widget struct {
+	Kind  TextKind `json:"kind,omitempty"`
+	Label string   `json:"label,omitempty"`
+	Url   string   `json:"url,omitempty"`
+}
+
+// NewTextWidget creates an Widget variant: Text branch.
+func NewTextWidget(label string) Widget {
+	return Widget{
+		Kind:  TextKindText,
+		Label: label,
+	}
+}
+
+// NewLinkWidget creates an Widget variant: Link branch.
+func NewLinkWidget(url string) Widget {
+	return Widget{
+		Url: url,
+	}
+}

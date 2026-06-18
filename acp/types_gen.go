@@ -2052,13 +2052,13 @@ type MultiSelectItems struct {
 }
 
 // NewUntitledMultiSelectItems creates an MultiSelectItems variant: Untitled multi-select items with plain string values.
-func NewUntitledMultiSelectItems(type_ ElicitationStringType, enum []string) MultiSelectItems {
+func NewUntitledMultiSelectItems(enum []string) MultiSelectItems {
 	if enum == nil {
 		enum = []string{}
 	}
 	return MultiSelectItems{
 		Enum: enum,
-		Type: type_,
+		Type: ElicitationStringTypeString,
 	}
 }
 
