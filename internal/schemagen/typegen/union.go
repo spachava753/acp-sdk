@@ -494,11 +494,10 @@ func arrayUnionMarshalCode(name string, branches []*jsonschema.Schema) jen.Code 
 }
 
 func arrayUnionUnmarshalCode(defs map[string]*jsonschema.Schema, name string, branches []*jsonschema.Schema) jen.Code {
-	flatBranch := branches[0]
+	flatBranch, groupBranch := arrayUnionDecodeBranches(defs, branches)
 	flatType := pascalIdentifier(flatBranch.Title) + name
 	flatField := arrayUnionFieldName(flatBranch.Title)
 	flatItem := defs[refName(flatBranch.Items.Ref)]
-	groupBranch := branches[len(branches)-1]
 	groupType := pascalIdentifier(groupBranch.Title) + name
 	groupField := arrayUnionFieldName(groupBranch.Title)
 	groupItem := defs[refName(groupBranch.Items.Ref)]
@@ -753,6 +752,47 @@ func arrayUnionFieldName(title string) string {
 		return "Groups"
 	}
 	return pascalIdentifier(title)
+}
+
+func arrayUnionDecodeBranches(defs map[string]*jsonschema.Schema, branches []*jsonschema.Schema) (*jsonschema.Schema, *jsonschema.Schema) {
+	flatBranch := branches[0]
+	groupBranch := branches[len(branches)-1]
+	if len(branches) != 2 {
+		return flatBranch, groupBranch
+	}
+
+	firstItem := defs[refName(branches[0].Items.Ref)]
+	secondItem := defs[refName(branches[1].Items.Ref)]
+	firstGrouped := arrayUnionGroupedBranch(defs, branches[0], firstItem, secondItem)
+	secondGrouped := arrayUnionGroupedBranch(defs, branches[1], secondItem, firstItem)
+	if firstGrouped && !secondGrouped {
+		return branches[1], branches[0]
+	}
+	return flatBranch, groupBranch
+}
+
+func arrayUnionGroupedBranch(defs map[string]*jsonschema.Schema, branch, item, otherItem *jsonschema.Schema) bool {
+	if branch != nil && branch.Title == "Grouped" {
+		return true
+	}
+	if item == nil {
+		return false
+	}
+	otherProperties := map[string]bool{}
+	if otherItem != nil {
+		for name := range otherItem.Properties {
+			otherProperties[name] = true
+		}
+	}
+	for _, field := range item.Required {
+		if otherProperties[field] {
+			continue
+		}
+		if schemaKind(defs, item.Properties[field]) == "array" {
+			return true
+		}
+	}
+	return false
 }
 
 func arrayUnionProbeField(flatItem, groupItem *jsonschema.Schema) string {
