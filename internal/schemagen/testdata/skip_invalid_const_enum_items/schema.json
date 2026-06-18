@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Skip Invalid Const Enum Items",
+  "$defs": {
+    "Payload": {
+      "description": "Object with tolerant arrays of const enum items.",
+      "type": "object",
+      "properties": {
+        "encodings": {
+          "description": "Const enum items that skip unknown values.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Encoding"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        }
+      }
+    },
+    "Encoding": {
+      "description": "Known encodings.",
+      "oneOf": [
+        {
+          "description": "UTF-8 encoding.",
+          "type": "string",
+          "const": "utf-8"
+        },
+        {
+          "description": "UTF-16 encoding.",
+          "type": "string",
+          "const": "utf-16"
+        }
+      ]
+    }
+  }
+}

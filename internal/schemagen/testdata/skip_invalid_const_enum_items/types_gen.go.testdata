@@ -1,0 +1,48 @@
+package acp
+
+import "encoding/json"
+
+// Encoding: Known encodings.
+type Encoding string
+
+const (
+	// EncodingUtf8: UTF-8 encoding.
+	EncodingUtf8 Encoding = "utf-8"
+	// EncodingUtf16: UTF-16 encoding.
+	EncodingUtf16 Encoding = "utf-16"
+)
+
+// Payload: Object with tolerant arrays of const enum items.
+type Payload struct {
+	Encodings []Encoding `json:"encodings,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *Payload) UnmarshalJSON(data []byte) error {
+	type alias Payload
+	decoded := alias{}
+	raw := struct {
+		Encodings json.RawMessage `json:"encodings"`
+		*alias
+	}{alias: &decoded}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Encodings) > 0 {
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Encodings, &values); err == nil {
+			decoded.Encodings = []Encoding{}
+			for _, value := range values {
+				var item Encoding
+				if err := json.Unmarshal(value, &item); err == nil {
+					switch item {
+					case EncodingUtf8, EncodingUtf16:
+						decoded.Encodings = append(decoded.Encodings, item)
+					}
+				}
+			}
+		}
+	}
+	*p = Payload(decoded)
+	return nil
+}

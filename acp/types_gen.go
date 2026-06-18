@@ -469,7 +469,10 @@ func (c *ClientCapabilities) UnmarshalJSON(data []byte) error {
 			for _, value := range values {
 				var item PositionEncodingKind
 				if err := json.Unmarshal(value, &item); err == nil {
-					decoded.PositionEncodings = append(decoded.PositionEncodings, item)
+					switch item {
+					case PositionEncodingKindUtf16, PositionEncodingKindUtf32, PositionEncodingKindUtf8:
+						decoded.PositionEncodings = append(decoded.PositionEncodings, item)
+					}
 				}
 			}
 		}

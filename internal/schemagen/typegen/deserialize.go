@@ -61,6 +61,16 @@ func deserializeItemSchema(schema *jsonschema.Schema) *jsonschema.Schema {
 }
 
 func skipInvalidItemsValidator(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) *skipInvalidItemValidator {
+	if validator := discriminatorSkipInvalidItemsValidator(defs, schema); validator != nil {
+		return validator
+	}
+	if cases := stringConstEnumItemCases(defs, schema); len(cases) > 0 {
+		return &skipInvalidItemValidator{cases: cases}
+	}
+	return nil
+}
+
+func discriminatorSkipInvalidItemsValidator(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) *skipInvalidItemValidator {
 	name := referencedDefinitionName(schema)
 	if name == "" {
 		return nil
@@ -96,6 +106,49 @@ func skipInvalidItemsValidator(defs map[string]*jsonschema.Schema, schema *jsons
 		return nil
 	}
 	return &skipInvalidItemValidator{discriminator: fieldName(discriminator), cases: cases}
+}
+
+func stringConstEnumItemCases(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) []jen.Code {
+	def, typeName, ok := stringConstEnumItemSchema(defs, schema)
+	if !ok {
+		return nil
+	}
+	used := map[string]bool{}
+	var cases []jen.Code
+	for _, branch := range unionBranches(def) {
+		text, ok := constString(branch)
+		if !ok || schemaTypeName(branch) != "string" {
+			return nil
+		}
+		if typeName == "" {
+			cases = append(cases, jen.Lit(text))
+			continue
+		}
+		cases = append(cases, jen.Id(uniqueConstName(typeName+primitiveConstName(branch), used)))
+	}
+	return cases
+}
+
+func stringConstEnumItemSchema(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) (*jsonschema.Schema, string, bool) {
+	if schema == nil {
+		return nil, "", false
+	}
+	if schema.Ref != "" {
+		name := refName(schema.Ref)
+		def := defs[name]
+		resolved, _, ok := stringConstEnumItemSchema(defs, def)
+		return resolved, goDefinitionName(defs, name), ok
+	}
+	if len(schema.AllOf) == 1 && schema.AllOf[0].Ref != "" {
+		return stringConstEnumItemSchema(defs, schema.AllOf[0])
+	}
+	if nonNull, nullable := nullableSchema(schema); nullable {
+		return stringConstEnumItemSchema(defs, nonNull)
+	}
+	if !isStringConstEnum(schema) {
+		return nil, "", false
+	}
+	return schema, "", true
 }
 
 func referencedDefinitionName(schema *jsonschema.Schema) string {
@@ -316,8 +369,12 @@ func skipInvalidItemsDecodeValues(field deserializeField, pointer bool) []jen.Co
 func skipInvalidItemDecodeCode(field deserializeField, appendItem jen.Code) jen.Code {
 	body := []jen.Code{appendItem}
 	if field.itemValidator != nil {
+		switchExpr := jen.Id("item")
+		if field.itemValidator.discriminator != "" {
+			switchExpr = jen.Id("item").Dot(field.itemValidator.discriminator)
+		}
 		body = []jen.Code{
-			jen.Switch(jen.Id("item").Dot(field.itemValidator.discriminator)).Block(
+			jen.Switch(switchExpr).Block(
 				jen.Case(field.itemValidator.cases...).Block(appendItem),
 			),
 		}
