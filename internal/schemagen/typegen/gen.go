@@ -63,7 +63,8 @@ func definition(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 
 	switch {
 	case isDiscriminatorUnion(defs, schema):
-		return discriminatorUnionCode(defs, name, schema), false, nil
+		codes, meta := discriminatorUnionCode(defs, name, schema)
+		return codes, meta, nil
 	case isArrayUnion(schema):
 		return arrayUnionCode(defs, name, schema), false, nil
 	case isObjectSchema(schema):

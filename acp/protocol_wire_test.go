@@ -86,8 +86,8 @@ func TestRequiredArraysMarshalAsEmptyArrays(t *testing.T) {
 		},
 		{
 			name: "select config option options",
-			in:   SelectSessionConfigOption("fast", SessionConfigSelectOptions{}),
-			want: `{"type":"select","currentValue":"fast","options":null}`,
+			in:   SelectSessionConfigOption("model", "Model", "fast", SessionConfigSelectOptions{}),
+			want: `{"type":"select","currentValue":"fast","id":"model","name":"Model","options":null}`,
 		},
 		{
 			name: "select config group options",

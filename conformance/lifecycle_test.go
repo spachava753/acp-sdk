@@ -54,7 +54,7 @@ func TestConformanceLifecycleAndOptionalAgentMethods(t *testing.T) {
 	if _, err := client.SetSessionMode(ctx, &acp.SetSessionModeRequest{SessionID: session.SessionID, ModeID: "code"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.SetSessionConfigOption(ctx, &acp.SetSessionConfigOptionRequest{Value: "gpt-4o-mini"}); err != nil {
+	if _, err := client.SetSessionConfigOption(ctx, &acp.SetSessionConfigOptionRequest{SessionID: session.SessionID, ConfigID: "model", Value: "gpt-4o-mini"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := client.CloseSession(ctx, &acp.CloseSessionRequest{SessionID: session.SessionID}); err != nil {

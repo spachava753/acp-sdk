@@ -1,0 +1,81 @@
+package acp
+
+// Meta: Reserved metadata for protocol extensions.
+type Meta map[string]any
+
+// HybridOption: Flattened union with common parent option fields.
+type HybridOption struct {
+	Kind        HybridOptionType `json:"kind"`
+	Meta        Meta             `json:"_meta,omitzero"`
+	Category    string           `json:"category,omitempty"`
+	Description *string          `json:"description,omitempty"`
+	Enabled     bool             `json:"enabled,omitempty"`
+	ID          string           `json:"id"`
+	Name        string           `json:"name"`
+	Text        string           `json:"text,omitempty"`
+}
+
+// HybridOptionType is the discriminator for HybridOption variants.
+type HybridOptionType string
+
+const (
+	// HybridOptionTypeText: Text discriminator.
+	HybridOptionTypeText HybridOptionType = "text"
+	// HybridOptionTypeToggle: Toggle discriminator.
+	HybridOptionTypeToggle HybridOptionType = "toggle"
+)
+
+// TextHybridOption creates text option.
+func TextHybridOption(id string, name string, text string) HybridOption {
+	return HybridOption{
+		Kind: HybridOptionTypeText,
+		ID:   id,
+		Name: name,
+		Text: text,
+	}
+}
+
+// ToggleHybridOption creates toggle option.
+func ToggleHybridOption(id string, name string, enabled bool) HybridOption {
+	return HybridOption{
+		Kind:    HybridOptionTypeToggle,
+		Enabled: enabled,
+		ID:      id,
+		Name:    name,
+	}
+}
+
+// HybridRequest: Flattened anyOf with common request identifiers.
+type HybridRequest struct {
+	Type      HybridRequestType `json:"type,omitempty"`
+	ConfigID  string            `json:"configId"`
+	SessionID string            `json:"sessionId"`
+	Value     any               `json:"value"`
+}
+
+// HybridRequestType is the discriminator for HybridRequest variants.
+type HybridRequestType string
+
+const (
+	// HybridRequestTypeBoolean: Boolean discriminator.
+	HybridRequestTypeBoolean HybridRequestType = "boolean"
+)
+
+// BooleanHybridRequest creates boolean value.
+func BooleanHybridRequest(sessionID string, configID string, value bool) HybridRequest {
+	return HybridRequest{
+		Type:      HybridRequestTypeBoolean,
+		ConfigID:  configID,
+		SessionID: sessionID,
+		Value:     value,
+	}
+}
+
+// ValueIdHybridRequest creates string value.
+func ValueIdHybridRequest(sessionID string, configID string, value string) HybridRequest {
+	return HybridRequest{
+		ConfigID:  configID,
+		SessionID: sessionID,
+		Value:     value,
+	}
+}

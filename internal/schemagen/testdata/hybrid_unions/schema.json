@@ -1,0 +1,111 @@
+{
+  "$defs": {
+    "HybridOption": {
+      "description": "Flattened union with common parent option fields.",
+      "oneOf": [
+        {
+          "description": "Text option.",
+          "properties": {
+            "kind": {
+              "const": "text",
+              "description": "Text discriminator.",
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": ["kind", "text"],
+          "title": "Text",
+          "type": "object"
+        },
+        {
+          "description": "Toggle option.",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "kind": {
+              "const": "toggle",
+              "description": "Toggle discriminator.",
+              "type": "string"
+            }
+          },
+          "required": ["kind", "enabled"],
+          "title": "Toggle",
+          "type": "object"
+        }
+      ],
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "Reserved metadata.",
+          "type": ["object", "null"]
+        },
+        "category": {
+          "description": "Optional category.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Optional description.",
+          "type": ["string", "null"]
+        },
+        "id": {
+          "description": "Option identifier.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "name"],
+      "type": "object"
+    },
+    "HybridRequest": {
+      "anyOf": [
+        {
+          "description": "Boolean value.",
+          "properties": {
+            "type": {
+              "const": "boolean",
+              "description": "Boolean discriminator.",
+              "type": "string"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": ["type", "value"],
+          "type": "object"
+        },
+        {
+          "description": "String value.",
+          "properties": {
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": ["value"],
+          "title": "value_id",
+          "type": "object"
+        }
+      ],
+      "description": "Flattened anyOf with common request identifiers.",
+      "properties": {
+        "configId": {
+          "description": "Config identifier.",
+          "type": "string"
+        },
+        "sessionId": {
+          "description": "Session identifier.",
+          "type": "string"
+        }
+      },
+      "required": ["sessionId", "configId"],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hybrid Union Test Fixture"
+}

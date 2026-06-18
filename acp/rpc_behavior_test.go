@@ -45,7 +45,7 @@ func (a *optionalAgent) Logout(_ context.Context, params *LogoutRequest) (*Logou
 func (a *optionalAgent) LoadSession(_ context.Context, params *LoadSessionRequest) (*LoadSessionResponse, error) {
 	a.record(MethodSessionLoad, *params)
 	return &LoadSessionResponse{ConfigOptions: &[]SessionConfigOption{
-		SelectSessionConfigOption("fast", SessionConfigSelectOptions{Ungrouped: ptr(UngroupedSessionConfigSelectOptions{{Value: "fast", Name: "Fast"}})}),
+		SelectSessionConfigOption("model", "Model", "fast", SessionConfigSelectOptions{Ungrouped: ptr(UngroupedSessionConfigSelectOptions{{Value: "fast", Name: "Fast"}})}),
 	}}, nil
 }
 
@@ -72,7 +72,7 @@ func (a *optionalAgent) SetSessionMode(_ context.Context, params *SetSessionMode
 func (a *optionalAgent) SetSessionConfigOption(_ context.Context, params *SetSessionConfigOptionRequest) (*SetSessionConfigOptionResponse, error) {
 	a.record(MethodSessionSetConfigOption, *params)
 	return &SetSessionConfigOptionResponse{ConfigOptions: []SessionConfigOption{
-		SelectSessionConfigOption("code", SessionConfigSelectOptions{Ungrouped: ptr(UngroupedSessionConfigSelectOptions{{Value: "code", Name: "Code"}})}),
+		SelectSessionConfigOption("mode", "Mode", "code", SessionConfigSelectOptions{Ungrouped: ptr(UngroupedSessionConfigSelectOptions{{Value: "code", Name: "Code"}})}),
 	}}, nil
 }
 
@@ -116,7 +116,7 @@ func TestOptionalAgentMethods(t *testing.T) {
 	if _, err := client.SetSessionMode(ctx, &SetSessionModeRequest{SessionID: "s1", ModeID: "code"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.SetSessionConfigOption(ctx, &SetSessionConfigOptionRequest{Value: "code"}); err != nil {
+	if _, err := client.SetSessionConfigOption(ctx, &SetSessionConfigOptionRequest{SessionID: "s1", ConfigID: "mode", Value: "code"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -138,8 +138,9 @@ func TestOptionalAgentMethods(t *testing.T) {
 	if got := recordedCall[SetSessionModeRequest](t, agent, MethodSessionSetMode).ModeID; got != "code" {
 		t.Fatalf("mode ID = %q, want code", got)
 	}
-	if got := recordedCall[SetSessionConfigOptionRequest](t, agent, MethodSessionSetConfigOption).Value; got != "code" {
-		t.Fatalf("config option value = %q, want code", got)
+	configRequest := recordedCall[SetSessionConfigOptionRequest](t, agent, MethodSessionSetConfigOption)
+	if configRequest.SessionID != "s1" || configRequest.ConfigID != "mode" || configRequest.Value != "code" {
+		t.Fatalf("config option request = %#v, want session s1 config mode value code", configRequest)
 	}
 }
 

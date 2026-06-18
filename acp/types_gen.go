@@ -522,7 +522,9 @@ type Cost struct {
 // Elicitations are tied to a session (optionally a tool call) or a request.
 type CreateElicitationRequest struct {
 	Mode            CreateElicitationRequestType `json:"mode"`
+	Meta            Meta                         `json:"_meta,omitzero"`
 	ElicitationID   ElicitationId                `json:"elicitationId,omitempty"`
+	Message         string                       `json:"message"`
 	RequestedSchema ElicitationSchema            `json:"requestedSchema,omitempty,omitzero"`
 	Url             string                       `json:"url,omitempty"`
 }
@@ -536,18 +538,20 @@ const (
 )
 
 // FormCreateElicitationRequest creates an CreateElicitationRequest variant: Form-based elicitation where the client renders a form from the provided schema.
-func FormCreateElicitationRequest(requestedSchema ElicitationSchema) CreateElicitationRequest {
+func FormCreateElicitationRequest(message string, requestedSchema ElicitationSchema) CreateElicitationRequest {
 	return CreateElicitationRequest{
 		Mode:            CreateElicitationRequestTypeForm,
+		Message:         message,
 		RequestedSchema: requestedSchema,
 	}
 }
 
 // UrlCreateElicitationRequest creates an CreateElicitationRequest variant: URL-based elicitation where the client directs the user to a URL.
-func UrlCreateElicitationRequest(elicitationID ElicitationId, url string) CreateElicitationRequest {
+func UrlCreateElicitationRequest(message string, elicitationID ElicitationId, url string) CreateElicitationRequest {
 	return CreateElicitationRequest{
 		Mode:          CreateElicitationRequestTypeUrl,
 		ElicitationID: elicitationID,
+		Message:       message,
 		Url:           url,
 	}
 }
@@ -559,6 +563,7 @@ func UrlCreateElicitationRequest(elicitationID ElicitationId, url string) Create
 // Response from the client to an elicitation request.
 type CreateElicitationResponse struct {
 	Action  CreateElicitationResponseType      `json:"action"`
+	Meta    Meta                               `json:"_meta,omitzero"`
 	Content map[string]ElicitationContentValue `json:"content,omitempty"`
 }
 
@@ -770,23 +775,26 @@ type ElicitationFormCapabilities struct {
 //
 // Form-based elicitation mode where the client renders a form from the provided schema.
 type ElicitationFormMode struct {
-	RequestID  RequestId   `json:"requestId,omitempty"`
-	SessionID  SessionId   `json:"sessionId,omitempty"`
-	ToolCallID *ToolCallId `json:"toolCallId,omitempty"`
+	RequestID       RequestId         `json:"requestId,omitempty"`
+	RequestedSchema ElicitationSchema `json:"requestedSchema"`
+	SessionID       SessionId         `json:"sessionId,omitempty"`
+	ToolCallID      *ToolCallId       `json:"toolCallId,omitempty"`
 }
 
 // SessionElicitationFormMode creates an ElicitationFormMode variant: Tied to a session, optionally to a specific tool call within that session.
-func SessionElicitationFormMode(sessionID SessionId) ElicitationFormMode {
+func SessionElicitationFormMode(requestedSchema ElicitationSchema, sessionID SessionId) ElicitationFormMode {
 	return ElicitationFormMode{
-		SessionID: sessionID,
+		RequestedSchema: requestedSchema,
+		SessionID:       sessionID,
 	}
 }
 
 // RequestElicitationFormMode creates an ElicitationFormMode variant: Tied to a specific JSON-RPC request outside of a session
 // (e.g., during auth/configuration phases before any session is started).
-func RequestElicitationFormMode(requestID RequestId) ElicitationFormMode {
+func RequestElicitationFormMode(requestedSchema ElicitationSchema, requestID RequestId) ElicitationFormMode {
 	return ElicitationFormMode{
-		RequestID: requestID,
+		RequestID:       requestID,
+		RequestedSchema: requestedSchema,
 	}
 }
 
@@ -936,23 +944,29 @@ type ElicitationUrlCapabilities struct {
 //
 // URL-based elicitation mode where the client directs the user to a URL.
 type ElicitationUrlMode struct {
-	RequestID  RequestId   `json:"requestId,omitempty"`
-	SessionID  SessionId   `json:"sessionId,omitempty"`
-	ToolCallID *ToolCallId `json:"toolCallId,omitempty"`
+	ElicitationID ElicitationId `json:"elicitationId"`
+	RequestID     RequestId     `json:"requestId,omitempty"`
+	SessionID     SessionId     `json:"sessionId,omitempty"`
+	ToolCallID    *ToolCallId   `json:"toolCallId,omitempty"`
+	Url           string        `json:"url"`
 }
 
 // SessionElicitationUrlMode creates an ElicitationUrlMode variant: Tied to a session, optionally to a specific tool call within that session.
-func SessionElicitationUrlMode(sessionID SessionId) ElicitationUrlMode {
+func SessionElicitationUrlMode(elicitationID ElicitationId, url string, sessionID SessionId) ElicitationUrlMode {
 	return ElicitationUrlMode{
-		SessionID: sessionID,
+		ElicitationID: elicitationID,
+		SessionID:     sessionID,
+		Url:           url,
 	}
 }
 
 // RequestElicitationUrlMode creates an ElicitationUrlMode variant: Tied to a specific JSON-RPC request outside of a session
 // (e.g., during auth/configuration phases before any session is started).
-func RequestElicitationUrlMode(requestID RequestId) ElicitationUrlMode {
+func RequestElicitationUrlMode(elicitationID ElicitationId, url string, requestID RequestId) ElicitationUrlMode {
 	return ElicitationUrlMode{
-		RequestID: requestID,
+		ElicitationID: elicitationID,
+		RequestID:     requestID,
+		Url:           url,
 	}
 }
 
@@ -2509,9 +2523,14 @@ type SessionConfigId string
 
 // SessionConfigOption: A session configuration option selector and its current state.
 type SessionConfigOption struct {
-	Type         SessionConfigOptionType    `json:"type"`
-	CurrentValue any                        `json:"currentValue"`
-	Options      SessionConfigSelectOptions `json:"options,omitempty"`
+	Type         SessionConfigOptionType      `json:"type"`
+	Meta         Meta                         `json:"_meta,omitzero"`
+	Category     *SessionConfigOptionCategory `json:"category,omitempty"`
+	CurrentValue any                          `json:"currentValue"`
+	Description  *string                      `json:"description,omitempty"`
+	ID           SessionConfigId              `json:"id"`
+	Name         string                       `json:"name"`
+	Options      SessionConfigSelectOptions   `json:"options,omitempty"`
 }
 
 // SessionConfigOptionType is the discriminator for SessionConfigOption variants.
@@ -2523,10 +2542,12 @@ const (
 )
 
 // SelectSessionConfigOption creates an SessionConfigOption variant: Single-value selector (dropdown).
-func SelectSessionConfigOption(currentValue SessionConfigValueId, options SessionConfigSelectOptions) SessionConfigOption {
+func SelectSessionConfigOption(id SessionConfigId, name string, currentValue SessionConfigValueId, options SessionConfigSelectOptions) SessionConfigOption {
 	return SessionConfigOption{
 		Type:         SessionConfigOptionTypeSelect,
 		CurrentValue: currentValue,
+		ID:           id,
+		Name:         name,
 		Options:      options,
 	}
 }
@@ -2536,10 +2557,12 @@ func SelectSessionConfigOption(currentValue SessionConfigValueId, options Sessio
 // This capability is not part of the spec yet, and may be removed or changed at any point.
 //
 // Boolean on/off toggle.
-func BooleanSessionConfigOption(currentValue bool) SessionConfigOption {
+func BooleanSessionConfigOption(id SessionConfigId, name string, currentValue bool) SessionConfigOption {
 	return SessionConfigOption{
 		Type:         SessionConfigOptionTypeBoolean,
 		CurrentValue: currentValue,
+		ID:           id,
+		Name:         name,
 	}
 }
 
@@ -2973,8 +2996,11 @@ type SetProviderResponse struct {
 
 // SetSessionConfigOptionRequest: Request parameters for setting a session configuration option.
 type SetSessionConfigOptionRequest struct {
-	Type  SetSessionConfigOptionRequestType `json:"type,omitempty"`
-	Value any                               `json:"value"`
+	Type      SetSessionConfigOptionRequestType `json:"type,omitempty"`
+	Meta      Meta                              `json:"_meta,omitzero"`
+	ConfigID  SessionConfigId                   `json:"configId"`
+	SessionID SessionId                         `json:"sessionId"`
+	Value     any                               `json:"value"`
 }
 
 // SetSessionConfigOptionRequestType is the discriminator for SetSessionConfigOptionRequest variants.
@@ -2985,10 +3011,12 @@ const (
 )
 
 // BooleanSetSessionConfigOptionRequest creates a boolean value (`type: "boolean"`).
-func BooleanSetSessionConfigOptionRequest(value bool) SetSessionConfigOptionRequest {
+func BooleanSetSessionConfigOptionRequest(sessionID SessionId, configID SessionConfigId, value bool) SetSessionConfigOptionRequest {
 	return SetSessionConfigOptionRequest{
-		Type:  SetSessionConfigOptionRequestTypeBoolean,
-		Value: value,
+		Type:      SetSessionConfigOptionRequestTypeBoolean,
+		ConfigID:  configID,
+		SessionID: sessionID,
+		Value:     value,
 	}
 }
 
@@ -2997,9 +3025,11 @@ func BooleanSetSessionConfigOptionRequest(value bool) SetSessionConfigOptionRequ
 // This is the default when `type` is absent on the wire. Unknown `type`
 // values with string payloads also gracefully deserialize into this
 // variant.
-func ValueIdSetSessionConfigOptionRequest(value SessionConfigValueId) SetSessionConfigOptionRequest {
+func ValueIdSetSessionConfigOptionRequest(sessionID SessionId, configID SessionConfigId, value SessionConfigValueId) SetSessionConfigOptionRequest {
 	return SetSessionConfigOptionRequest{
-		Value: value,
+		ConfigID:  configID,
+		SessionID: sessionID,
+		Value:     value,
 	}
 }
 
