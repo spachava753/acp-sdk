@@ -70,14 +70,14 @@ func skipInvalidItemsValidator(defs map[string]*jsonschema.Schema, schema *jsons
 		return nil
 	}
 	branches := unionBranches(def)
-	discriminator := discriminatorField(defs, branches)
+	discriminator := discriminatorField(defs, def, branches)
 	if discriminator == "" {
 		return nil
 	}
 	seen := map[string]bool{}
 	var cases []jen.Code
 	for _, branch := range branches {
-		value, _ := variantConst(defs, branch)
+		value, _ := variantConst(defs, branch, discriminator)
 		if seen[value] {
 			continue
 		}

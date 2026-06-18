@@ -1,0 +1,32 @@
+package acp
+
+// ExplicitThing: Union with an explicit discriminator property.
+type ExplicitThing struct {
+	Type  ExplicitThingType `json:"type"`
+	Count int32             `json:"count,omitempty"`
+	Value string            `json:"value,omitempty"`
+}
+
+// ExplicitThingType is the discriminator for ExplicitThing variants.
+type ExplicitThingType string
+
+const (
+	ExplicitThingTypeAlpha ExplicitThingType = "alpha"
+	ExplicitThingTypeBeta  ExplicitThingType = "beta"
+)
+
+// AlphaExplicitThing creates alpha branch.
+func AlphaExplicitThing(value string) ExplicitThing {
+	return ExplicitThing{
+		Type:  ExplicitThingTypeAlpha,
+		Value: value,
+	}
+}
+
+// BetaExplicitThing creates beta branch.
+func BetaExplicitThing(count int32) ExplicitThing {
+	return ExplicitThing{
+		Type:  ExplicitThingTypeBeta,
+		Count: count,
+	}
+}

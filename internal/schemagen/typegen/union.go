@@ -26,7 +26,7 @@ type unionRequiredSlice struct {
 
 func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, schema *jsonschema.Schema) ([]jen.Code, bool) {
 	branches := unionBranches(schema)
-	discriminator := discriminatorField(defs, branches)
+	discriminator := discriminatorField(defs, schema, branches)
 	parentRequired := requiredMap(schema.Required)
 	requiredCount := map[string]int{}
 	fieldOrder := []string{}
@@ -57,7 +57,7 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 
 	var requiredSlices []unionRequiredSlice
 	for _, branch := range branches {
-		value, _ := variantConst(defs, branch)
+		value, _ := variantConst(defs, branch, discriminator)
 		branchRequired := variantRequired(defs, branch)
 		for _, req := range branchRequired {
 			requiredCount[req]++
@@ -111,7 +111,7 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 
 		var consts []jen.Code
 		for _, branch := range branches {
-			value, desc := variantConst(defs, branch)
+			value, desc := variantConst(defs, branch, discriminator)
 			if value == "" {
 				continue
 			}
@@ -335,7 +335,7 @@ func sliceFieldAssignmentCode(receiver string, field unionField) []jen.Code {
 
 func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discriminator string, branch *jsonschema.Schema, inline bool, parentProperties map[string]*jsonschema.Schema, parentRequired []string, fieldsByJSON map[string]unionField) jen.Code {
 	constructorName := pascalIdentifier(branch.Title)
-	value, _ := variantConst(defs, branch)
+	value, _ := variantConst(defs, branch, discriminator)
 	ref := variantRef(branch)
 	if constructorName == "" && value != "" {
 		constructorName = pascalIdentifier(value)
@@ -645,7 +645,20 @@ func intersectStrings(a, b []string) []string {
 	return common
 }
 
-func variantConst(defs map[string]*jsonschema.Schema, branch *jsonschema.Schema) (string, string) {
+func variantConst(defs map[string]*jsonschema.Schema, branch *jsonschema.Schema, discriminator string) (string, string) {
+	if discriminator != "" {
+		if prop := branch.Properties[discriminator]; prop != nil {
+			if text, ok := constString(prop); ok {
+				return text, prop.Description
+			}
+		}
+		properties := variantProperties(defs, branch)
+		if prop := properties[discriminator]; prop != nil {
+			if text, ok := constString(prop); ok {
+				return text, prop.Description
+			}
+		}
+	}
 	for _, jsonName := range sortedPropertyNames(branch.Properties) {
 		prop := branch.Properties[jsonName]
 		if text, ok := constString(prop); ok {
@@ -681,7 +694,10 @@ func variantRef(branch *jsonschema.Schema) string {
 	return ""
 }
 
-func discriminatorField(defs map[string]*jsonschema.Schema, branches []*jsonschema.Schema) string {
+func discriminatorField(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema, branches []*jsonschema.Schema) string {
+	if discriminator := explicitDiscriminatorField(schema); discriminator != "" {
+		return discriminator
+	}
 	for _, branch := range branches {
 		for _, jsonName := range sortedPropertyNames(branch.Properties) {
 			if branch.Properties[jsonName].Const != nil {
@@ -698,6 +714,18 @@ func discriminatorField(defs map[string]*jsonschema.Schema, branches []*jsonsche
 		}
 	}
 	return ""
+}
+
+func explicitDiscriminatorField(schema *jsonschema.Schema) string {
+	if schema == nil || schema.Extra == nil {
+		return ""
+	}
+	discriminator, _ := schema.Extra["discriminator"].(map[string]any)
+	if discriminator == nil {
+		return ""
+	}
+	propertyName, _ := discriminator["propertyName"].(string)
+	return propertyName
 }
 
 func inlineUnion(branches []*jsonschema.Schema) bool {

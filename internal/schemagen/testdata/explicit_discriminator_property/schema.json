@@ -1,0 +1,53 @@
+{
+  "$defs": {
+    "ExplicitThing": {
+      "description": "Union with an explicit discriminator property.",
+      "oneOf": [
+        {
+          "title": "Alpha",
+          "description": "Alpha branch.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "metadata"
+            },
+            "type": {
+              "type": "string",
+              "const": "alpha"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": ["type", "value"]
+        },
+        {
+          "title": "Beta",
+          "description": "Beta branch.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "metadata"
+            },
+            "type": {
+              "type": "string",
+              "const": "beta"
+            },
+            "count": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "required": ["type", "count"]
+        }
+      ],
+      "discriminator": {
+        "propertyName": "type"
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Explicit Discriminator Property Fixture"
+}
