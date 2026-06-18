@@ -1,0 +1,52 @@
+package acp
+
+const (
+	MethodChatSendMessage  = "chat/send-message"
+	MethodChatSendMessage2 = "chat/send_message"
+)
+
+// ChatHandler handles all chat related agent methods.
+type ChatHandler interface {
+	SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
+
+	SendMessageAlt(context.Context, *SendMessageAltRequest) (*SendMessageAltResponse, error)
+}
+
+func (c *AgentConnection) SendMessage(ctx context.Context, params *SendMessageRequest) (*SendMessageResponse, error) {
+	return call[SendMessageResponse](ctx, c.rpc.conn, MethodChatSendMessage, params)
+}
+
+func (c *AgentConnection) SendMessageAlt(ctx context.Context, params *SendMessageAltRequest) (*SendMessageAltResponse, error) {
+	return call[SendMessageAltResponse](ctx, c.rpc.conn, MethodChatSendMessage2, params)
+}
+
+func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (any, error) {
+	jsonrpc2.Async(ctx)
+	if agent == nil {
+		return nil, methodNotFound(req.Method)
+	}
+	switch req.Method {
+	case MethodChatSendMessage:
+		handler, ok := agent.(ChatHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[SendMessageRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(handler.SendMessage(ctx, params))
+	case MethodChatSendMessage2:
+		handler, ok := agent.(ChatHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[SendMessageAltRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(handler.SendMessageAlt(ctx, params))
+	default:
+		return nil, methodNotFound(req.Method)
+	}
+}

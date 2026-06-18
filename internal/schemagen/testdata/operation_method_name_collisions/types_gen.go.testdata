@@ -1,0 +1,17 @@
+package acp
+
+type SendMessageAltRequest struct {
+	Text string `json:"text"`
+}
+
+type SendMessageAltResponse struct {
+	Ok bool `json:"ok"`
+}
+
+type SendMessageRequest struct {
+	Text string `json:"text"`
+}
+
+type SendMessageResponse struct {
+	Ok bool `json:"ok"`
+}

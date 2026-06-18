@@ -87,6 +87,7 @@ func operations(schema *jsonschema.Schema) []operation {
 		}
 		ops = append(ops, op)
 	}
+	assignMethodConstNames(ops)
 	sort.Slice(ops, func(i, j int) bool {
 		if ops[i].constName != ops[j].constName {
 			return ops[i].constName < ops[j].constName
@@ -97,6 +98,37 @@ func operations(schema *jsonschema.Schema) []operation {
 		return paramType(ops[i]) < paramType(ops[j])
 	})
 	return ops
+}
+
+func assignMethodConstNames(ops []operation) {
+	type methodConst struct {
+		method string
+		base   string
+	}
+
+	byMethod := map[string]string{}
+	for _, op := range ops {
+		byMethod[op.method] = "Method" + pascal(op.method)
+	}
+	methods := make([]methodConst, 0, len(byMethod))
+	for method, base := range byMethod {
+		methods = append(methods, methodConst{method: method, base: base})
+	}
+	sort.Slice(methods, func(i, j int) bool {
+		if methods[i].base != methods[j].base {
+			return methods[i].base < methods[j].base
+		}
+		return methods[i].method < methods[j].method
+	})
+
+	used := map[string]bool{}
+	constNames := make(map[string]string, len(methods))
+	for _, method := range methods {
+		constNames[method.method] = uniqueName(method.base, used)
+	}
+	for i := range ops {
+		ops[i].constName = constNames[ops[i].method]
+	}
 }
 
 func operationMergeKey(op operation) string {

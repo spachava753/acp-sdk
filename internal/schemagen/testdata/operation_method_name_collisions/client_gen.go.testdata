@@ -1,0 +1,47 @@
+package acp
+
+// ChatClientHandler handles all chat related client methods.
+type ChatClientHandler interface {
+	SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
+
+	SendMessageAlt(context.Context, *SendMessageAltRequest) (*SendMessageAltResponse, error)
+}
+
+func (c *Client) SendMessage(ctx context.Context, params *SendMessageRequest) (*SendMessageResponse, error) {
+	return call[SendMessageResponse](ctx, c.rpc.conn, MethodChatSendMessage, params)
+}
+
+func (c *Client) SendMessageAlt(ctx context.Context, params *SendMessageAltRequest) (*SendMessageAltResponse, error) {
+	return call[SendMessageAltResponse](ctx, c.rpc.conn, MethodChatSendMessage2, params)
+}
+
+func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) {
+	jsonrpc2.Async(ctx)
+	if c.handler == nil {
+		return nil, methodNotFound(req.Method)
+	}
+	switch req.Method {
+	case MethodChatSendMessage:
+		handler, ok := c.handler.(ChatClientHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[SendMessageRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(handler.SendMessage(ctx, params))
+	case MethodChatSendMessage2:
+		handler, ok := c.handler.(ChatClientHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[SendMessageAltRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(handler.SendMessageAlt(ctx, params))
+	default:
+		return nil, methodNotFound(req.Method)
+	}
+}

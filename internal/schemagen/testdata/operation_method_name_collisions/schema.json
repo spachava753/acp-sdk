@@ -1,0 +1,48 @@
+{
+  "$defs": {
+    "SendMessageAltRequest": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": ["text"],
+      "x-method": "chat/send_message",
+      "x-side": "both"
+    },
+    "SendMessageAltResponse": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "required": ["ok"],
+      "x-method": "chat/send_message",
+      "x-side": "both"
+    },
+    "SendMessageRequest": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": ["text"],
+      "x-method": "chat/send-message",
+      "x-side": "both"
+    },
+    "SendMessageResponse": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "required": ["ok"],
+      "x-method": "chat/send-message",
+      "x-side": "both"
+    }
+  }
+}
