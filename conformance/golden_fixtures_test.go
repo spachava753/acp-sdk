@@ -45,7 +45,7 @@ func goldenFixtures() map[string]goldenCase {
 			raw:    `{"sessionId":"sess_abc123def456","path":"/home/user/project/src/main.py","line":10,"limit":50}`,
 			decode: func() any { return &acp.ReadTextFileRequest{} },
 			value: func() any {
-				return acp.ReadTextFileRequest{SessionID: sess, Path: "/home/user/project/src/main.py", Line: int64Ptr(10), Limit: int64Ptr(50)}
+				return acp.ReadTextFileRequest{SessionID: sess, Path: "/home/user/project/src/main.py", Line: genericPtr(uint32(10)), Limit: genericPtr(uint32(50))}
 			},
 		},
 		"fs_read_text_file_response": {

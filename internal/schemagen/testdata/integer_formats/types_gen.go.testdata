@@ -1,0 +1,19 @@
+package acp
+
+// Counters: Object covering formatted integer fields.
+type Counters struct {
+	ErrorCode ErrorCode `json:"errorCode"`
+	Line      uint32    `json:"line"`
+	Plain     int64     `json:"plain"`
+	Port      uint16    `json:"port"`
+	Sequence  int64     `json:"sequence"`
+	Tokens    uint64    `json:"tokens"`
+}
+
+// ErrorCode: Known int32 error codes with room for custom values.
+type ErrorCode int32
+
+const (
+	// ErrorCodeInvalidRequest: The request is invalid.
+	ErrorCodeInvalidRequest ErrorCode = -32600
+)

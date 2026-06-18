@@ -839,7 +839,7 @@ type CreateTerminalRequest struct {
 	Command         string        `json:"command"`
 	Cwd             *string       `json:"cwd,omitempty"`
 	Env             []EnvVariable `json:"env,omitempty"`
-	OutputByteLimit *int64        `json:"outputByteLimit,omitempty"`
+	OutputByteLimit *uint64       `json:"outputByteLimit,omitempty"`
 	SessionID       SessionId     `json:"sessionId"`
 }
 
@@ -1075,11 +1075,11 @@ type ElicitationPropertySchema struct {
 	Enum        *[]string                     `json:"enum,omitempty"`
 	Format      *StringFormat                 `json:"format,omitempty"`
 	Items       MultiSelectItems              `json:"items,omitempty,omitzero"`
-	MaxItems    *int64                        `json:"maxItems,omitempty"`
-	MaxLength   *int64                        `json:"maxLength,omitempty"`
+	MaxItems    *uint64                       `json:"maxItems,omitempty"`
+	MaxLength   *uint32                       `json:"maxLength,omitempty"`
 	Maximum     *float64                      `json:"maximum,omitempty"`
-	MinItems    *int64                        `json:"minItems,omitempty"`
-	MinLength   *int64                        `json:"minLength,omitempty"`
+	MinItems    *uint64                       `json:"minItems,omitempty"`
+	MinLength   *uint32                       `json:"minLength,omitempty"`
 	Minimum     *float64                      `json:"minimum,omitempty"`
 	OneOf       *[]EnumOption                 `json:"oneOf,omitempty"`
 	Pattern     *string                       `json:"pattern,omitempty"`
@@ -1307,7 +1307,7 @@ type Error struct {
 //
 // These codes follow the JSON-RPC 2.0 specification for standard errors
 // and use the reserved range (-32000 to -32099) for protocol-specific errors.
-type ErrorCode int64
+type ErrorCode int32
 
 const (
 	// ErrorCodeParseError: **Parse error**: Invalid JSON was received by the server.
@@ -2001,8 +2001,8 @@ type MultiSelectPropertySchema struct {
 	Default     *[]string        `json:"default,omitempty"`
 	Description *string          `json:"description,omitempty"`
 	Items       MultiSelectItems `json:"items"`
-	MaxItems    *int64           `json:"maxItems,omitempty"`
-	MinItems    *int64           `json:"minItems,omitempty"`
+	MaxItems    *uint64          `json:"maxItems,omitempty"`
+	MinItems    *uint64          `json:"minItems,omitempty"`
 	Title       *string          `json:"title,omitempty"`
 }
 
@@ -2184,8 +2184,8 @@ func (c *NesDocumentEventCapabilities) UnmarshalJSON(data []byte) error {
 
 // NesEditHistoryCapabilities: Capabilities for edit history context.
 type NesEditHistoryCapabilities struct {
-	Meta     Meta   `json:"_meta,omitzero"`
-	MaxCount *int64 `json:"maxCount,omitempty"`
+	Meta     Meta    `json:"_meta,omitzero"`
+	MaxCount *uint32 `json:"maxCount,omitempty"`
 }
 
 // NesEditHistoryEntry: An entry in the edit history.
@@ -2231,8 +2231,8 @@ func (c *NesEventCapabilities) UnmarshalJSON(data []byte) error {
 // NesExcerpt: A code excerpt from a file.
 type NesExcerpt struct {
 	Meta      Meta   `json:"_meta,omitzero"`
-	EndLine   int64  `json:"endLine"`
-	StartLine int64  `json:"startLine"`
+	EndLine   uint32 `json:"endLine"`
+	StartLine uint32 `json:"startLine"`
 	Text      string `json:"text"`
 }
 
@@ -2251,11 +2251,11 @@ type NesJumpSuggestion struct {
 
 // NesOpenFile: An open file in the editor.
 type NesOpenFile struct {
-	Meta          Meta   `json:"_meta,omitzero"`
-	LanguageID    string `json:"languageId"`
-	LastFocusedMs *int64 `json:"lastFocusedMs,omitempty"`
-	URI           string `json:"uri"`
-	VisibleRange  *Range `json:"visibleRange,omitempty"`
+	Meta          Meta    `json:"_meta,omitzero"`
+	LanguageID    string  `json:"languageId"`
+	LastFocusedMs *uint64 `json:"lastFocusedMs,omitempty"`
+	URI           string  `json:"uri"`
+	VisibleRange  *Range  `json:"visibleRange,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -2295,8 +2295,8 @@ type NesRecentFile struct {
 
 // NesRecentFilesCapabilities: Capabilities for recent files context.
 type NesRecentFilesCapabilities struct {
-	Meta     Meta   `json:"_meta,omitzero"`
-	MaxCount *int64 `json:"maxCount,omitempty"`
+	Meta     Meta    `json:"_meta,omitzero"`
+	MaxCount *uint32 `json:"maxCount,omitempty"`
 }
 
 // NesRejectReason: The reason a suggestion was rejected.
@@ -2549,14 +2549,14 @@ type NesUserAction struct {
 	Meta        Meta     `json:"_meta,omitzero"`
 	Action      string   `json:"action"`
 	Position    Position `json:"position"`
-	TimestampMs int64    `json:"timestampMs"`
+	TimestampMs uint64   `json:"timestampMs"`
 	URI         string   `json:"uri"`
 }
 
 // NesUserActionsCapabilities: Capabilities for user actions context.
 type NesUserActionsCapabilities struct {
-	Meta     Meta   `json:"_meta,omitzero"`
-	MaxCount *int64 `json:"maxCount,omitempty"`
+	Meta     Meta    `json:"_meta,omitzero"`
+	MaxCount *uint32 `json:"maxCount,omitempty"`
 }
 
 // NewSessionRequest: Request parameters for creating a new session.
@@ -2946,9 +2946,9 @@ func (c *PlanUpdateContent) UnmarshalJSON(data []byte) error {
 //
 // The meaning of `character` depends on the negotiated position encoding.
 type Position struct {
-	Meta      Meta  `json:"_meta,omitzero"`
-	Character int64 `json:"character"`
-	Line      int64 `json:"line"`
+	Meta      Meta   `json:"_meta,omitzero"`
+	Character uint32 `json:"character"`
+	Line      uint32 `json:"line"`
 }
 
 // PositionEncodingKind: The encoding used for character offsets in positions.
@@ -3036,7 +3036,7 @@ func (r *PromptResponse) UnmarshalJSON(data []byte) error {
 //
 // This version is only bumped for breaking changes.
 // Non-breaking changes should be introduced via capabilities.
-type ProtocolVersion int64
+type ProtocolVersion uint16
 
 // ProviderCurrentConfig: **UNSTABLE**
 //
@@ -3085,8 +3085,8 @@ type Range struct {
 // Only available if the client supports the `fs.readTextFile` capability.
 type ReadTextFileRequest struct {
 	Meta      Meta      `json:"_meta,omitzero"`
-	Limit     *int64    `json:"limit,omitempty"`
-	Line      *int64    `json:"line,omitempty"`
+	Limit     *uint32   `json:"limit,omitempty"`
+	Line      *uint32   `json:"line,omitempty"`
 	Path      string    `json:"path"`
 	SessionID SessionId `json:"sessionId"`
 }
@@ -3735,12 +3735,12 @@ type SessionUpdate struct {
 	Plan              PlanUpdateContent     `json:"plan,omitempty,omitzero"`
 	RawInput          any                   `json:"rawInput,omitempty"`
 	RawOutput         any                   `json:"rawOutput,omitempty"`
-	Size              int64                 `json:"size,omitempty"`
+	Size              uint64                `json:"size,omitempty"`
 	Status            *ToolCallStatus       `json:"status,omitempty"`
 	Title             *string               `json:"title,omitempty"`
 	ToolCallID        ToolCallId            `json:"toolCallId,omitempty"`
 	UpdatedAt         *string               `json:"updatedAt,omitempty"`
-	Used              int64                 `json:"used,omitempty"`
+	Used              uint64                `json:"used,omitempty"`
 }
 
 // SessionUpdateType is the discriminator for SessionUpdate variants.
@@ -3870,7 +3870,7 @@ func SessionInfoUpdateSessionUpdate() SessionUpdate {
 }
 
 // UsageUpdateSessionUpdate creates an SessionUpdate variant: Context window and cost update for the session.
-func UsageUpdateSessionUpdate(used int64, size int64) SessionUpdate {
+func UsageUpdateSessionUpdate(used uint64, size uint64) SessionUpdate {
 	return SessionUpdate{
 		SessionUpdate: SessionUpdateTypeUsageUpdate,
 		Size:          size,
@@ -4188,8 +4188,8 @@ type StringPropertySchema struct {
 	Description *string       `json:"description,omitempty"`
 	Enum        *[]string     `json:"enum,omitempty"`
 	Format      *StringFormat `json:"format,omitempty"`
-	MaxLength   *int64        `json:"maxLength,omitempty"`
-	MinLength   *int64        `json:"minLength,omitempty"`
+	MaxLength   *uint32       `json:"maxLength,omitempty"`
+	MinLength   *uint32       `json:"minLength,omitempty"`
 	OneOf       *[]EnumOption `json:"oneOf,omitempty"`
 	Pattern     *string       `json:"pattern,omitempty"`
 	Title       *string       `json:"title,omitempty"`
@@ -4285,7 +4285,7 @@ type Terminal struct {
 // TerminalExitStatus: Exit status of a terminal command.
 type TerminalExitStatus struct {
 	Meta     Meta    `json:"_meta,omitzero"`
-	ExitCode *int64  `json:"exitCode,omitempty"`
+	ExitCode *uint32 `json:"exitCode,omitempty"`
 	Signal   *string `json:"signal,omitempty"`
 }
 
@@ -4495,9 +4495,9 @@ type ToolCallId string
 //
 // See protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/tool-calls#following-the-agent)
 type ToolCallLocation struct {
-	Meta Meta   `json:"_meta,omitzero"`
-	Line *int64 `json:"line,omitempty"`
-	Path string `json:"path"`
+	Meta Meta    `json:"_meta,omitzero"`
+	Line *uint32 `json:"line,omitempty"`
+	Path string  `json:"path"`
 }
 
 // ToolCallStatus: Execution status of a tool call.
@@ -4627,21 +4627,21 @@ func (i UntitledMultiSelectItems) MarshalJSON() ([]byte, error) {
 //
 // Token usage information for a prompt turn.
 type Usage struct {
-	Meta              Meta   `json:"_meta,omitzero"`
-	CachedReadTokens  *int64 `json:"cachedReadTokens,omitempty"`
-	CachedWriteTokens *int64 `json:"cachedWriteTokens,omitempty"`
-	InputTokens       int64  `json:"inputTokens"`
-	OutputTokens      int64  `json:"outputTokens"`
-	ThoughtTokens     *int64 `json:"thoughtTokens,omitempty"`
-	TotalTokens       int64  `json:"totalTokens"`
+	Meta              Meta    `json:"_meta,omitzero"`
+	CachedReadTokens  *uint64 `json:"cachedReadTokens,omitempty"`
+	CachedWriteTokens *uint64 `json:"cachedWriteTokens,omitempty"`
+	InputTokens       uint64  `json:"inputTokens"`
+	OutputTokens      uint64  `json:"outputTokens"`
+	ThoughtTokens     *uint64 `json:"thoughtTokens,omitempty"`
+	TotalTokens       uint64  `json:"totalTokens"`
 }
 
 // UsageUpdate: Context window and cost update for a session.
 type UsageUpdate struct {
-	Meta Meta  `json:"_meta,omitzero"`
-	Cost *Cost `json:"cost,omitempty"`
-	Size int64 `json:"size"`
-	Used int64 `json:"used"`
+	Meta Meta   `json:"_meta,omitzero"`
+	Cost *Cost  `json:"cost,omitempty"`
+	Size uint64 `json:"size"`
+	Used uint64 `json:"used"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -4672,7 +4672,7 @@ type WaitForTerminalExitRequest struct {
 // WaitForTerminalExitResponse: Response containing the exit status of a terminal command.
 type WaitForTerminalExitResponse struct {
 	Meta     Meta    `json:"_meta,omitzero"`
-	ExitCode *int64  `json:"exitCode,omitempty"`
+	ExitCode *uint32 `json:"exitCode,omitempty"`
 	Signal   *string `json:"signal,omitempty"`
 }
 

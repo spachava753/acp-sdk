@@ -44,7 +44,7 @@ func schemaType(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema, o
 	case "string":
 		return jen.String(), "string"
 	case "integer":
-		return jen.Int64(), "int64"
+		return integerType(schema.Format)
 	case "number":
 		return jen.Float64(), "float64"
 	case "boolean":
@@ -57,6 +57,21 @@ func schemaType(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema, o
 		return jen.Any(), "any"
 	default:
 		return jen.Any(), "any"
+	}
+}
+
+func integerType(format string) (jen.Code, string) {
+	switch format {
+	case "int32":
+		return jen.Id("int32"), "int32"
+	case "uint16":
+		return jen.Id("uint16"), "uint16"
+	case "uint32":
+		return jen.Id("uint32"), "uint32"
+	case "uint64":
+		return jen.Id("uint64"), "uint64"
+	default:
+		return jen.Int64(), "int64"
 	}
 }
 

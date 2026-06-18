@@ -94,6 +94,8 @@
 // Object field names are derived from JSON property names. JSON tags should omit
 // optional fields and keep required fields non-omitempty. The _meta property maps
 // to Meta and should use omitzero to match the existing ACP package style.
+// JSON Schema integer formats should map to the corresponding Go integer widths:
+// int32, int64, uint16, uint32, and uint64. Unformatted integers remain int64.
 // Required slice fields need custom MarshalJSON methods that encode nil slices
 // as empty JSON arrays, matching the hand-written behavior in acp/protocol_json.go.
 // Fields marked x-deserialize-default-on-error should get custom UnmarshalJSON
@@ -245,6 +247,8 @@
 //   - testdata/deserialize_extensions: x-deserialize-default-on-error and
 //     x-deserialize-skip-invalid-items generate tolerant UnmarshalJSON methods
 //     for object structs and flattened tagged unions.
+//   - testdata/integer_formats: JSON Schema integer formats map to matching Go
+//     integer widths, while unformatted integers continue to use int64.
 //   - testdata/protocol_side: x-side "protocol" notifications are skipped
 //     entirely by ACP agent/client generation and produce no output files.
 //   - testdata/multiline_comments: multiline Markdown descriptions generate

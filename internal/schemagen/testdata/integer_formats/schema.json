@@ -1,0 +1,63 @@
+{
+  "$defs": {
+    "Counters": {
+      "description": "Object covering formatted integer fields.",
+      "properties": {
+        "errorCode": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ErrorCode"
+            }
+          ],
+          "description": "Formatted integer union."
+        },
+        "line": {
+          "description": "Unsigned line number.",
+          "format": "uint32",
+          "type": "integer"
+        },
+        "plain": {
+          "description": "Unformatted integer.",
+          "type": "integer"
+        },
+        "port": {
+          "description": "Unsigned port number.",
+          "format": "uint16",
+          "type": "integer"
+        },
+        "sequence": {
+          "description": "Signed sequence number.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "tokens": {
+          "description": "Unsigned token count.",
+          "format": "uint64",
+          "type": "integer"
+        }
+      },
+      "required": ["errorCode", "line", "plain", "port", "sequence", "tokens"],
+      "type": "object"
+    },
+    "ErrorCode": {
+      "description": "Known int32 error codes with room for custom values.",
+      "anyOf": [
+        {
+          "title": "Invalid request",
+          "description": "The request is invalid.",
+          "format": "int32",
+          "type": "integer",
+          "const": -32600
+        },
+        {
+          "title": "Other",
+          "description": "Any other int32 error code.",
+          "format": "int32",
+          "type": "integer"
+        }
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Integer Format Test Fixture"
+}

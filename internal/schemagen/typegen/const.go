@@ -52,7 +52,7 @@ func isStringConstEnum(schema *jsonschema.Schema) bool {
 }
 
 func primitiveConstUnionCode(name string, schema *jsonschema.Schema) []jen.Code {
-	kind, _ := primitiveConstUnionKind(schema)
+	kind, format, _ := primitiveConstUnionKind(schema)
 	var values []jen.Code
 	for _, branch := range unionBranches(schema) {
 		if branch.Const == nil {
@@ -62,7 +62,7 @@ func primitiveConstUnionCode(name string, schema *jsonschema.Schema) []jen.Code 
 		values = append(values, commented(constName, branch.Description, jen.Id(constName).Id(name).Op("=").Add(primitiveConstLiteral(kind, *branch.Const))))
 	}
 	return []jen.Code{
-		commented(name, schema.Description, jen.Type().Id(name).Add(primitiveConstType(kind))),
+		commented(name, schema.Description, jen.Type().Id(name).Add(primitiveConstType(kind, format))),
 		jen.Line(),
 		jen.Const().Defs(values...),
 		jen.Line(),
@@ -70,32 +70,46 @@ func primitiveConstUnionCode(name string, schema *jsonschema.Schema) []jen.Code 
 }
 
 func isPrimitiveConstUnion(schema *jsonschema.Schema) bool {
-	_, ok := primitiveConstUnionKind(schema)
+	_, _, ok := primitiveConstUnionKind(schema)
 	return ok
 }
 
-func primitiveConstUnionKind(schema *jsonschema.Schema) (string, bool) {
+func primitiveConstUnionKind(schema *jsonschema.Schema) (string, string, bool) {
 	branches := unionBranches(schema)
 	if len(branches) == 0 {
-		return "", false
+		return "", "", false
 	}
 	var kind string
+	var format string
+	formatSet := false
+	formatMixed := false
 	hasConst := false
 	for _, branch := range branches {
 		branchKind := schemaTypeName(branch)
 		if !isPrimitiveConstKind(branchKind) {
-			return "", false
+			return "", "", false
 		}
 		if kind == "" {
 			kind = branchKind
 		} else if kind != branchKind {
-			return "", false
+			return "", "", false
+		}
+		if branchKind == "integer" {
+			if !formatSet {
+				format = branch.Format
+				formatSet = true
+			} else if format != branch.Format {
+				formatMixed = true
+			}
 		}
 		if branch.Const != nil {
 			hasConst = true
 		}
 	}
-	return kind, hasConst
+	if formatMixed {
+		format = ""
+	}
+	return kind, format, hasConst
 }
 
 func isPrimitiveConstKind(kind string) bool {
@@ -107,12 +121,13 @@ func isPrimitiveConstKind(kind string) bool {
 	}
 }
 
-func primitiveConstType(kind string) jen.Code {
+func primitiveConstType(kind, format string) jen.Code {
 	switch kind {
 	case "string":
 		return jen.String()
 	case "integer":
-		return jen.Int64()
+		typ, _ := integerType(format)
+		return typ
 	case "number":
 		return jen.Float64()
 	case "boolean":
