@@ -1,0 +1,61 @@
+{
+  "$defs": {
+    "ErrorCode": {
+      "description": "Known error codes with room for implementation-defined values.",
+      "anyOf": [
+        {
+          "title": "Invalid request",
+          "description": "The request is invalid.",
+          "type": "integer",
+          "const": -32600
+        },
+        {
+          "title": "Invalid params",
+          "description": "The params are invalid.",
+          "type": "integer",
+          "const": -32602
+        },
+        {
+          "title": "Other",
+          "description": "Any other integer code.",
+          "type": "integer"
+        }
+      ]
+    },
+    "ProviderConfig": {
+      "description": "An object that references open primitive const unions.",
+      "type": "object",
+      "properties": {
+        "protocol": {
+          "$ref": "#/$defs/Protocol"
+        },
+        "lastError": {
+          "$ref": "#/$defs/ErrorCode"
+        }
+      },
+      "required": ["protocol", "lastError"]
+    },
+    "Protocol": {
+      "description": "Known protocol identifiers with room for custom values.",
+      "anyOf": [
+        {
+          "description": "Anthropic API protocol.",
+          "type": "string",
+          "const": "anthropic"
+        },
+        {
+          "description": "OpenAI API protocol.",
+          "type": "string",
+          "const": "openai"
+        },
+        {
+          "title": "other",
+          "description": "Unknown or custom protocol.",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Primitive Const Union Test Fixture"
+}

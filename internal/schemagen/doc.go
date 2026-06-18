@@ -117,10 +117,13 @@
 // discriminator unset when the schema says the missing discriminator selects that
 // variant.
 //
-// Primitive or mixed scalar unions that have no object shape or discriminator,
-// such as RequestId or ElicitationContentValue, should be represented as
-// json.RawMessage aliases. They are intentionally preserved as raw JSON instead
-// of forcing an awkward public wrapper type.
+// Primitive const unions with a single scalar kind and an open fallback branch,
+// such as LlmProtocol or ErrorCode, should be represented as named primitive
+// types with constants for the known values. Primitive or mixed scalar unions
+// that have no object shape and no useful const set, such as RequestId or
+// ElicitationContentValue, should be represented as json.RawMessage aliases.
+// They are intentionally preserved as raw JSON instead of forcing an awkward
+// public wrapper type.
 //
 // Untagged array unions, such as a value that can be []Option or []Group, should
 // use a wrapper type with one pointer field per variant and custom MarshalJSON

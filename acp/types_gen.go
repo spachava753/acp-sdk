@@ -1032,7 +1032,39 @@ type Error struct {
 //
 // These codes follow the JSON-RPC 2.0 specification for standard errors
 // and use the reserved range (-32000 to -32099) for protocol-specific errors.
-type ErrorCode = json.RawMessage
+type ErrorCode int64
+
+const (
+	// ErrorCodeParseError: **Parse error**: Invalid JSON was received by the server.
+	// An error occurred on the server while parsing the JSON text.
+	ErrorCodeParseError ErrorCode = -32700
+	// ErrorCodeInvalidRequest: **Invalid request**: The JSON sent is not a valid Request object.
+	ErrorCodeInvalidRequest ErrorCode = -32600
+	// ErrorCodeMethodNotFound: **Method not found**: The method does not exist or is not available.
+	ErrorCodeMethodNotFound ErrorCode = -32601
+	// ErrorCodeInvalidParams: **Invalid params**: Invalid method parameter(s).
+	ErrorCodeInvalidParams ErrorCode = -32602
+	// ErrorCodeInternalError: **Internal error**: Internal JSON-RPC error.
+	// Reserved for implementation-defined server errors.
+	ErrorCodeInternalError ErrorCode = -32603
+	// ErrorCodeRequestCancelled: **Request cancelled**: **UNSTABLE**
+	//
+	// This capability is not part of the spec yet, and may be removed or changed at any point.
+	//
+	// Execution of the method was aborted either due to a cancellation request from the caller or
+	// because of resource constraints or shutdown.
+	ErrorCodeRequestCancelled ErrorCode = -32800
+	// ErrorCodeAuthenticationRequired: **Authentication required**: Authentication is required before this operation can be performed.
+	ErrorCodeAuthenticationRequired ErrorCode = -32000
+	// ErrorCodeResourceNotFound: **Resource not found**: A given resource, such as a file, was not found.
+	ErrorCodeResourceNotFound ErrorCode = -32002
+	// ErrorCodeURLElicitationRequired: **URL elicitation required**: **UNSTABLE**
+	//
+	// This capability is not part of the spec yet, and may be removed or changed at any point.
+	//
+	// The agent requires user input via a URL-based elicitation before it can proceed.
+	ErrorCodeURLElicitationRequired ErrorCode = -32042
+)
 
 // ExtNotification: Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
 // Extension notifications provide a way to send one-way messages for custom functionality
@@ -1222,7 +1254,20 @@ type ListSessionsResponse struct {
 //
 // Protocol names beginning with `_` are free for custom use, like other ACP extension methods.
 // Protocol names that do not begin with `_` are reserved for the ACP spec.
-type LlmProtocol = json.RawMessage
+type LlmProtocol string
+
+const (
+	// LlmProtocolAnthropic: Anthropic API protocol.
+	LlmProtocolAnthropic LlmProtocol = "anthropic"
+	// LlmProtocolOpenai: OpenAI API protocol.
+	LlmProtocolOpenai LlmProtocol = "openai"
+	// LlmProtocolAzure: Azure OpenAI API protocol.
+	LlmProtocolAzure LlmProtocol = "azure"
+	// LlmProtocolVertex: Google Vertex AI API protocol.
+	LlmProtocolVertex LlmProtocol = "vertex"
+	// LlmProtocolBedrock: AWS Bedrock API protocol.
+	LlmProtocolBedrock LlmProtocol = "bedrock"
+)
 
 // LoadSessionRequest: Request parameters for loading an existing session.
 //
@@ -2575,7 +2620,16 @@ func BooleanSessionConfigOption(id SessionConfigId, name string, currentValue bo
 //
 // Category names beginning with `_` are free for custom use, like other ACP extension methods.
 // Category names that do not begin with `_` are reserved for the ACP spec.
-type SessionConfigOptionCategory = json.RawMessage
+type SessionConfigOptionCategory string
+
+const (
+	// SessionConfigOptionCategoryMode: Session mode selector.
+	SessionConfigOptionCategoryMode SessionConfigOptionCategory = "mode"
+	// SessionConfigOptionCategoryModel: Model selector.
+	SessionConfigOptionCategoryModel SessionConfigOptionCategory = "model"
+	// SessionConfigOptionCategoryThoughtLevel: Thought/reasoning level selector.
+	SessionConfigOptionCategoryThoughtLevel SessionConfigOptionCategory = "thought_level"
+)
 
 // SessionConfigSelect: A single-value selector (dropdown) session configuration option payload.
 type SessionConfigSelect struct {

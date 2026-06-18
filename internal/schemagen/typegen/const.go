@@ -5,6 +5,7 @@
 package typegen
 
 import (
+	"fmt"
 	"strings"
 	"unicode"
 
@@ -48,6 +49,111 @@ func isStringConstEnum(schema *jsonschema.Schema) bool {
 		}
 	}
 	return true
+}
+
+func primitiveConstUnionCode(name string, schema *jsonschema.Schema) []jen.Code {
+	kind, _ := primitiveConstUnionKind(schema)
+	var values []jen.Code
+	for _, branch := range unionBranches(schema) {
+		if branch.Const == nil {
+			continue
+		}
+		constName := name + primitiveConstName(branch)
+		values = append(values, commented(constName, branch.Description, jen.Id(constName).Id(name).Op("=").Add(primitiveConstLiteral(kind, *branch.Const))))
+	}
+	return []jen.Code{
+		commented(name, schema.Description, jen.Type().Id(name).Add(primitiveConstType(kind))),
+		jen.Line(),
+		jen.Const().Defs(values...),
+		jen.Line(),
+	}
+}
+
+func isPrimitiveConstUnion(schema *jsonschema.Schema) bool {
+	_, ok := primitiveConstUnionKind(schema)
+	return ok
+}
+
+func primitiveConstUnionKind(schema *jsonschema.Schema) (string, bool) {
+	branches := unionBranches(schema)
+	if len(branches) == 0 {
+		return "", false
+	}
+	var kind string
+	hasConst := false
+	for _, branch := range branches {
+		branchKind := schemaTypeName(branch)
+		if !isPrimitiveConstKind(branchKind) {
+			return "", false
+		}
+		if kind == "" {
+			kind = branchKind
+		} else if kind != branchKind {
+			return "", false
+		}
+		if branch.Const != nil {
+			hasConst = true
+		}
+	}
+	return kind, hasConst
+}
+
+func isPrimitiveConstKind(kind string) bool {
+	switch kind {
+	case "string", "integer", "number", "boolean":
+		return true
+	default:
+		return false
+	}
+}
+
+func primitiveConstType(kind string) jen.Code {
+	switch kind {
+	case "string":
+		return jen.String()
+	case "integer":
+		return jen.Int64()
+	case "number":
+		return jen.Float64()
+	case "boolean":
+		return jen.Bool()
+	default:
+		return jen.Any()
+	}
+}
+
+func primitiveConstLiteral(kind string, value any) jen.Code {
+	switch kind {
+	case "integer":
+		switch v := value.(type) {
+		case int:
+			return jen.Lit(v)
+		case int32:
+			return jen.Lit(int(v))
+		case int64:
+			return jen.Lit(int(v))
+		case float64:
+			return jen.Lit(int(v))
+		}
+	case "number":
+		switch v := value.(type) {
+		case float32:
+			return jen.Lit(float64(v))
+		case float64:
+			return jen.Lit(v)
+		}
+	}
+	return jen.Lit(value)
+}
+
+func primitiveConstName(branch *jsonschema.Schema) string {
+	if branch.Title != "" {
+		return pascalIdentifier(branch.Title)
+	}
+	if branch.Const == nil {
+		return ""
+	}
+	return pascalIdentifier(fmt.Sprint(*branch.Const))
 }
 
 func constString(schema *jsonschema.Schema) (string, bool) {

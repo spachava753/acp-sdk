@@ -1,0 +1,27 @@
+package acp
+
+// ErrorCode: Known error codes with room for implementation-defined values.
+type ErrorCode int64
+
+const (
+	// ErrorCodeInvalidRequest: The request is invalid.
+	ErrorCodeInvalidRequest ErrorCode = -32600
+	// ErrorCodeInvalidParams: The params are invalid.
+	ErrorCodeInvalidParams ErrorCode = -32602
+)
+
+// Protocol: Known protocol identifiers with room for custom values.
+type Protocol string
+
+const (
+	// ProtocolAnthropic: Anthropic API protocol.
+	ProtocolAnthropic Protocol = "anthropic"
+	// ProtocolOpenai: OpenAI API protocol.
+	ProtocolOpenai Protocol = "openai"
+)
+
+// ProviderConfig: An object that references open primitive const unions.
+type ProviderConfig struct {
+	LastError ErrorCode `json:"lastError"`
+	Protocol  Protocol  `json:"protocol"`
+}

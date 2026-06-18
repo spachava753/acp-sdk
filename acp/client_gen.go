@@ -65,12 +65,12 @@ type McpClientHandler interface {
 	// Closes an MCP-over-ACP connection.
 	DisconnectMcp(context.Context, *DisconnectMcpRequest) (*DisconnectMcpResponse, error)
 
-	// MessageMcp: **UNSTABLE**
+	// Message: **UNSTABLE**
 	//
 	// This capability is not part of the spec yet, and may be removed or changed at any point.
 	//
-	// Exchanges an MCP-over-ACP message.
-	MessageMcp(context.Context, *MessageMcpNotification) error
+	// Receives an MCP-over-ACP notification.
+	Message(context.Context, *MessageMcpNotification) error
 }
 
 // SessionClientHandler handles all session related client methods.
@@ -231,12 +231,12 @@ func (c *Client) Logout(ctx context.Context, params *LogoutRequest) (*LogoutResp
 	return call[LogoutResponse](ctx, c.rpc.conn, MethodLogout, params)
 }
 
-// MessageMcp: **UNSTABLE**
+// Message: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
 //
-// Exchanges an MCP-over-ACP message.
-func (c *Client) MessageMcp(ctx context.Context, params *MessageMcpNotification) error {
+// Receives an MCP-over-ACP notification.
+func (c *Client) Message(ctx context.Context, params *MessageMcpNotification) error {
 	return notify(ctx, c.rpc.conn, MethodMcpMessage, params)
 }
 
@@ -519,7 +519,7 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return nil, handler.MessageMcp(ctx, params)
+		return nil, handler.Message(ctx, params)
 	case MethodSessionRequestPermission:
 		handler, ok := c.handler.(SessionClientHandler)
 		if !ok {

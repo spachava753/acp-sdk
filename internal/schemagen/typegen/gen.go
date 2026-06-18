@@ -73,6 +73,8 @@ func definition(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 		return stringEnumCode(name, schema), false, nil
 	case isStringConstEnum(schema):
 		return stringConstEnumCode(name, schema), false, nil
+	case isPrimitiveConstUnion(schema):
+		return primitiveConstUnionCode(name, schema), false, nil
 	default:
 		typ, text := schemaType(defs, schema, false)
 		decl := jen.Type().Id(name)
