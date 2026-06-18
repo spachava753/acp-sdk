@@ -77,7 +77,7 @@ func goldenFixtures() map[string]goldenCase {
 			},
 		},
 		"new_session_request": {
-			raw:    `{"cwd":"/home/user/project","mcpServers":[{"name":"filesystem","command":"/path/to/mcp-server","args":["--stdio"]}]}`,
+			raw:    `{"cwd":"/home/user/project","mcpServers":[{"name":"filesystem","command":"/path/to/mcp-server","args":["--stdio"],"env":[]}]}`,
 			decode: func() any { return &acp.NewSessionRequest{} },
 			value: func() any {
 				return acp.NewSessionRequest{Cwd: "/home/user/project", McpServers: []acp.McpServer{{Name: "filesystem", Command: "/path/to/mcp-server", Args: []string{"--stdio"}, Env: []acp.EnvVariable{}}}}

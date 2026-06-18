@@ -130,7 +130,8 @@
 // same flattened strategy. Variants with const discriminator values get
 // discriminator constants. The default variant gets a constructor that leaves the
 // discriminator unset when the schema says the missing discriminator selects that
-// variant.
+// variant. Required slice fields on that default variant still need the same
+// nil-as-empty-array marshal handling as const-tagged variants.
 //
 // Primitive const unions with a single scalar kind and an open fallback branch,
 // such as LlmProtocol or ErrorCode, should be represented as named primitive
@@ -244,6 +245,9 @@
 //   - testdata/nullable_union_fields: flattened unions keep a precise pointer
 //     field when the same JSON field is non-nullable in one variant and
 //     nullable in another, instead of broadening to any.
+//   - testdata/fallback_union_slices: partially tagged flattened unions apply
+//     required nil-slice marshal handling to a no-const default variant and emit
+//     one grouped switch case for that fallback branch.
 //   - testdata/deserialize_extensions: x-deserialize-default-on-error and
 //     x-deserialize-skip-invalid-items generate tolerant UnmarshalJSON methods
 //     for object structs and flattened tagged unions.

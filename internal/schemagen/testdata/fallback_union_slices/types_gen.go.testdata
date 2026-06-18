@@ -1,0 +1,71 @@
+package acp
+
+import "encoding/json"
+
+// Transport: Tagged union with a fallback branch that has required arrays.
+type Transport struct {
+	Type    TransportType `json:"type,omitempty"`
+	Args    []string      `json:"args,omitempty"`
+	Command string        `json:"command,omitempty"`
+	Env     []string      `json:"env,omitempty"`
+	Headers []string      `json:"headers,omitempty"`
+	Name    string        `json:"name"`
+}
+
+// TransportType is the discriminator for Transport variants.
+type TransportType string
+
+const (
+	TransportTypeHttp TransportType = "http"
+)
+
+// HTTPTransport creates http transport.
+func HTTPTransport(name string, headers []string) Transport {
+	return Transport{
+		Type:    TransportTypeHttp,
+		Headers: headers,
+		Name:    name,
+	}
+}
+
+// StdioTransport creates stdio transport used when no type is present.
+func StdioTransport(name string, command string, args []string, env []string) Transport {
+	return Transport{
+		Args:    args,
+		Command: command,
+		Env:     env,
+		Name:    name,
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (t Transport) MarshalJSON() ([]byte, error) {
+	type alias Transport
+	type wire struct {
+		*alias
+		Headers *[]string `json:"headers,omitempty"`
+		Args    *[]string `json:"args,omitempty"`
+		Env     *[]string `json:"env,omitempty"`
+	}
+	w := wire{alias: (*alias)(&t)}
+	switch t.Type {
+	case TransportTypeHttp:
+		Headers := t.Headers
+		if Headers == nil {
+			Headers = []string{}
+		}
+		w.Headers = &Headers
+	case "":
+		Args := t.Args
+		if Args == nil {
+			Args = []string{}
+		}
+		w.Args = &Args
+		Env := t.Env
+		if Env == nil {
+			Env = []string{}
+		}
+		w.Env = &Env
+	}
+	return json.Marshal(w)
+}

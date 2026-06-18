@@ -39,7 +39,7 @@ func TestRequiredArraysMarshalAsEmptyArrays(t *testing.T) {
 		{
 			name: "stdio mcp server args and env",
 			in:   McpServer{Name: "tools", Command: "tools-server"},
-			want: `{"name":"tools","command":"tools-server"}`,
+			want: `{"name":"tools","command":"tools-server","args":[],"env":[]}`,
 		},
 		{
 			name: "http mcp server headers",

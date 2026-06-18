@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Fallback Union Slices Test Fixture",
+  "$defs": {
+    "Transport": {
+      "description": "Tagged union with a fallback branch that has required arrays.",
+      "oneOf": [
+        {
+          "description": "Http transport.",
+          "type": "object",
+          "title": "HTTP",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "http"
+            },
+            "name": {
+              "type": "string"
+            },
+            "headers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": ["type", "name", "headers"]
+        },
+        {
+          "description": "Stdio transport used when no type is present.",
+          "type": "object",
+          "title": "stdio",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "command": {
+              "type": "string"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "env": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": ["name", "command", "args", "env"]
+        }
+      ],
+      "discriminator": {
+        "propertyName": "type"
+      }
+    }
+  }
+}

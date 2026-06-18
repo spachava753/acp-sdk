@@ -1830,7 +1830,9 @@ func (s McpServer) MarshalJSON() ([]byte, error) {
 	type alias McpServer
 	type wire struct {
 		*alias
-		Headers *[]HttpHeader `json:"headers,omitempty"`
+		Headers *[]HttpHeader  `json:"headers,omitempty"`
+		Args    *[]string      `json:"args,omitempty"`
+		Env     *[]EnvVariable `json:"env,omitempty"`
 	}
 	w := wire{alias: (*alias)(&s)}
 	switch s.Type {
@@ -1846,6 +1848,17 @@ func (s McpServer) MarshalJSON() ([]byte, error) {
 			Headers = []HttpHeader{}
 		}
 		w.Headers = &Headers
+	case "":
+		Args := s.Args
+		if Args == nil {
+			Args = []string{}
+		}
+		w.Args = &Args
+		Env := s.Env
+		if Env == nil {
+			Env = []EnvVariable{}
+		}
+		w.Env = &Env
 	}
 	return json.Marshal(w)
 }
