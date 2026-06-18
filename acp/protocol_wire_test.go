@@ -122,7 +122,7 @@ func TestContentBlockWireShapes(t *testing.T) {
 		},
 		{
 			name: "image data base64",
-			in:   ContentBlock{Type: ContentBlockTypeImage, Data: "AQID", MimeType: "image/png"},
+			in:   ContentBlock{Type: ContentBlockTypeImage, Data: "AQID", MimeType: ptr("image/png")},
 			want: `{"type":"image","data":"AQID","mimeType":"image/png"}`,
 		},
 		{
@@ -155,7 +155,7 @@ func TestSessionUpdateWireShapes(t *testing.T) {
 		SessionUpdate: "tool_call_update",
 		ToolCallID:    "call-1",
 		Title:         &title,
-		Status:        ToolCallStatusCompleted,
+		Status:        ptr(ToolCallStatusCompleted),
 		Content: []ToolCallContent{{
 			Type:    ToolCallContentTypeContent,
 			Content: ContentBlock{Type: ContentBlockTypeText, Text: "ok"},

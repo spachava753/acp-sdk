@@ -1,0 +1,44 @@
+{
+  "$defs": {
+    "SharedNullable": {
+      "description": "Flattened union with a shared field that is nullable in one variant.",
+      "oneOf": [
+        {
+          "description": "Required non-null branch.",
+          "properties": {
+            "kind": {
+              "const": "strict",
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": ["kind", "label", "value"],
+          "title": "Strict",
+          "type": "object"
+        },
+        {
+          "description": "Nullable optional branch.",
+          "properties": {
+            "kind": {
+              "const": "maybe",
+              "type": "string"
+            },
+            "label": {
+              "type": ["string", "null"]
+            }
+          },
+          "required": ["kind"],
+          "title": "Maybe",
+          "type": "object"
+        }
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nullable Union Fields Test Fixture"
+}

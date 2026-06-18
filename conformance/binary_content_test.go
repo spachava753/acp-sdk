@@ -19,12 +19,12 @@ func TestBinaryContentMarshalsAsBase64Strings(t *testing.T) {
 	}{
 		{
 			name: "image data",
-			in:   acp.ContentBlock{Type: acp.ContentBlockTypeImage, MimeType: "image/png", Data: "AQID"},
+			in:   acp.ContentBlock{Type: acp.ContentBlockTypeImage, MimeType: stringPtr("image/png"), Data: "AQID"},
 			want: `{"type":"image","data":"AQID","mimeType":"image/png"}`,
 		},
 		{
 			name: "audio data",
-			in:   acp.ContentBlock{Type: acp.ContentBlockTypeAudio, MimeType: "audio/wav", Data: "BAUG"},
+			in:   acp.ContentBlock{Type: acp.ContentBlockTypeAudio, MimeType: stringPtr("audio/wav"), Data: "BAUG"},
 			want: `{"type":"audio","data":"BAUG","mimeType":"audio/wav"}`,
 		},
 		{

@@ -111,6 +111,11 @@
 //   - constructor helpers for each variant that set the discriminator and the
 //     required fields for that variant.
 //
+// Fields shared by multiple flattened variants should use the narrowest common Go
+// shape that preserves the wire schema. If one variant uses `T` and another uses
+// nullable `T`, generate `*T`; reserve `any` for genuinely incompatible field
+// kinds.
+//
 // A partially tagged union with a default variant, such as AuthMethod, uses the
 // same flattened strategy. Variants with const discriminator values get
 // discriminator constants. The default variant gets a constructor that leaves the
@@ -223,6 +228,9 @@
 //   - testdata/hard_unions: partially tagged unions with default variants, raw
 //     JSON aliases for non-object mixed unions, and wrapper types with custom
 //     JSON for untagged array unions.
+//   - testdata/nullable_union_fields: flattened unions keep a precise pointer
+//     field when the same JSON field is non-nullable in one variant and
+//     nullable in another, instead of broadening to any.
 //   - testdata/protocol_side: x-side "protocol" notifications are skipped
 //     entirely by ACP agent/client generation and produce no output files.
 //   - testdata/multiline_comments: multiline Markdown descriptions generate

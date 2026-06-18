@@ -46,11 +46,7 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 		if existing, ok := fieldsByJSON[jsonName]; ok {
 			if jsonName != "_meta" {
 				field := newUnionField(defs, jsonName, prop, common)
-				if existing.typeText != field.typeText && schemaKind(defs, prop) != schemaKind(defs, existing.schema) {
-					existing.typeCode = jen.Any()
-					existing.typeText = "any"
-				}
-				fieldsByJSON[jsonName] = existing
+				fieldsByJSON[jsonName] = mergeUnionField(defs, existing, field)
 			}
 			return
 		}
@@ -140,6 +136,32 @@ func newUnionField(defs map[string]*jsonschema.Schema, jsonName string, prop *js
 	}
 	typ, text := schemaType(defs, prop, false)
 	return unionField{jsonName: jsonName, goName: fieldName(jsonName), typeCode: typ, typeText: text, schema: prop}
+}
+
+func mergeUnionField(defs map[string]*jsonschema.Schema, existing, field unionField) unionField {
+	if existing.typeText == field.typeText {
+		return existing
+	}
+	if typeText, typeCode, ok := nullableUnionField(existing, field); ok {
+		existing.typeText = typeText
+		existing.typeCode = typeCode
+		return existing
+	}
+	if schemaKind(defs, field.schema) != schemaKind(defs, existing.schema) {
+		existing.typeCode = jen.Any()
+		existing.typeText = "any"
+	}
+	return existing
+}
+
+func nullableUnionField(a, b unionField) (string, jen.Code, bool) {
+	if strings.HasPrefix(a.typeText, "*") && strings.TrimPrefix(a.typeText, "*") == b.typeText {
+		return a.typeText, a.typeCode, true
+	}
+	if strings.HasPrefix(b.typeText, "*") && strings.TrimPrefix(b.typeText, "*") == a.typeText {
+		return b.typeText, b.typeCode, true
+	}
+	return "", nil, false
 }
 
 func requiredMap(required []string) map[string]bool {

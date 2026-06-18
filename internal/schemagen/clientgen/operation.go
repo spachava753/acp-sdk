@@ -48,7 +48,8 @@ func operations(schema *jsonschema.Schema) []operation {
 	}
 
 	byMethod := map[string]operation{}
-	for _, op := range byType {
+	for _, name := range sortedKeys(byType) {
+		op := byType[name]
 		if op.method == "" {
 			continue
 		}

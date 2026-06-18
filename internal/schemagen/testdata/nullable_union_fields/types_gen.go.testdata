@@ -1,0 +1,32 @@
+package acp
+
+// SharedNullable: Flattened union with a shared field that is nullable in one variant.
+type SharedNullable struct {
+	Kind  SharedNullableType `json:"kind"`
+	Label *string            `json:"label,omitempty"`
+	Value string             `json:"value,omitempty"`
+}
+
+// SharedNullableType is the discriminator for SharedNullable variants.
+type SharedNullableType string
+
+const (
+	SharedNullableTypeStrict SharedNullableType = "strict"
+	SharedNullableTypeMaybe  SharedNullableType = "maybe"
+)
+
+// StrictSharedNullable creates required non-null branch.
+func StrictSharedNullable(label string, value string) SharedNullable {
+	return SharedNullable{
+		Kind:  SharedNullableTypeStrict,
+		Label: &label,
+		Value: value,
+	}
+}
+
+// MaybeSharedNullable creates nullable optional branch.
+func MaybeSharedNullable() SharedNullable {
+	return SharedNullable{
+		Kind: SharedNullableTypeMaybe,
+	}
+}

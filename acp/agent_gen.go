@@ -102,7 +102,7 @@ const (
 	//
 	// This capability is not part of the spec yet, and may be removed or changed at any point.
 	//
-	// Exchanges an MCP-over-ACP message.
+	// Receives an MCP-over-ACP notification.
 	MethodMcpMessage = "mcp/message"
 	// MethodNesAccept: **UNSTABLE**
 	//
@@ -396,12 +396,12 @@ type LogoutHandler interface {
 
 // McpHandler handles all mcp related agent methods.
 type McpHandler interface {
-	// MessageMcp: **UNSTABLE**
+	// Message: **UNSTABLE**
 	//
 	// This capability is not part of the spec yet, and may be removed or changed at any point.
 	//
-	// Exchanges an MCP-over-ACP message.
-	MessageMcp(context.Context, *MessageMcpNotification) error
+	// Receives an MCP-over-ACP notification.
+	Message(context.Context, *MessageMcpNotification) error
 }
 
 // NesHandler handles all nes related agent methods.
@@ -635,12 +635,12 @@ func (c *AgentConnection) DisconnectMcp(ctx context.Context, params *DisconnectM
 	return call[DisconnectMcpResponse](ctx, c.rpc.conn, MethodMcpDisconnect, params)
 }
 
-// MessageMcp: **UNSTABLE**
+// Message: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
 //
-// Exchanges an MCP-over-ACP message.
-func (c *AgentConnection) MessageMcp(ctx context.Context, params *MessageMcpNotification) error {
+// Receives an MCP-over-ACP notification.
+func (c *AgentConnection) Message(ctx context.Context, params *MessageMcpNotification) error {
 	return notify(ctx, c.rpc.conn, MethodMcpMessage, params)
 }
 
@@ -835,7 +835,7 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return nil, handler.MessageMcp(ctx, params)
+		return nil, handler.Message(ctx, params)
 	case MethodNesAccept:
 		handler, ok := agent.(NesHandler)
 		if !ok {

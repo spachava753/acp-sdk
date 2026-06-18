@@ -56,6 +56,36 @@ func TestGenerate(t *testing.T) {
 	}
 }
 
+func TestGenerateDeterministic(t *testing.T) {
+	schemaData, err := os.ReadFile("schema.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var schema jsonschema.Schema
+	if err := json.Unmarshal(schemaData, &schema); err != nil {
+		t.Fatal(err)
+	}
+
+	want := generatedFilesByName(t, schemagen.Generate(&schema))
+	for i := 0; i < 50; i++ {
+		got := generatedFilesByName(t, schemagen.Generate(&schema))
+		for filename, wantContents := range want {
+			gotContents, ok := got[filename]
+			if !ok {
+				t.Fatalf("Generate() run %d missing file %q", i+1, filename)
+			}
+			if !bytes.Equal(gotContents, wantContents) {
+				t.Fatalf("Generate() run %d file %q changed between runs", i+1, filename)
+			}
+			delete(got, filename)
+		}
+		for filename := range got {
+			t.Fatalf("Generate() run %d returned unexpected file %q", i+1, filename)
+		}
+	}
+}
+
 func readExpectedFiles(t *testing.T, dir string) map[string][]byte {
 	t.Helper()
 

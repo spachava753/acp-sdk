@@ -421,13 +421,13 @@ type ContentBlock struct {
 	Annotations *Annotations             `json:"annotations,omitempty"`
 	Data        string                   `json:"data,omitempty"`
 	Description *string                  `json:"description,omitempty"`
-	MimeType    any                      `json:"mimeType,omitempty"`
+	MimeType    *string                  `json:"mimeType,omitempty"`
 	Name        string                   `json:"name,omitempty"`
 	Resource    EmbeddedResourceResource `json:"resource,omitempty,omitzero"`
 	Size        *int64                   `json:"size,omitempty"`
 	Text        string                   `json:"text,omitempty"`
 	Title       *string                  `json:"title,omitempty"`
-	URI         any                      `json:"uri,omitempty"`
+	URI         *string                  `json:"uri,omitempty"`
 }
 
 // ContentBlockType is the discriminator for ContentBlock variants.
@@ -459,7 +459,7 @@ func ImageContentBlock(data string, mimeType string) ContentBlock {
 	return ContentBlock{
 		Type:     ContentBlockTypeImage,
 		Data:     data,
-		MimeType: mimeType,
+		MimeType: &mimeType,
 	}
 }
 
@@ -470,7 +470,7 @@ func AudioContentBlock(data string, mimeType string) ContentBlock {
 	return ContentBlock{
 		Type:     ContentBlockTypeAudio,
 		Data:     data,
-		MimeType: mimeType,
+		MimeType: &mimeType,
 	}
 }
 
@@ -481,7 +481,7 @@ func ResourceLinkContentBlock(name string, uri string) ContentBlock {
 	return ContentBlock{
 		Type: ContentBlockTypeResourceLink,
 		Name: name,
-		URI:  uri,
+		URI:  &uri,
 	}
 }
 
@@ -2842,15 +2842,15 @@ type SessionUpdate struct {
 	CurrentModeID     SessionModeId         `json:"currentModeId,omitempty"`
 	Entries           []PlanEntry           `json:"entries,omitempty"`
 	ID                PlanId                `json:"id,omitempty"`
-	Kind              ToolKind              `json:"kind,omitempty"`
-	Locations         any                   `json:"locations,omitempty"`
+	Kind              *ToolKind             `json:"kind,omitempty"`
+	Locations         *[]ToolCallLocation   `json:"locations,omitempty"`
 	MessageID         *MessageId            `json:"messageId,omitempty"`
 	Plan              PlanUpdateContent     `json:"plan,omitempty,omitzero"`
 	RawInput          any                   `json:"rawInput,omitempty"`
 	RawOutput         any                   `json:"rawOutput,omitempty"`
 	Size              int64                 `json:"size,omitempty"`
-	Status            ToolCallStatus        `json:"status,omitempty"`
-	Title             any                   `json:"title,omitempty"`
+	Status            *ToolCallStatus       `json:"status,omitempty"`
+	Title             *string               `json:"title,omitempty"`
 	ToolCallID        ToolCallId            `json:"toolCallId,omitempty"`
 	UpdatedAt         *string               `json:"updatedAt,omitempty"`
 	Used              int64                 `json:"used,omitempty"`
@@ -2903,7 +2903,7 @@ func AgentThoughtChunkSessionUpdate(content ContentBlock) SessionUpdate {
 func ToolCallSessionUpdate(toolCallID ToolCallId, title string) SessionUpdate {
 	return SessionUpdate{
 		SessionUpdate: SessionUpdateTypeToolCall,
-		Title:         title,
+		Title:         &title,
 		ToolCallID:    toolCallID,
 	}
 }
