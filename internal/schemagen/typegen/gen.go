@@ -177,16 +177,16 @@ func ignoredTopLevelProtocolRefs(schema *jsonschema.Schema) map[string]bool {
 	}
 	for _, branch := range schema.AnyOf {
 		if branch.Title == "ProtocolLevel" && docsIgnored(branch) {
-			collectRefs(branch, ignored)
+			collectRefs(branch, schema.Defs, ignored, map[string]bool{})
 			continue
 		}
-		collectRefs(branch, public)
+		collectRefs(branch, schema.Defs, public, map[string]bool{})
 	}
 	for name, def := range schema.Defs {
 		if docsIgnored(def) || ignored[name] {
 			continue
 		}
-		collectRefs(def, public)
+		collectRefs(def, schema.Defs, public, map[string]bool{})
 	}
 	for ref := range public {
 		delete(ignored, ref)
@@ -194,27 +194,32 @@ func ignoredTopLevelProtocolRefs(schema *jsonschema.Schema) map[string]bool {
 	return ignored
 }
 
-func collectRefs(schema *jsonschema.Schema, refs map[string]bool) {
+func collectRefs(schema *jsonschema.Schema, defs map[string]*jsonschema.Schema, refs map[string]bool, seen map[string]bool) {
 	if schema == nil {
 		return
 	}
 	if schema.Ref != "" {
-		refs[refName(schema.Ref)] = true
+		name := refName(schema.Ref)
+		refs[name] = true
+		if !seen[name] {
+			seen[name] = true
+			collectRefs(defs[name], defs, refs, seen)
+		}
 	}
 	for _, branch := range schema.AnyOf {
-		collectRefs(branch, refs)
+		collectRefs(branch, defs, refs, seen)
 	}
 	for _, branch := range schema.OneOf {
-		collectRefs(branch, refs)
+		collectRefs(branch, defs, refs, seen)
 	}
 	for _, branch := range schema.AllOf {
-		collectRefs(branch, refs)
+		collectRefs(branch, defs, refs, seen)
 	}
 	for _, prop := range schema.Properties {
-		collectRefs(prop, refs)
+		collectRefs(prop, defs, refs, seen)
 	}
-	collectRefs(schema.Items, refs)
-	collectRefs(schema.AdditionalProperties, refs)
+	collectRefs(schema.Items, defs, refs, seen)
+	collectRefs(schema.AdditionalProperties, defs, refs, seen)
 }
 
 func contains[S ~[]E, E comparable](slice S, value E) bool {

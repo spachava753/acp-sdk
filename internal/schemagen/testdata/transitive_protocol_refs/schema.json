@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Transitive Protocol Refs Test Fixture",
+  "anyOf": [
+    {
+      "title": "Visible",
+      "description": "A non-protocol schema branch.",
+      "type": "object"
+    },
+    {
+      "title": "ProtocolLevel",
+      "description": "Docs-ignored protocol-level envelope with private helper refs.",
+      "type": "object",
+      "properties": {
+        "params": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProtocolNotification"
+            }
+          ]
+        }
+      },
+      "x-docs-ignore": true
+    }
+  ],
+  "$defs": {
+    "ProtocolHelper": {
+      "description": "Helper only used through the ignored protocol payload.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "Hidden value.",
+          "type": "string"
+        }
+      },
+      "required": ["value"]
+    },
+    "ProtocolNotification": {
+      "description": "Protocol-level notification that should not generate a public ACP payload type.",
+      "type": "object",
+      "properties": {
+        "payload": {
+          "description": "Private protocol payload.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProtocolPayload"
+            }
+          ]
+        }
+      },
+      "required": ["payload"],
+      "x-method": "$/private",
+      "x-side": "protocol"
+    },
+    "ProtocolPayload": {
+      "description": "Payload only used by ignored protocol notifications.",
+      "type": "object",
+      "properties": {
+        "helper": {
+          "description": "Private helper.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProtocolHelper"
+            }
+          ]
+        }
+      },
+      "required": ["helper"]
+    },
+    "VisiblePayload": {
+      "description": "Normal payload that should still generate.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Visible name.",
+          "type": "string"
+        }
+      },
+      "required": ["name"]
+    }
+  }
+}

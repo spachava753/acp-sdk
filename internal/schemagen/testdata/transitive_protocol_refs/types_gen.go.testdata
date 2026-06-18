@@ -1,0 +1,6 @@
+package acp
+
+// VisiblePayload: Normal payload that should still generate.
+type VisiblePayload struct {
+	Name string `json:"name"`
+}
