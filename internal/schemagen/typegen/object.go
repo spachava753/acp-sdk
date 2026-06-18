@@ -17,6 +17,11 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 		deserializeField
 		tag      string
 		required bool
+		schema   *jsonschema.Schema
+	}
+	type requiredArrayUnion struct {
+		field  field
+		schema *jsonschema.Schema
 	}
 
 	required := map[string]bool{}
@@ -44,18 +49,20 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 		}
 		deserialize := newDeserializeField(defs, jsonName, prop, typ, text)
 		deserialize.goName = goNames[jsonName]
-		f := field{deserializeField: deserialize, tag: jsonTag(jsonName, !required[jsonName], false), required: required[jsonName]}
+		f := field{deserializeField: deserialize, tag: jsonTag(jsonName, !required[jsonName], false), required: required[jsonName], schema: prop}
 		fields = append(fields, f)
 		structFields = append(structFields, jen.Id(f.goName).Add(f.typeCode).Tag(map[string]string{"json": f.tag}))
 	}
 
 	codes := []jen.Code{commented(name, schema.Description, jen.Type().Id(name).Struct(structFields...)), jen.Line()}
 
-	// JSON encoders serialize a nil slice as null. Required array fields should
-	// remain arrays on the wire for the protocol structs that rely on that
-	// distinction. Collection/map-heavy shapes deliberately keep the default
-	// encoder behavior to match the current fixture contract.
+	// JSON encoders serialize a nil slice as null. Required array fields and
+	// required array-union options wrappers should remain arrays on the wire for
+	// the protocol structs that rely on that distinction. Collection/map-heavy
+	// shapes deliberately keep the default encoder behavior to match the current
+	// fixture contract.
 	var requiredSlices []field
+	var requiredArrayUnions []requiredArrayUnion
 	var hasRequiredMap bool
 	var hasOptionalPointer bool
 	for _, f := range fields {
@@ -68,6 +75,11 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 		if strings.HasPrefix(f.typeText, "[]") {
 			requiredSlices = append(requiredSlices, f)
 		}
+		if f.jsonName == "options" && !strings.HasPrefix(f.typeText, "*") {
+			if arrayUnion := constructorArrayUnionSchema(defs, f.schema); arrayUnion != nil {
+				requiredArrayUnions = append(requiredArrayUnions, requiredArrayUnion{field: f, schema: arrayUnion})
+			}
+		}
 		if strings.HasPrefix(f.typeText, "map[") {
 			hasRequiredMap = true
 		}
@@ -77,7 +89,7 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 		deserializeFields = append(deserializeFields, f.deserializeField)
 	}
 	unmarshalMethod, hasUnmarshal := deserializeUnmarshalCode(name, deserializeFields)
-	if len(requiredSlices) == 0 || hasRequiredMap {
+	if (len(requiredSlices) == 0 && len(requiredArrayUnions) == 0) || hasRequiredMap {
 		if hasUnmarshal {
 			codes = append(codes, unmarshalMethod)
 		}
@@ -95,6 +107,9 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 			jen.Id("a").Dot(f.goName).Op("=").Add(f.typeCode).Values(),
 		))
 	}
+	for _, f := range requiredArrayUnions {
+		body = append(body, requiredArrayUnionMarshalCode(defs, "a", f.field.goName, f.field.typeText, f.schema)...)
+	}
 	body = append(body, jen.Return(jen.Qual("encoding/json", "Marshal").Call(jen.Id("a"))))
 	method := jen.Comment("MarshalJSON implements json.Marshaler.").Line().Func().Params(jen.Id(receiver).Id(name)).Id("MarshalJSON").Params().Params(jen.Index().Byte(), jen.Error()).Block(body...)
 	methods := []jen.Code{method}
@@ -105,6 +120,24 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 		return codes, needsMeta, methods
 	}
 	return append(codes, methods...), needsMeta, nil
+}
+
+func requiredArrayUnionMarshalCode(defs map[string]*jsonschema.Schema, receiver, goName, typeName string, schema *jsonschema.Schema) []jen.Code {
+	variants := arrayUnionVariants(defs, typeName, unionBranches(schema))
+	if len(variants) == 0 {
+		return nil
+	}
+	flatVariant, _ := arrayUnionDecodeVariants(defs, variants)
+	condition := jen.Id(receiver).Dot(goName).Dot(variants[0].fieldName).Op("==").Nil()
+	for _, variant := range variants[1:] {
+		condition.Op("&&").Id(receiver).Dot(goName).Dot(variant.fieldName).Op("==").Nil()
+	}
+	return []jen.Code{
+		jen.If(condition).Block(
+			jen.Id("flat").Op(":=").Id(flatVariant.typeName).Values(),
+			jen.Id(receiver).Dot(goName).Op("=").Id(typeName).Values(jen.Id(flatVariant.fieldName).Op(":").Op("&").Id("flat")),
+		),
+	}
 }
 
 func pointerDefaultTrueBool(jsonName string, schema *jsonschema.Schema, optional bool) bool {

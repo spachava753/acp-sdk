@@ -1,0 +1,99 @@
+package acp
+
+import "encoding/json"
+
+// SelectConfig: Config object with a required array-union field.
+type SelectConfig struct {
+	CurrentValue string        `json:"currentValue"`
+	Options      SelectOptions `json:"options"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (c SelectConfig) MarshalJSON() ([]byte, error) {
+	type alias SelectConfig
+	a := alias(c)
+	if a.Options.Ungrouped == nil && a.Options.Groups == nil {
+		flat := UngroupedSelectOptions{}
+		a.Options = SelectOptions{Ungrouped: &flat}
+	}
+	return json.Marshal(a)
+}
+
+type SelectGroup struct {
+	Name    string         `json:"name"`
+	Options []SelectOption `json:"options"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (g SelectGroup) MarshalJSON() ([]byte, error) {
+	type alias SelectGroup
+	a := alias(g)
+	if a.Options == nil {
+		a.Options = []SelectOption{}
+	}
+	return json.Marshal(a)
+}
+
+type SelectOption struct {
+	Value string `json:"value"`
+}
+
+// SelectOptions: Grouped or ungrouped select options.
+type SelectOptions struct {
+	Ungrouped *UngroupedSelectOptions
+	Groups    *GroupedSelectOptions
+}
+
+// UngroupedSelectOptions is the ungrouped variant of SelectOptions.
+type UngroupedSelectOptions []SelectOption
+
+// GroupedSelectOptions is the grouped variant of SelectOptions.
+type GroupedSelectOptions []SelectGroup
+
+// MarshalJSON implements json.Marshaler.
+func (o SelectOptions) MarshalJSON() ([]byte, error) {
+	if o.Groups != nil {
+		return json.Marshal(o.Groups)
+	}
+	if o.Ungrouped != nil {
+		return json.Marshal(o.Ungrouped)
+	}
+	return []byte("null"), nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *SelectOptions) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*o = SelectOptions{}
+		return nil
+	}
+	var raw []json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw) == 0 {
+		flat := UngroupedSelectOptions{}
+		*o = SelectOptions{Ungrouped: &flat}
+		return nil
+	}
+	var probe struct {
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(raw[0], &probe); err != nil {
+		return err
+	}
+	if probe.Name != "" {
+		var groups GroupedSelectOptions
+		if err := json.Unmarshal(data, &groups); err != nil {
+			return err
+		}
+		*o = SelectOptions{Groups: &groups}
+		return nil
+	}
+	var flat UngroupedSelectOptions
+	if err := json.Unmarshal(data, &flat); err != nil {
+		return err
+	}
+	*o = SelectOptions{Ungrouped: &flat}
+	return nil
+}

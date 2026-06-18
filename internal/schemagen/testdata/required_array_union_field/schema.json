@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "SelectConfig": {
+      "description": "Config object with a required array-union field.",
+      "type": "object",
+      "properties": {
+        "currentValue": { "type": "string" },
+        "options": {
+          "allOf": [{ "$ref": "#/$defs/SelectOptions" }]
+        }
+      },
+      "required": ["currentValue", "options"]
+    },
+    "SelectOptions": {
+      "description": "Grouped or ungrouped select options.",
+      "anyOf": [
+        {
+          "title": "Ungrouped",
+          "description": "Flat options.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/SelectOption" }
+        },
+        {
+          "title": "Grouped",
+          "description": "Grouped options.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/SelectGroup" }
+        }
+      ]
+    },
+    "SelectOption": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "string" }
+      },
+      "required": ["value"]
+    },
+    "SelectGroup": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "options": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SelectOption" }
+        }
+      },
+      "required": ["name", "options"]
+    }
+  }
+}

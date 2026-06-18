@@ -3668,6 +3668,17 @@ type SessionConfigSelect struct {
 	Options      SessionConfigSelectOptions `json:"options"`
 }
 
+// MarshalJSON implements json.Marshaler.
+func (s SessionConfigSelect) MarshalJSON() ([]byte, error) {
+	type alias SessionConfigSelect
+	a := alias(s)
+	if a.Options.Ungrouped == nil && a.Options.Groups == nil {
+		flat := UngroupedSessionConfigSelectOptions{}
+		a.Options = SessionConfigSelectOptions{Ungrouped: &flat}
+	}
+	return json.Marshal(a)
+}
+
 // SessionConfigSelectGroup: A group of possible values for a session configuration option.
 type SessionConfigSelectGroup struct {
 	Meta    Meta                        `json:"_meta,omitzero"`
