@@ -3704,12 +3704,12 @@ func (o *SessionConfigSelectOptions) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	var probe struct {
-		Group string `json:"group"`
+		Group json.RawMessage `json:"group"`
 	}
 	if err := json.Unmarshal(raw[0], &probe); err != nil {
 		return err
 	}
-	if probe.Group != "" {
+	if len(probe.Group) > 0 {
 		var groups GroupedSessionConfigSelectOptions
 		if err := json.Unmarshal(data, &groups); err != nil {
 			return err

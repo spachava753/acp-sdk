@@ -262,6 +262,10 @@
 //   - testdata/hard_unions: partially tagged unions with default variants, raw
 //     JSON aliases for non-object mixed unions, and wrapper types with custom
 //     JSON for untagged array unions.
+//   - testdata/array_union_ref_probe: untagged array unions use presence-based
+//     probing when the grouped variant is identified by a required field whose
+//     schema is a named/allOf reference, so empty string identifiers still select
+//     the grouped shape.
 //   - testdata/nullable_union_fields: flattened unions keep a precise pointer
 //     field when the same JSON field is non-nullable in one variant and
 //     nullable in another, instead of broadening to any.

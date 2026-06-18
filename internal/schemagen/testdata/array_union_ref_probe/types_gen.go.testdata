@@ -1,0 +1,88 @@
+package acp
+
+import "encoding/json"
+
+// GroupId: Group identifier.
+type GroupId string
+
+// SelectGroup: A grouped set of select options.
+type SelectGroup struct {
+	Group   GroupId        `json:"group"`
+	Options []SelectOption `json:"options"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (g SelectGroup) MarshalJSON() ([]byte, error) {
+	type alias SelectGroup
+	a := alias(g)
+	if a.Options == nil {
+		a.Options = []SelectOption{}
+	}
+	return json.Marshal(a)
+}
+
+// SelectOption: A selectable option.
+type SelectOption struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// SelectOptions: Select options represented by one of two array shapes.
+type SelectOptions struct {
+	Flat   *FlatSelectOptions
+	Groups *GroupedSelectOptions
+}
+
+// FlatSelectOptions is the flat variant of SelectOptions.
+type FlatSelectOptions []SelectOption
+
+// GroupedSelectOptions is the grouped variant of SelectOptions.
+type GroupedSelectOptions []SelectGroup
+
+// MarshalJSON implements json.Marshaler.
+func (o SelectOptions) MarshalJSON() ([]byte, error) {
+	if o.Groups != nil {
+		return json.Marshal(o.Groups)
+	}
+	if o.Flat != nil {
+		return json.Marshal(o.Flat)
+	}
+	return []byte("null"), nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *SelectOptions) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*o = SelectOptions{}
+		return nil
+	}
+	var raw []json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw) == 0 {
+		flat := FlatSelectOptions{}
+		*o = SelectOptions{Flat: &flat}
+		return nil
+	}
+	var probe struct {
+		Group json.RawMessage `json:"group"`
+	}
+	if err := json.Unmarshal(raw[0], &probe); err != nil {
+		return err
+	}
+	if len(probe.Group) > 0 {
+		var groups GroupedSelectOptions
+		if err := json.Unmarshal(data, &groups); err != nil {
+			return err
+		}
+		*o = SelectOptions{Groups: &groups}
+		return nil
+	}
+	var flat FlatSelectOptions
+	if err := json.Unmarshal(data, &flat); err != nil {
+		return err
+	}
+	*o = SelectOptions{Flat: &flat}
+	return nil
+}

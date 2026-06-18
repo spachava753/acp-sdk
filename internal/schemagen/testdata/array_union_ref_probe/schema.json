@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Array Union Ref Probe",
+  "$defs": {
+    "GroupId": {
+      "description": "Group identifier.",
+      "type": "string"
+    },
+    "SelectOptions": {
+      "description": "Select options represented by one of two array shapes.",
+      "anyOf": [
+        {
+          "title": "Flat",
+          "description": "A flat list of options with no grouping.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SelectOption"
+          }
+        },
+        {
+          "title": "Grouped",
+          "description": "A list of options grouped under headers.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SelectGroup"
+          }
+        }
+      ]
+    },
+    "SelectOption": {
+      "description": "A selectable option.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "Option value.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        }
+      },
+      "required": ["value", "name"]
+    },
+    "SelectGroup": {
+      "description": "A grouped set of select options.",
+      "type": "object",
+      "properties": {
+        "group": {
+          "description": "Group identifier.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/GroupId"
+            }
+          ]
+        },
+        "options": {
+          "description": "Options in this group.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SelectOption"
+          }
+        }
+      },
+      "required": ["group", "options"]
+    }
+  }
+}

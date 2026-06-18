@@ -499,7 +499,14 @@ func arrayUnionUnmarshalCode(defs map[string]*jsonschema.Schema, name string, br
 	groupBranch := branches[len(branches)-1]
 	groupType := pascalIdentifier(groupBranch.Title) + name
 	groupField := arrayUnionFieldName(groupBranch.Title)
-	probeField := firstRequiredObjectField(defs[refName(groupBranch.Items.Ref)])
+	groupItem := defs[refName(groupBranch.Items.Ref)]
+	probeField := firstRequiredObjectField(groupItem)
+	probeFieldType := jen.String()
+	probeCondition := jen.Id("probe").Dot(fieldName(probeField)).Op("!=").Lit("")
+	if arrayUnionProbeUsesPresence(defs, groupItem, probeField) {
+		probeFieldType = jen.Qual("encoding/json", "RawMessage")
+		probeCondition = jen.Len(jen.Id("probe").Dot(fieldName(probeField))).Op(">").Lit(0)
+	}
 
 	return jen.Comment("UnmarshalJSON implements json.Unmarshaler.").Line().Func().Params(jen.Id("o").Op("*").Id(name)).Id("UnmarshalJSON").Params(jen.Id("data").Index().Byte()).Error().Block(
 		jen.If(jen.String().Call(jen.Id("data")).Op("==").Lit("null")).Block(
@@ -513,9 +520,9 @@ func arrayUnionUnmarshalCode(defs map[string]*jsonschema.Schema, name string, br
 			jen.Op("*").Id("o").Op("=").Id(name).Values(jen.Id(flatField).Op(":").Op("&").Id("flat")),
 			jen.Return(jen.Nil()),
 		),
-		jen.Var().Id("probe").Struct(jen.Id(fieldName(probeField)).String().Tag(map[string]string{"json": probeField})),
+		jen.Var().Id("probe").Struct(jen.Id(fieldName(probeField)).Add(probeFieldType).Tag(map[string]string{"json": probeField})),
 		jen.If(jen.Id("err").Op(":=").Qual("encoding/json", "Unmarshal").Call(jen.Id("raw").Index(jen.Lit(0)), jen.Op("&").Id("probe")), jen.Id("err").Op("!=").Nil()).Block(jen.Return(jen.Id("err"))),
-		jen.If(jen.Id("probe").Dot(fieldName(probeField)).Op("!=").Lit("")).Block(
+		jen.If(probeCondition).Block(
 			jen.Var().Id("groups").Id(groupType),
 			jen.If(jen.Id("err").Op(":=").Qual("encoding/json", "Unmarshal").Call(jen.Id("data"), jen.Op("&").Id("groups")), jen.Id("err").Op("!=").Nil()).Block(jen.Return(jen.Id("err"))),
 			jen.Op("*").Id("o").Op("=").Id(name).Values(jen.Id(groupField).Op(":").Op("&").Id("groups")),
@@ -723,4 +730,18 @@ func firstRequiredObjectField(schema *jsonschema.Schema) string {
 		return schema.Required[0]
 	}
 	return "group"
+}
+
+func arrayUnionProbeUsesPresence(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema, field string) bool {
+	if schema == nil {
+		return false
+	}
+	prop := schema.Properties[field]
+	if prop == nil {
+		return false
+	}
+	if prop.Ref != "" || (len(prop.AllOf) == 1 && prop.AllOf[0].Ref != "") {
+		return true
+	}
+	return schemaKind(defs, prop) != "string"
 }
