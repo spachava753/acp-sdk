@@ -1,0 +1,9 @@
+package acp
+
+type SendMessageRequest struct {
+	Text string `json:"text"`
+}
+
+type SendMessageResponse struct {
+	Ok bool `json:"ok"`
+}

@@ -1,0 +1,26 @@
+{
+  "$defs": {
+    "send-message-request": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": ["text"],
+      "x-method": "chat/send-message",
+      "x-side": "both"
+    },
+    "send-message-response": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "required": ["ok"],
+      "x-method": "chat/send-message",
+      "x-side": "both"
+    }
+  }
+}

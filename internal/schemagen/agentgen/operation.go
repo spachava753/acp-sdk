@@ -13,10 +13,11 @@ import (
 
 func operations(schema *jsonschema.Schema) []operation {
 	byType := map[string]operation{}
-	addEnvelopeOps(schema, byType, "ClientRequest")
-	addEnvelopeOps(schema, byType, "ClientNotification")
-	addEnvelopeOps(schema, byType, "AgentRequest")
-	addEnvelopeOps(schema, byType, "AgentNotification")
+	goNames := goDefinitionNames(schema.Defs)
+	addEnvelopeOps(schema, byType, goNames, "ClientRequest")
+	addEnvelopeOps(schema, byType, goNames, "ClientNotification")
+	addEnvelopeOps(schema, byType, goNames, "AgentRequest")
+	addEnvelopeOps(schema, byType, goNames, "AgentNotification")
 
 	for name, def := range schema.Defs {
 		method, _ := def.Extra["x-method"].(string)
@@ -27,6 +28,7 @@ func operations(schema *jsonschema.Schema) []operation {
 		if side == "protocol" {
 			continue
 		}
+		goName := goNames[name]
 		op := byType[name]
 		if op.method == "" {
 			op.method = method
@@ -34,15 +36,15 @@ func operations(schema *jsonschema.Schema) []operation {
 			op.group = methodGroup(method)
 			op.constName = "Method" + pascal(method)
 		}
-		if strings.HasSuffix(name, "Request") {
-			op.requestType = name
-		} else if strings.HasSuffix(name, "Response") {
-			op.responseType = name
-		} else if strings.HasSuffix(name, "Notification") {
-			op.notifyType = name
+		if strings.HasSuffix(goName, "Request") {
+			op.requestType = goName
+		} else if strings.HasSuffix(goName, "Response") {
+			op.responseType = goName
+		} else if strings.HasSuffix(goName, "Notification") {
+			op.notifyType = goName
 		}
 		if op.funcName == "" {
-			op.funcName = operationName(name)
+			op.funcName = operationName(goName)
 		}
 		byType[name] = op
 	}
@@ -105,7 +107,7 @@ func operationMergeKey(op operation) string {
 	return op.method + "\x00" + kind
 }
 
-func addEnvelopeOps(schema *jsonschema.Schema, byType map[string]operation, envelope string) {
+func addEnvelopeOps(schema *jsonschema.Schema, byType map[string]operation, goNames map[string]string, envelope string) {
 	def := schema.Defs[envelope]
 	if def == nil || def.Properties == nil || def.Properties["params"] == nil {
 		return
@@ -124,23 +126,24 @@ func addEnvelopeOps(schema *jsonschema.Schema, byType map[string]operation, enve
 		if method == "" || side == "protocol" {
 			continue
 		}
+		goName := goNames[name]
 		op := byType[name]
 		op.method = method
 		op.side = side
 		op.group = methodGroup(method)
 		op.constName = "Method" + pascal(method)
-		op.funcName = operationName(name)
-		if strings.HasSuffix(name, "Notification") {
+		op.funcName = operationName(goName)
+		if strings.HasSuffix(goName, "Notification") {
 			_, action, ok := strings.Cut(method, "/")
 			if ok {
 				op.funcName = pascal(action)
 			}
 		}
 		op.description = variant.Description
-		if strings.HasSuffix(name, "Request") {
-			op.requestType = name
-		} else if strings.HasSuffix(name, "Notification") {
-			op.notifyType = name
+		if strings.HasSuffix(goName, "Request") {
+			op.requestType = goName
+		} else if strings.HasSuffix(goName, "Notification") {
+			op.notifyType = goName
 		}
 		byType[name] = op
 	}

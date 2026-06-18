@@ -5,6 +5,7 @@
 package agentgen
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"unicode"
@@ -72,6 +73,33 @@ func sortedKeys[V any](m map[string]V) []string {
 
 func refName(ref string) string {
 	return strings.TrimPrefix(ref, "#/$defs/")
+}
+
+func goDefinitionNames[V any](defs map[string]V) map[string]string {
+	names := make(map[string]string, len(defs))
+	used := map[string]bool{}
+	for _, rawName := range sortedKeys(defs) {
+		name := pascal(rawName)
+		if name == "" {
+			name = "Definition"
+		}
+		names[rawName] = uniqueName(name, used)
+	}
+	return names
+}
+
+func uniqueName(name string, used map[string]bool) string {
+	if !used[name] {
+		used[name] = true
+		return name
+	}
+	for suffix := 2; ; suffix++ {
+		candidate := fmt.Sprintf("%s%d", name, suffix)
+		if !used[candidate] {
+			used[candidate] = true
+			return candidate
+		}
+	}
 }
 
 func pascal(value string) string {
