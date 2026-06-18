@@ -23,7 +23,7 @@ func schemaType(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema, o
 	}
 	if nonNull, nullable := nullableSchema(schema); nullable {
 		base, text := schemaType(defs, nonNull, false)
-		if text == "any" || strings.HasPrefix(text, "map[") {
+		if text == "any" || text == "map[string]any" {
 			return base, text
 		}
 		return jen.Op("*").Add(base), "*" + strings.TrimPrefix(text, "*")

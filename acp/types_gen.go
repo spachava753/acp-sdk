@@ -816,9 +816,9 @@ func UrlCreateElicitationRequest(message string, elicitationID ElicitationId, ur
 //
 // Response from the client to an elicitation request.
 type CreateElicitationResponse struct {
-	Action  CreateElicitationResponseType      `json:"action"`
-	Meta    Meta                               `json:"_meta,omitzero"`
-	Content map[string]ElicitationContentValue `json:"content,omitempty"`
+	Action  CreateElicitationResponseType       `json:"action"`
+	Meta    Meta                                `json:"_meta,omitzero"`
+	Content *map[string]ElicitationContentValue `json:"content,omitempty"`
 }
 
 // CreateElicitationResponseType is the discriminator for CreateElicitationResponse variants.
@@ -998,7 +998,7 @@ type DisconnectMcpResponse struct {
 //
 // The user accepted the elicitation and provided content.
 type ElicitationAcceptAction struct {
-	Content map[string]ElicitationContentValue `json:"content,omitempty"`
+	Content *map[string]ElicitationContentValue `json:"content,omitempty"`
 }
 
 // ElicitationCapabilities: **UNSTABLE**

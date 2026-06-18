@@ -105,7 +105,9 @@
 // Array fields also marked x-deserialize-skip-invalid-items should
 // decode each item independently and keep the valid items while preserving normal
 // errors for unmarked fields. Nullable arrays should get the same item-level
-// filtering while preserving JSON null as a nil pointer.
+// filtering while preserving JSON null as a nil pointer. Nullable typed maps
+// should also preserve nullability with a pointer, while arbitrary extension maps
+// remain value maps to preserve the existing extension-map contract.
 //
 // # Union generation
 //
@@ -273,6 +275,9 @@
 //     for object structs and flattened tagged unions.
 //   - testdata/integer_formats: JSON Schema integer formats map to matching Go
 //     integer widths, while unformatted integers continue to use int64.
+//   - testdata/nullable_typed_maps: nullable object maps with typed
+//     additionalProperties preserve nullability as *map[string]T, while arbitrary
+//     extension maps continue to use map[string]any.
 //   - testdata/protocol_side: x-side "protocol" notifications are skipped
 //     entirely by ACP agent/client generation and produce no output files.
 //   - testdata/multiline_comments: multiline Markdown descriptions generate

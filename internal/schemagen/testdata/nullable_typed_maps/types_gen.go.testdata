@@ -1,0 +1,13 @@
+package acp
+
+// MapContainer: Object containing nullable typed and arbitrary maps.
+type MapContainer struct {
+	Attributes *map[string]MapValue `json:"attributes"`
+	Extensions map[string]any       `json:"extensions,omitempty"`
+	Name       string               `json:"name"`
+}
+
+// MapValue: Typed map value.
+type MapValue struct {
+	Value string `json:"value"`
+}

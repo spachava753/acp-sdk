@@ -1,0 +1,40 @@
+{
+  "$defs": {
+    "MapContainer": {
+      "description": "Object containing nullable typed and arbitrary maps.",
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "$ref": "#/$defs/MapValue"
+          },
+          "description": "Required nullable map with typed values.",
+          "type": ["object", "null"]
+        },
+        "extensions": {
+          "additionalProperties": true,
+          "description": "Optional nullable map with arbitrary values.",
+          "type": ["object", "null"]
+        },
+        "name": {
+          "description": "Container name.",
+          "type": "string"
+        }
+      },
+      "required": ["name", "attributes"],
+      "type": "object"
+    },
+    "MapValue": {
+      "description": "Typed map value.",
+      "properties": {
+        "value": {
+          "description": "Stored value.",
+          "type": "string"
+        }
+      },
+      "required": ["value"],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nullable Typed Maps Test Fixture"
+}
