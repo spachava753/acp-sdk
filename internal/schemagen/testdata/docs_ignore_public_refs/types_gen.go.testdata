@@ -1,0 +1,12 @@
+package acp
+
+// HiddenPayload: Payload hidden from docs but required by a public generated type.
+type HiddenPayload struct {
+	ID string `json:"id"`
+}
+
+// VisiblePayload: Public payload that depends on a docs-ignored helper.
+type VisiblePayload struct {
+	Hidden HiddenPayload `json:"hidden"`
+	Name   string        `json:"name"`
+}

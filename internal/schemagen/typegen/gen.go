@@ -25,9 +25,10 @@ func Generate(schema *jsonschema.Schema) []byte {
 	needsMeta := false
 
 	ignoredProtocolRefs := ignoredTopLevelProtocolRefs(schema)
+	publicRefs := publicDefinitionRefs(schema, ignoredProtocolRefs)
 	for _, name := range sortedDefNames(schema.Defs) {
 		def := schema.Defs[name]
-		if docsIgnored(def) || ignoredProtocolRefs[name] {
+		if ignoredProtocolRefs[name] || (docsIgnored(def) && !publicRefs[name]) {
 			continue
 		}
 		codes, meta, tail := definition(schema.Defs, name, def)
@@ -167,6 +168,20 @@ func docsIgnored(schema *jsonschema.Schema) bool {
 	}
 	ignored, _ := schema.Extra["x-docs-ignore"].(bool)
 	return ignored
+}
+
+func publicDefinitionRefs(schema *jsonschema.Schema, ignoredProtocolRefs map[string]bool) map[string]bool {
+	refs := map[string]bool{}
+	if schema == nil {
+		return refs
+	}
+	for name, def := range schema.Defs {
+		if docsIgnored(def) || ignoredProtocolRefs[name] {
+			continue
+		}
+		collectRefs(def, schema.Defs, refs, map[string]bool{})
+	}
+	return refs
 }
 
 func ignoredTopLevelProtocolRefs(schema *jsonschema.Schema) map[string]bool {

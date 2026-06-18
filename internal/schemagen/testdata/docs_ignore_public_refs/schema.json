@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Docs Ignore Public Refs Test Fixture",
+  "$defs": {
+    "HiddenPayload": {
+      "description": "Payload hidden from docs but required by a public generated type.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Hidden identifier.",
+          "type": "string"
+        }
+      },
+      "required": ["id"],
+      "x-docs-ignore": true
+    },
+    "VisiblePayload": {
+      "description": "Public payload that depends on a docs-ignored helper.",
+      "type": "object",
+      "properties": {
+        "hidden": {
+          "description": "Docs-ignored helper used on the wire.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/HiddenPayload"
+            }
+          ]
+        },
+        "name": {
+          "description": "Visible name.",
+          "type": "string"
+        }
+      },
+      "required": ["hidden", "name"]
+    }
+  }
+}
