@@ -1,0 +1,8 @@
+package acp
+
+// EnvVar: Environment variable descriptor.
+type EnvVar struct {
+	Name     string `json:"name"`
+	Optional bool   `json:"optional,omitempty"`
+	Secret   *bool  `json:"secret,omitempty"`
+}

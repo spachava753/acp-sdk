@@ -75,6 +75,10 @@ func integerType(format string) (jen.Code, string) {
 	}
 }
 
+func schemaDefaultTrue(schema *jsonschema.Schema) bool {
+	return schema != nil && strings.TrimSpace(string(schema.Default)) == "true"
+}
+
 func refType(defs map[string]*jsonschema.Schema, ref string, optional bool) (jen.Code, string) {
 	rawName := refName(ref)
 	name := goDefinitionName(defs, rawName)

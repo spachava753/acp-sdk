@@ -39,6 +39,9 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 			continue
 		}
 		typ, text := schemaType(defs, prop, !required[jsonName])
+		if pointerDefaultTrueBool(jsonName, prop, !required[jsonName]) {
+			typ, text = jen.Op("*").Bool(), "*bool"
+		}
 		deserialize := newDeserializeField(defs, jsonName, prop, typ, text)
 		deserialize.goName = goNames[jsonName]
 		f := field{deserializeField: deserialize, tag: jsonTag(jsonName, !required[jsonName], false), required: required[jsonName]}
@@ -102,6 +105,11 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 		return codes, needsMeta, methods
 	}
 	return append(codes, methods...), needsMeta, nil
+}
+
+func pointerDefaultTrueBool(jsonName string, schema *jsonschema.Schema, optional bool) bool {
+	// AuthEnvVar.secret defaults to true, so explicit false must survive encoding.
+	return optional && jsonName == "secret" && schemaTypeName(schema) == "boolean" && schemaDefaultTrue(schema)
 }
 
 func isObjectSchema(schema *jsonschema.Schema) bool {

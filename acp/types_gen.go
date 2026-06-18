@@ -178,7 +178,7 @@ type AuthEnvVar struct {
 	Label    *string `json:"label,omitempty"`
 	Name     string  `json:"name"`
 	Optional bool    `json:"optional,omitempty"`
-	Secret   bool    `json:"secret,omitempty"`
+	Secret   *bool   `json:"secret,omitempty"`
 }
 
 // AuthMethod: Describes an available authentication method.

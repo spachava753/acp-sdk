@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "EnvVar": {
+      "description": "Environment variable descriptor.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Variable name.",
+          "type": "string"
+        },
+        "optional": {
+          "description": "Whether the value is optional.",
+          "type": "boolean",
+          "default": false
+        },
+        "secret": {
+          "description": "Whether the value should be treated as secret by default.",
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "required": ["name"]
+    }
+  }
+}
