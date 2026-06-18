@@ -3565,7 +3565,7 @@ type SessionConfigOption struct {
 	Description  *string                      `json:"description,omitempty"`
 	ID           SessionConfigId              `json:"id"`
 	Name         string                       `json:"name"`
-	Options      SessionConfigSelectOptions   `json:"options,omitempty"`
+	Options      SessionConfigSelectOptions   `json:"options,omitempty,omitzero"`
 }
 
 // SessionConfigOptionType is the discriminator for SessionConfigOption variants.
@@ -3578,6 +3578,10 @@ const (
 
 // SelectSessionConfigOption creates an SessionConfigOption variant: Single-value selector (dropdown).
 func SelectSessionConfigOption(id SessionConfigId, name string, currentValue SessionConfigValueId, options SessionConfigSelectOptions) SessionConfigOption {
+	if options.Ungrouped == nil && options.Groups == nil {
+		flat := UngroupedSessionConfigSelectOptions{}
+		options = SessionConfigSelectOptions{Ungrouped: &flat}
+	}
 	return SessionConfigOption{
 		Type:         SessionConfigOptionTypeSelect,
 		CurrentValue: currentValue,

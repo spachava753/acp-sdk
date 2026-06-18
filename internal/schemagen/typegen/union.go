@@ -388,6 +388,11 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 				jen.Id(paramName).Op("=").Add(field.typeCode).Values(),
 			))
 		}
+		if !strings.HasPrefix(field.typeText, "*") {
+			if arrayUnion := constructorArrayUnionSchema(defs, prop); arrayUnion != nil {
+				prelude = append(prelude, arrayUnionConstructorPrelude(defs, field.typeText, paramName, arrayUnion)...)
+			}
+		}
 	}
 
 	var literalFields []jen.Code
@@ -414,6 +419,44 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 		return functionCommented(constructorName, "creates ", lowerFirstSentence(description)+".", fn)
 	}
 	return functionCommented(constructorName, fmt.Sprintf("creates an %s variant: ", unionName), branch.Description, fn)
+}
+
+func constructorArrayUnionSchema(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) *jsonschema.Schema {
+	if schema == nil {
+		return nil
+	}
+	if schema.Ref != "" {
+		def := defs[refName(schema.Ref)]
+		if isArrayUnion(def) {
+			return def
+		}
+		return nil
+	}
+	if len(schema.AllOf) == 1 && schema.AllOf[0].Ref != "" {
+		return constructorArrayUnionSchema(defs, schema.AllOf[0])
+	}
+	if isArrayUnion(schema) {
+		return schema
+	}
+	return nil
+}
+
+func arrayUnionConstructorPrelude(defs map[string]*jsonschema.Schema, typeName, paramName string, schema *jsonschema.Schema) []jen.Code {
+	variants := arrayUnionVariants(defs, typeName, unionBranches(schema))
+	if len(variants) == 0 {
+		return nil
+	}
+	flatVariant, _ := arrayUnionDecodeVariants(defs, variants)
+	condition := jen.Id(paramName).Dot(variants[0].fieldName).Op("==").Nil()
+	for _, variant := range variants[1:] {
+		condition.Op("&&").Id(paramName).Dot(variant.fieldName).Op("==").Nil()
+	}
+	return []jen.Code{
+		jen.If(condition).Block(
+			jen.Id("flat").Op(":=").Id(flatVariant.typeName).Values(),
+			jen.Id(paramName).Op("=").Id(typeName).Values(jen.Id(flatVariant.fieldName).Op(":").Op("&").Id("flat")),
+		),
+	}
 }
 
 func discriminatorTypeName(defs map[string]*jsonschema.Schema, unionName string) string {
@@ -500,12 +543,12 @@ func needsOmitZero(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema
 	}
 	if schema.Ref != "" {
 		def := defs[refName(schema.Ref)]
-		return isObjectSchema(def) || isDiscriminatorUnion(defs, def)
+		return isObjectSchema(def) || isDiscriminatorUnion(defs, def) || isArrayUnion(def)
 	}
 	if len(schema.AllOf) == 1 && schema.AllOf[0].Ref != "" {
 		return needsOmitZero(defs, schema.AllOf[0])
 	}
-	return isObjectSchema(schema) || isDiscriminatorUnion(defs, schema)
+	return isObjectSchema(schema) || isDiscriminatorUnion(defs, schema) || isArrayUnion(schema)
 }
 
 func schemaKind(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) string {

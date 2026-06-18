@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "ConfigOption": {
+      "description": "Config option with variant-only array-union payload.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" }
+      },
+      "required": ["id"],
+      "oneOf": [
+        {
+          "title": "Toggle",
+          "description": "Toggle option.",
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "const": "toggle" },
+            "enabled": { "type": "boolean" }
+          },
+          "required": ["type", "enabled"]
+        },
+        {
+          "title": "Select",
+          "description": "Select option.",
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "const": "select" },
+            "options": {
+              "allOf": [{ "$ref": "#/$defs/SelectOptions" }]
+            }
+          },
+          "required": ["type", "options"]
+        }
+      ],
+      "discriminator": { "propertyName": "type" }
+    },
+    "SelectOptions": {
+      "description": "Grouped or ungrouped select options.",
+      "anyOf": [
+        {
+          "title": "Ungrouped",
+          "description": "Flat options.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/SelectOption" }
+        },
+        {
+          "title": "Grouped",
+          "description": "Grouped options.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/SelectGroup" }
+        }
+      ]
+    },
+    "SelectOption": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "string" }
+      },
+      "required": ["value"]
+    },
+    "SelectGroup": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "options": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SelectOption" }
+        }
+      },
+      "required": ["name", "options"]
+    }
+  }
+}
