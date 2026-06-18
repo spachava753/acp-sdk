@@ -129,6 +129,14 @@
 // nullable `T`, generate `*T`; reserve `any` for genuinely incompatible field
 // kinds.
 //
+// A flattened variant that references another schema via allOf should include
+// that referenced schema's own nested union branch fields. For example, if an
+// outer tagged request has a form variant that references a form mode, and that
+// form mode can be either session-scoped or request-scoped, the outer request
+// type still needs sessionId, toolCallId, and requestId fields. Only fields
+// required by every nested branch should be treated as constructor-required for
+// the outer variant.
+//
 // A partially tagged union with a default variant, such as AuthMethod, uses the
 // same flattened strategy. Variants with const discriminator values get
 // discriminator constants. The default variant gets a constructor that leaves the
@@ -248,6 +256,9 @@
 //   - testdata/nullable_union_fields: flattened unions keep a precise pointer
 //     field when the same JSON field is non-nullable in one variant and
 //     nullable in another, instead of broadening to any.
+//   - testdata/nested_union_ref_fields: flattened union variants that reference
+//     schemas with their own nested union branches preserve the nested branch
+//     fields on the outer flattened type.
 //   - testdata/nullable_skip_invalid_items: nullable array fields marked with
 //     x-deserialize-skip-invalid-items preserve valid items using pointer-to-slice
 //     assignment instead of dropping the whole field on one invalid item.

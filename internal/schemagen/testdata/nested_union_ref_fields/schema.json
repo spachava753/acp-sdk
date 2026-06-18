@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nested Union Ref Fields",
+  "$defs": {
+    "CreatePromptRequest": {
+      "description": "Request with branches that reference modes containing nested scope unions.",
+      "type": "object",
+      "properties": {
+        "message": {
+          "description": "Prompt message.",
+          "type": "string"
+        }
+      },
+      "oneOf": [
+        {
+          "description": "Form mode.",
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "form"
+            }
+          },
+          "required": ["mode"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/FormMode"
+            }
+          ]
+        },
+        {
+          "description": "URL mode.",
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "url"
+            }
+          },
+          "required": ["mode"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/UrlMode"
+            }
+          ]
+        }
+      ],
+      "discriminator": {
+        "propertyName": "mode"
+      },
+      "required": ["message"]
+    },
+    "FormMode": {
+      "description": "Form mode with a nested session-or-request scope.",
+      "type": "object",
+      "properties": {
+        "schema": {
+          "description": "Requested schema name.",
+          "type": "string"
+        }
+      },
+      "anyOf": [
+        {
+          "title": "Session",
+          "description": "Session scope.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionScope"
+            }
+          ]
+        },
+        {
+          "title": "Request",
+          "description": "Request scope.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/RequestScope"
+            }
+          ]
+        }
+      ],
+      "required": ["schema"]
+    },
+    "UrlMode": {
+      "description": "URL mode with a nested session-or-request scope.",
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "URL to open.",
+          "type": "string"
+        }
+      },
+      "anyOf": [
+        {
+          "title": "Session",
+          "description": "Session scope.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionScope"
+            }
+          ]
+        },
+        {
+          "title": "Request",
+          "description": "Request scope.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/RequestScope"
+            }
+          ]
+        }
+      ],
+      "required": ["url"]
+    },
+    "SessionScope": {
+      "description": "A session-scoped operation.",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "description": "Session identifier.",
+          "type": "string"
+        },
+        "toolCallId": {
+          "description": "Optional tool call identifier.",
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["sessionId"]
+    },
+    "RequestScope": {
+      "description": "A request-scoped operation.",
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "description": "Request identifier.",
+          "type": "string"
+        }
+      },
+      "required": ["requestId"]
+    }
+  }
+}

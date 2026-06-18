@@ -1,0 +1,97 @@
+package acp
+
+// CreatePromptRequest: Request with branches that reference modes containing nested scope unions.
+type CreatePromptRequest struct {
+	Mode       CreatePromptRequestType `json:"mode"`
+	Message    string                  `json:"message"`
+	RequestID  string                  `json:"requestId,omitempty"`
+	Schema     string                  `json:"schema,omitempty"`
+	SessionID  string                  `json:"sessionId,omitempty"`
+	ToolCallID *string                 `json:"toolCallId,omitempty"`
+	Url        string                  `json:"url,omitempty"`
+}
+
+// CreatePromptRequestType is the discriminator for CreatePromptRequest variants.
+type CreatePromptRequestType string
+
+const (
+	CreatePromptRequestTypeForm CreatePromptRequestType = "form"
+	CreatePromptRequestTypeUrl  CreatePromptRequestType = "url"
+)
+
+// FormCreatePromptRequest creates an CreatePromptRequest variant: Form mode.
+func FormCreatePromptRequest(message string, schema string) CreatePromptRequest {
+	return CreatePromptRequest{
+		Mode:    CreatePromptRequestTypeForm,
+		Message: message,
+		Schema:  schema,
+	}
+}
+
+// UrlCreatePromptRequest creates an CreatePromptRequest variant: URL mode.
+func UrlCreatePromptRequest(message string, url string) CreatePromptRequest {
+	return CreatePromptRequest{
+		Mode:    CreatePromptRequestTypeUrl,
+		Message: message,
+		Url:     url,
+	}
+}
+
+// FormMode: Form mode with a nested session-or-request scope.
+type FormMode struct {
+	RequestID  string  `json:"requestId,omitempty"`
+	Schema     string  `json:"schema"`
+	SessionID  string  `json:"sessionId,omitempty"`
+	ToolCallID *string `json:"toolCallId,omitempty"`
+}
+
+// SessionFormMode creates an FormMode variant: Session scope.
+func SessionFormMode(schema string, sessionID string) FormMode {
+	return FormMode{
+		Schema:    schema,
+		SessionID: sessionID,
+	}
+}
+
+// RequestFormMode creates an FormMode variant: Request scope.
+func RequestFormMode(schema string, requestID string) FormMode {
+	return FormMode{
+		RequestID: requestID,
+		Schema:    schema,
+	}
+}
+
+// RequestScope: A request-scoped operation.
+type RequestScope struct {
+	RequestID string `json:"requestId"`
+}
+
+// SessionScope: A session-scoped operation.
+type SessionScope struct {
+	SessionID  string  `json:"sessionId"`
+	ToolCallID *string `json:"toolCallId,omitempty"`
+}
+
+// UrlMode: URL mode with a nested session-or-request scope.
+type UrlMode struct {
+	RequestID  string  `json:"requestId,omitempty"`
+	SessionID  string  `json:"sessionId,omitempty"`
+	ToolCallID *string `json:"toolCallId,omitempty"`
+	Url        string  `json:"url"`
+}
+
+// SessionUrlMode creates an UrlMode variant: Session scope.
+func SessionUrlMode(url string, sessionID string) UrlMode {
+	return UrlMode{
+		SessionID: sessionID,
+		Url:       url,
+	}
+}
+
+// RequestUrlMode creates an UrlMode variant: Request scope.
+func RequestUrlMode(url string, requestID string) UrlMode {
+	return UrlMode{
+		RequestID: requestID,
+		Url:       url,
+	}
+}

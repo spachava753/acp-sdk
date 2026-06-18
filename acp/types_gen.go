@@ -776,7 +776,10 @@ type CreateElicitationRequest struct {
 	Meta            Meta                         `json:"_meta,omitzero"`
 	ElicitationID   ElicitationId                `json:"elicitationId,omitempty"`
 	Message         string                       `json:"message"`
+	RequestID       RequestId                    `json:"requestId,omitempty"`
 	RequestedSchema ElicitationSchema            `json:"requestedSchema,omitempty,omitzero"`
+	SessionID       SessionId                    `json:"sessionId,omitempty"`
+	ToolCallID      *ToolCallId                  `json:"toolCallId,omitempty"`
 	Url             string                       `json:"url,omitempty"`
 }
 

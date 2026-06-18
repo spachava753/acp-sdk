@@ -500,7 +500,7 @@ func variantProperties(defs map[string]*jsonschema.Schema, branch *jsonschema.Sc
 	properties := map[string]*jsonschema.Schema{}
 	if ref := variantRef(branch); ref != "" {
 		if def := defs[ref]; def != nil {
-			for name, prop := range def.Properties {
+			for name, prop := range schemaVariantProperties(defs, def) {
 				properties[name] = prop
 			}
 		}
@@ -511,11 +511,24 @@ func variantProperties(defs map[string]*jsonschema.Schema, branch *jsonschema.Sc
 	return properties
 }
 
+func schemaVariantProperties(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) map[string]*jsonschema.Schema {
+	properties := map[string]*jsonschema.Schema{}
+	for name, prop := range schema.Properties {
+		properties[name] = prop
+	}
+	for _, branch := range unionBranches(schema) {
+		for name, prop := range variantProperties(defs, branch) {
+			properties[name] = prop
+		}
+	}
+	return properties
+}
+
 func variantRequired(defs map[string]*jsonschema.Schema, branch *jsonschema.Schema) []string {
 	var required []string
 	if ref := variantRef(branch); ref != "" {
 		if def := defs[ref]; def != nil {
-			required = append(required, def.Required...)
+			required = append(required, schemaVariantRequired(defs, def)...)
 		}
 	}
 	for _, req := range branch.Required {
@@ -526,8 +539,45 @@ func variantRequired(defs map[string]*jsonschema.Schema, branch *jsonschema.Sche
 	return required
 }
 
+func schemaVariantRequired(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) []string {
+	required := append([]string(nil), schema.Required...)
+	branches := unionBranches(schema)
+	if len(branches) == 0 {
+		return required
+	}
+	common := variantRequired(defs, branches[0])
+	for _, branch := range branches[1:] {
+		branchRequired := variantRequired(defs, branch)
+		common = intersectStrings(common, branchRequired)
+	}
+	for _, req := range common {
+		if !contains(required, req) {
+			required = append(required, req)
+		}
+	}
+	return required
+}
+
+func intersectStrings(a, b []string) []string {
+	var common []string
+	for _, value := range a {
+		if contains(b, value) {
+			common = append(common, value)
+		}
+	}
+	return common
+}
+
 func variantConst(defs map[string]*jsonschema.Schema, branch *jsonschema.Schema) (string, string) {
-	for _, prop := range variantProperties(defs, branch) {
+	for _, jsonName := range sortedPropertyNames(branch.Properties) {
+		prop := branch.Properties[jsonName]
+		if text, ok := constString(prop); ok {
+			return text, prop.Description
+		}
+	}
+	properties := variantProperties(defs, branch)
+	for _, jsonName := range sortedPropertyNames(properties) {
+		prop := properties[jsonName]
 		if text, ok := constString(prop); ok {
 			return text, prop.Description
 		}
@@ -556,8 +606,16 @@ func variantRef(branch *jsonschema.Schema) string {
 
 func discriminatorField(defs map[string]*jsonschema.Schema, branches []*jsonschema.Schema) string {
 	for _, branch := range branches {
-		for jsonName, prop := range variantProperties(defs, branch) {
-			if prop.Const != nil {
+		for _, jsonName := range sortedPropertyNames(branch.Properties) {
+			if branch.Properties[jsonName].Const != nil {
+				return jsonName
+			}
+		}
+	}
+	for _, branch := range branches {
+		properties := variantProperties(defs, branch)
+		for _, jsonName := range sortedPropertyNames(properties) {
+			if properties[jsonName].Const != nil {
 				return jsonName
 			}
 		}
