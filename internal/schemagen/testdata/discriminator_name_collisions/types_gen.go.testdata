@@ -1,6 +1,9 @@
 package acp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"reflect"
+)
 
 // CollisionUnion: A discriminator union whose values normalize to the same Go suffix.
 type CollisionUnion struct {
@@ -41,6 +44,42 @@ func InProgressCollisionUnion3(ok bool) CollisionUnion {
 		Kind: CollisionUnionTypeInProgress3,
 		Ok:   ok,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (u CollisionUnion) MarshalJSON() ([]byte, error) {
+	type alias CollisionUnion
+	type wire struct {
+		*alias
+		Text  *string `json:"text,omitempty"`
+		Count *int32  `json:"count,omitempty"`
+		Ok    *bool   `json:"ok,omitempty"`
+	}
+	w := wire{alias: (*alias)(&u)}
+	if !reflect.ValueOf(u.Text).IsZero() {
+		Text := u.Text
+		w.Text = &Text
+	}
+	if !reflect.ValueOf(u.Count).IsZero() {
+		Count := u.Count
+		w.Count = &Count
+	}
+	if !reflect.ValueOf(u.Ok).IsZero() {
+		Ok := u.Ok
+		w.Ok = &Ok
+	}
+	switch u.Kind {
+	case CollisionUnionTypeInProgress:
+		Text := u.Text
+		w.Text = &Text
+	case CollisionUnionTypeInProgress2:
+		Count := u.Count
+		w.Count = &Count
+	case CollisionUnionTypeInProgress3:
+		Ok := u.Ok
+		w.Ok = &Ok
+	}
+	return json.Marshal(w)
 }
 
 // Payload: Object with a tolerant array of colliding union items.

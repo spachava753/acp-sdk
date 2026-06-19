@@ -1,6 +1,9 @@
 package acp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"reflect"
+)
 
 // ContentBlock: A flattened union of content block variants.
 type ContentBlock struct {
@@ -47,6 +50,49 @@ func ResourceContentBlock(uri string) ContentBlock {
 		Type: ContentBlockTypeResource,
 		URI:  uri,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (b ContentBlock) MarshalJSON() ([]byte, error) {
+	type alias ContentBlock
+	type wire struct {
+		*alias
+		Text     *string `json:"text,omitempty"`
+		Data     *string `json:"data,omitempty"`
+		MimeType *string `json:"mimeType,omitempty"`
+		URI      *string `json:"uri,omitempty"`
+	}
+	w := wire{alias: (*alias)(&b)}
+	if !reflect.ValueOf(b.Text).IsZero() {
+		Text := b.Text
+		w.Text = &Text
+	}
+	if !reflect.ValueOf(b.Data).IsZero() {
+		Data := b.Data
+		w.Data = &Data
+	}
+	if !reflect.ValueOf(b.MimeType).IsZero() {
+		MimeType := b.MimeType
+		w.MimeType = &MimeType
+	}
+	if !reflect.ValueOf(b.URI).IsZero() {
+		URI := b.URI
+		w.URI = &URI
+	}
+	switch b.Type {
+	case ContentBlockTypeText:
+		Text := b.Text
+		w.Text = &Text
+	case ContentBlockTypeImage:
+		Data := b.Data
+		w.Data = &Data
+		MimeType := b.MimeType
+		w.MimeType = &MimeType
+	case ContentBlockTypeResource:
+		URI := b.URI
+		w.URI = &URI
+	}
+	return json.Marshal(w)
 }
 
 // Message: A message containing content blocks.

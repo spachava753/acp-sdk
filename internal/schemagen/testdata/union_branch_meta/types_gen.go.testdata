@@ -1,5 +1,10 @@
 package acp
 
+import (
+	"encoding/json"
+	"reflect"
+)
+
 // Meta: Reserved metadata for protocol extensions.
 type Meta map[string]any
 
@@ -33,6 +38,34 @@ func LinkBranchMetaUnion(uri string) BranchMetaUnion {
 		Kind: BranchMetaUnionTypeLink,
 		URI:  uri,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (u BranchMetaUnion) MarshalJSON() ([]byte, error) {
+	type alias BranchMetaUnion
+	type wire struct {
+		*alias
+		Text *string `json:"text,omitempty"`
+		URI  *string `json:"uri,omitempty"`
+	}
+	w := wire{alias: (*alias)(&u)}
+	if !reflect.ValueOf(u.Text).IsZero() {
+		Text := u.Text
+		w.Text = &Text
+	}
+	if !reflect.ValueOf(u.URI).IsZero() {
+		URI := u.URI
+		w.URI = &URI
+	}
+	switch u.Kind {
+	case BranchMetaUnionTypeText:
+		Text := u.Text
+		w.Text = &Text
+	case BranchMetaUnionTypeLink:
+		URI := u.URI
+		w.URI = &URI
+	}
+	return json.Marshal(w)
 }
 
 // LinkBranch: Link branch payload.

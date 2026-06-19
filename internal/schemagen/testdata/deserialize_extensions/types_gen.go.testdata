@@ -1,6 +1,9 @@
 package acp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"reflect"
+)
 
 // Item: A referenced item.
 type Item struct {
@@ -97,6 +100,26 @@ func OtherTagged(title string) Tagged {
 		Kind:  TaggedTypeOther,
 		Title: title,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (t Tagged) MarshalJSON() ([]byte, error) {
+	type alias Tagged
+	type wire struct {
+		*alias
+		Title *string `json:"title,omitempty"`
+	}
+	w := wire{alias: (*alias)(&t)}
+	if !reflect.ValueOf(t.Title).IsZero() {
+		Title := t.Title
+		w.Title = &Title
+	}
+	switch t.Kind {
+	case TaggedTypeOther:
+		Title := t.Title
+		w.Title = &Title
+	}
+	return json.Marshal(w)
 }
 
 // UnmarshalJSON implements json.Unmarshaler.

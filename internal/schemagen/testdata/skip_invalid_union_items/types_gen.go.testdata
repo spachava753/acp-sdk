@@ -1,6 +1,9 @@
 package acp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"reflect"
+)
 
 // FallbackItem: Tagged item with a default branch when type is absent.
 type FallbackItem struct {
@@ -29,6 +32,34 @@ func LocalFallbackItem(path string) FallbackItem {
 	return FallbackItem{
 		Path: path,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (i FallbackItem) MarshalJSON() ([]byte, error) {
+	type alias FallbackItem
+	type wire struct {
+		*alias
+		Url  *string `json:"url,omitempty"`
+		Path *string `json:"path,omitempty"`
+	}
+	w := wire{alias: (*alias)(&i)}
+	if !reflect.ValueOf(i.Url).IsZero() {
+		Url := i.Url
+		w.Url = &Url
+	}
+	if !reflect.ValueOf(i.Path).IsZero() {
+		Path := i.Path
+		w.Path = &Path
+	}
+	switch i.Type {
+	case FallbackItemTypeRemote:
+		Url := i.Url
+		w.Url = &Url
+	case "":
+		Path := i.Path
+		w.Path = &Path
+	}
+	return json.Marshal(w)
 }
 
 // Payload: Object with tolerant arrays of union items.
@@ -112,4 +143,32 @@ func ImageTaggedItem(uri string) TaggedItem {
 		Kind: TaggedItemTypeImage,
 		URI:  uri,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (i TaggedItem) MarshalJSON() ([]byte, error) {
+	type alias TaggedItem
+	type wire struct {
+		*alias
+		Text *string `json:"text,omitempty"`
+		URI  *string `json:"uri,omitempty"`
+	}
+	w := wire{alias: (*alias)(&i)}
+	if !reflect.ValueOf(i.Text).IsZero() {
+		Text := i.Text
+		w.Text = &Text
+	}
+	if !reflect.ValueOf(i.URI).IsZero() {
+		URI := i.URI
+		w.URI = &URI
+	}
+	switch i.Kind {
+	case TaggedItemTypeText:
+		Text := i.Text
+		w.Text = &Text
+	case TaggedItemTypeImage:
+		URI := i.URI
+		w.URI = &URI
+	}
+	return json.Marshal(w)
 }

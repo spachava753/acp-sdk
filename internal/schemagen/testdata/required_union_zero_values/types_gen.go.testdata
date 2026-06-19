@@ -1,0 +1,97 @@
+package acp
+
+import (
+	"encoding/json"
+	"reflect"
+)
+
+// Choice: Tagged union with branch-required zero-value fields.
+type Choice struct {
+	Type    ChoiceType `json:"type"`
+	Count   int64      `json:"count,omitempty"`
+	Enabled bool       `json:"enabled,omitempty"`
+	Payload Payload    `json:"payload,omitempty,omitzero"`
+	Text    string     `json:"text,omitempty"`
+}
+
+// ChoiceType is the discriminator for Choice variants.
+type ChoiceType string
+
+const (
+	ChoiceTypeText    ChoiceType = "text"
+	ChoiceTypeCount   ChoiceType = "count"
+	ChoiceTypePayload ChoiceType = "payload"
+)
+
+// TextChoice creates text branch with required scalar fields.
+func TextChoice(enabled bool, text string) Choice {
+	return Choice{
+		Type:    ChoiceTypeText,
+		Enabled: enabled,
+		Text:    text,
+	}
+}
+
+// CountChoice creates count branch with a required integer field.
+func CountChoice(count int64) Choice {
+	return Choice{
+		Type:  ChoiceTypeCount,
+		Count: count,
+	}
+}
+
+// PayloadChoice creates payload branch with a required object field.
+func PayloadChoice(payload Payload) Choice {
+	return Choice{
+		Type:    ChoiceTypePayload,
+		Payload: payload,
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (c Choice) MarshalJSON() ([]byte, error) {
+	type alias Choice
+	type wire struct {
+		*alias
+		Enabled *bool    `json:"enabled,omitempty"`
+		Text    *string  `json:"text,omitempty"`
+		Count   *int64   `json:"count,omitempty"`
+		Payload *Payload `json:"payload,omitempty"`
+	}
+	w := wire{alias: (*alias)(&c)}
+	if !reflect.ValueOf(c.Enabled).IsZero() {
+		Enabled := c.Enabled
+		w.Enabled = &Enabled
+	}
+	if !reflect.ValueOf(c.Text).IsZero() {
+		Text := c.Text
+		w.Text = &Text
+	}
+	if !reflect.ValueOf(c.Count).IsZero() {
+		Count := c.Count
+		w.Count = &Count
+	}
+	if !reflect.ValueOf(c.Payload).IsZero() {
+		Payload := c.Payload
+		w.Payload = &Payload
+	}
+	switch c.Type {
+	case ChoiceTypeText:
+		Enabled := c.Enabled
+		w.Enabled = &Enabled
+		Text := c.Text
+		w.Text = &Text
+	case ChoiceTypeCount:
+		Count := c.Count
+		w.Count = &Count
+	case ChoiceTypePayload:
+		Payload := c.Payload
+		w.Payload = &Payload
+	}
+	return json.Marshal(w)
+}
+
+// Payload: Payload object.
+type Payload struct {
+	ID string `json:"id"`
+}

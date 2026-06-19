@@ -1,6 +1,9 @@
 package acp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"reflect"
+)
 
 // Transport: Tagged union with a fallback branch that has required arrays.
 type Transport struct {
@@ -45,9 +48,26 @@ func (t Transport) MarshalJSON() ([]byte, error) {
 		*alias
 		Headers *[]string `json:"headers,omitempty"`
 		Args    *[]string `json:"args,omitempty"`
+		Command *string   `json:"command,omitempty"`
 		Env     *[]string `json:"env,omitempty"`
 	}
 	w := wire{alias: (*alias)(&t)}
+	if len(t.Headers) > 0 {
+		Headers := t.Headers
+		w.Headers = &Headers
+	}
+	if len(t.Args) > 0 {
+		Args := t.Args
+		w.Args = &Args
+	}
+	if !reflect.ValueOf(t.Command).IsZero() {
+		Command := t.Command
+		w.Command = &Command
+	}
+	if len(t.Env) > 0 {
+		Env := t.Env
+		w.Env = &Env
+	}
 	switch t.Type {
 	case TransportTypeHttp:
 		Headers := t.Headers
@@ -61,6 +81,8 @@ func (t Transport) MarshalJSON() ([]byte, error) {
 			Args = []string{}
 		}
 		w.Args = &Args
+		Command := t.Command
+		w.Command = &Command
 		Env := t.Env
 		if Env == nil {
 			Env = []string{}

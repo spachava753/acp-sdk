@@ -167,11 +167,13 @@
 // choose the correct variant, following the hand-written style used by
 // SessionConfigSelectOptions.
 //
-// Flattened tagged unions do not need custom marshal or unmarshal logic solely
-// to select variants. Encoding/json can marshal the flattened struct directly,
-// and callers should use the generated constructors to set the discriminator.
-// Custom JSON helpers are still needed for unrelated rules such as required nil
-// slices that must encode as empty arrays.
+// Flattened tagged unions do not need custom unmarshal logic solely to select
+// variants. Encoding/json can unmarshal the flattened struct directly, and
+// callers should use the generated constructors to set the discriminator.
+// Marshal helpers are still needed when branch-required fields would otherwise
+// be optional on the flattened struct, so zero values for the selected variant
+// remain present on the wire. Custom JSON helpers are also needed for unrelated
+// rules such as required nil slices that must encode as empty arrays.
 //
 // # Generated files
 //

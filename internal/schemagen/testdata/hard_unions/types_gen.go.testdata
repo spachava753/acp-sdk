@@ -1,6 +1,9 @@
 package acp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"reflect"
+)
 
 // AliasA: First named string alias.
 type AliasA string
@@ -53,6 +56,34 @@ func AgentAuthMethod(id string, name string) AuthMethod {
 		ID:   id,
 		Name: name,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (m AuthMethod) MarshalJSON() ([]byte, error) {
+	type alias AuthMethod
+	type wire struct {
+		*alias
+		EnvName *string `json:"envName,omitempty"`
+		Command *string `json:"command,omitempty"`
+	}
+	w := wire{alias: (*alias)(&m)}
+	if !reflect.ValueOf(m.EnvName).IsZero() {
+		EnvName := m.EnvName
+		w.EnvName = &EnvName
+	}
+	if !reflect.ValueOf(m.Command).IsZero() {
+		Command := m.Command
+		w.Command = &Command
+	}
+	switch m.Type {
+	case AuthMethodTypeEnvVar:
+		EnvName := m.EnvName
+		w.EnvName = &EnvName
+	case AuthMethodTypeTerminal:
+		Command := m.Command
+		w.Command = &Command
+	}
+	return json.Marshal(w)
 }
 
 // AuthMethodAgent: Agent-managed authentication method.
@@ -133,9 +164,23 @@ func (u ObjectFieldUnion) MarshalJSON() ([]byte, error) {
 	type alias ObjectFieldUnion
 	type wire struct {
 		*alias
-		Items *[]string `json:"items,omitempty"`
+		Items  *[]string     `json:"items,omitempty"`
+		Text   *string       `json:"text,omitempty"`
+		Nested *NestedObject `json:"nested,omitempty"`
 	}
 	w := wire{alias: (*alias)(&u)}
+	if len(u.Items) > 0 {
+		Items := u.Items
+		w.Items = &Items
+	}
+	if !reflect.ValueOf(u.Text).IsZero() {
+		Text := u.Text
+		w.Text = &Text
+	}
+	if !reflect.ValueOf(u.Nested).IsZero() {
+		Nested := u.Nested
+		w.Nested = &Nested
+	}
 	switch u.Type {
 	case ObjectFieldUnionTypeText:
 		Items := u.Items
@@ -143,6 +188,11 @@ func (u ObjectFieldUnion) MarshalJSON() ([]byte, error) {
 			Items = []string{}
 		}
 		w.Items = &Items
+		Text := u.Text
+		w.Text = &Text
+	case ObjectFieldUnionTypeNested:
+		Nested := u.Nested
+		w.Nested = &Nested
 	}
 	return json.Marshal(w)
 }

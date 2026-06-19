@@ -1,5 +1,10 @@
 package acp
 
+import (
+	"encoding/json"
+	"reflect"
+)
+
 // CollisionUnion: A discriminator union whose helper type name collides with a top-level definition.
 type CollisionUnion struct {
 	Kind  CollisionUnionType2 `json:"kind"`
@@ -29,6 +34,34 @@ func CountCollisionUnion(count int32) CollisionUnion {
 		Kind:  CollisionUnionType2Count,
 		Count: count,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (u CollisionUnion) MarshalJSON() ([]byte, error) {
+	type alias CollisionUnion
+	type wire struct {
+		*alias
+		Text  *string `json:"text,omitempty"`
+		Count *int32  `json:"count,omitempty"`
+	}
+	w := wire{alias: (*alias)(&u)}
+	if !reflect.ValueOf(u.Text).IsZero() {
+		Text := u.Text
+		w.Text = &Text
+	}
+	if !reflect.ValueOf(u.Count).IsZero() {
+		Count := u.Count
+		w.Count = &Count
+	}
+	switch u.Kind {
+	case CollisionUnionType2Text:
+		Text := u.Text
+		w.Text = &Text
+	case CollisionUnionType2Count:
+		Count := u.Count
+		w.Count = &Count
+	}
+	return json.Marshal(w)
 }
 
 // CollisionUnionType: A top-level definition whose name collides with the discriminator helper type.

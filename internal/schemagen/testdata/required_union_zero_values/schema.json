@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Choice": {
+      "description": "Tagged union with branch-required zero-value fields.",
+      "type": "object",
+      "oneOf": [
+        {
+          "title": "Text",
+          "description": "Text branch with required scalar fields.",
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "const": "text" },
+            "enabled": { "type": "boolean" },
+            "text": { "type": "string" }
+          },
+          "required": ["type", "enabled", "text"]
+        },
+        {
+          "title": "Count",
+          "description": "Count branch with a required integer field.",
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "const": "count" },
+            "count": { "type": "integer" }
+          },
+          "required": ["type", "count"]
+        },
+        {
+          "title": "Payload",
+          "description": "Payload branch with a required object field.",
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "const": "payload" },
+            "payload": { "allOf": [{ "$ref": "#/$defs/Payload" }] }
+          },
+          "required": ["type", "payload"]
+        }
+      ],
+      "discriminator": { "propertyName": "type" }
+    },
+    "Payload": {
+      "description": "Payload object.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" }
+      },
+      "required": ["id"]
+    }
+  }
+}

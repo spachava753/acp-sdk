@@ -1,5 +1,10 @@
 package acp
 
+import (
+	"encoding/json"
+	"reflect"
+)
+
 // SharedNullable: Flattened union with a shared field that is nullable in one variant.
 type SharedNullable struct {
 	Kind  SharedNullableType `json:"kind"`
@@ -29,4 +34,31 @@ func MaybeSharedNullable() SharedNullable {
 	return SharedNullable{
 		Kind: SharedNullableTypeMaybe,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (n SharedNullable) MarshalJSON() ([]byte, error) {
+	type alias SharedNullable
+	type wire struct {
+		*alias
+		Label **string `json:"label,omitempty"`
+		Value *string  `json:"value,omitempty"`
+	}
+	w := wire{alias: (*alias)(&n)}
+	if n.Label != nil {
+		Label := n.Label
+		w.Label = &Label
+	}
+	if !reflect.ValueOf(n.Value).IsZero() {
+		Value := n.Value
+		w.Value = &Value
+	}
+	switch n.Kind {
+	case SharedNullableTypeStrict:
+		Label := n.Label
+		w.Label = &Label
+		Value := n.Value
+		w.Value = &Value
+	}
+	return json.Marshal(w)
 }

@@ -1,6 +1,9 @@
 package acp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"reflect"
+)
 
 // Choice: Union with a branch-required empty object payload.
 type Choice struct {
@@ -42,12 +45,24 @@ func (c Choice) MarshalJSON() ([]byte, error) {
 	type wire struct {
 		*alias
 		Schema *EmptySchema `json:"schema,omitempty"`
+		Text   *string      `json:"text,omitempty"`
 	}
 	w := wire{alias: (*alias)(&c)}
+	if !reflect.ValueOf(c.Schema).IsZero() {
+		Schema := c.Schema
+		w.Schema = &Schema
+	}
+	if !reflect.ValueOf(c.Text).IsZero() {
+		Text := c.Text
+		w.Text = &Text
+	}
 	switch c.Mode {
 	case ChoiceTypeForm:
 		Schema := c.Schema
 		w.Schema = &Schema
+	case ChoiceTypeText:
+		Text := c.Text
+		w.Text = &Text
 	}
 	return json.Marshal(w)
 }

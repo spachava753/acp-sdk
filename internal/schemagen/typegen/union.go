@@ -22,7 +22,8 @@ type unionRequiredMarshalKind int
 
 const (
 	unionRequiredSliceField unionRequiredMarshalKind = iota
-	unionRequiredEmptyObjectField
+	unionRequiredArrayUnionField
+	unionRequiredValueField
 )
 
 type unionRequiredMarshalField struct {
@@ -81,14 +82,16 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 		properties := variantProperties(defs, branch)
 		for _, jsonName := range sortedPropertyNames(properties) {
 			prop := properties[jsonName]
-			if contains(branchRequired, jsonName) {
+			if contains(branchRequired, jsonName) && prop.Const == nil && jsonName != discriminator {
 				typ, text := schemaType(defs, prop, false)
 				field := unionField{deserializeField: newDeserializeField(defs, jsonName, prop, typ, text), schema: prop}
 				switch {
 				case strings.HasPrefix(text, "[]"):
 					requiredMarshalFields = append(requiredMarshalFields, unionRequiredMarshalField{discriminatorValue: value, field: field, kind: unionRequiredSliceField})
-				case discriminator != "" && objectSchemaHasNoRequiredFields(defs, prop):
-					requiredMarshalFields = append(requiredMarshalFields, unionRequiredMarshalField{discriminatorValue: value, field: field, kind: unionRequiredEmptyObjectField})
+				case discriminator != "" && !strings.HasPrefix(text, "*") && constructorArrayUnionSchema(defs, prop) != nil:
+					requiredMarshalFields = append(requiredMarshalFields, unionRequiredMarshalField{discriminatorValue: value, field: field, kind: unionRequiredArrayUnionField})
+				case discriminator != "":
+					requiredMarshalFields = append(requiredMarshalFields, unionRequiredMarshalField{discriminatorValue: value, field: field, kind: unionRequiredValueField})
 				}
 			}
 			addField(jsonName, prop, false)
@@ -121,8 +124,10 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 	for i := range requiredMarshalFields {
 		if field, ok := fieldsByJSON[requiredMarshalFields[i].field.jsonName]; ok {
 			requiredMarshalFields[i].field.goName = field.goName
+			requiredMarshalFields[i].field.typeCode = field.typeCode
+			requiredMarshalFields[i].field.typeText = field.typeText
 		}
-		if requiredMarshalFields[i].kind == unionRequiredEmptyObjectField && isRequiredInAllVariants(parentRequired, requiredCount, requiredMarshalFields[i].field.jsonName, len(branches)) {
+		if requiredMarshalFields[i].kind == unionRequiredValueField && isRequiredInAllVariants(parentRequired, requiredCount, requiredMarshalFields[i].field.jsonName, len(branches)) {
 			continue
 		}
 		filteredRequiredMarshalFields = append(filteredRequiredMarshalFields, requiredMarshalFields[i])
@@ -174,9 +179,9 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 	unmarshalMethod, hasUnmarshal := deserializeUnmarshalCode(name, deserializeFields)
 	if len(requiredMarshalFields) > 0 {
 		if discriminator != "" {
-			codes = append(codes, discriminatorUnionMarshalCode(name, discriminator, requiredMarshalFields, constNames), jen.Line())
+			codes = append(codes, discriminatorUnionMarshalCode(defs, name, discriminator, requiredMarshalFields, constNames), jen.Line())
 		} else {
-			codes = append(codes, discriminatorlessUnionMarshalCode(name, requiredMarshalFields, len(branches)), jen.Line())
+			codes = append(codes, discriminatorlessUnionMarshalCode(defs, name, requiredMarshalFields, len(branches)), jen.Line())
 		}
 	}
 	if hasUnmarshal {
@@ -233,7 +238,7 @@ func isRequiredInAllVariants(parentRequired map[string]bool, requiredCount map[s
 	return parentRequired[jsonName] || requiredCount[jsonName] == branchCount
 }
 
-func discriminatorUnionMarshalCode(name, discriminator string, requiredFields []unionRequiredMarshalField, constNames map[string]string) jen.Code {
+func discriminatorUnionMarshalCode(defs map[string]*jsonschema.Schema, name, discriminator string, requiredFields []unionRequiredMarshalField, constNames map[string]string) jen.Code {
 	receiver := receiverName(name)
 	fieldSeen := map[string]bool{}
 	var orderedFields []unionRequiredMarshalField
@@ -258,7 +263,7 @@ func discriminatorUnionMarshalCode(name, discriminator string, requiredFields []
 			continue
 		}
 		commonSeen[required.field.goName] = true
-		commonAssignments = append(commonAssignments, marshalFieldAssignmentCode(receiver, required)...)
+		commonAssignments = append(commonAssignments, marshalFieldAssignmentCode(defs, receiver, required)...)
 	}
 
 	type discriminatorGroup struct {
@@ -289,7 +294,7 @@ func discriminatorUnionMarshalCode(name, discriminator string, requiredFields []
 	for _, group := range groups {
 		var assignments []jen.Code
 		for _, required := range group.fields {
-			assignments = append(assignments, marshalFieldAssignmentCode(receiver, required)...)
+			assignments = append(assignments, marshalFieldAssignmentCode(defs, receiver, required)...)
 		}
 		var caseValue jen.Code = jen.Lit("")
 		if constName := constNames[group.value]; constName != "" {
@@ -305,6 +310,9 @@ func discriminatorUnionMarshalCode(name, discriminator string, requiredFields []
 		),
 		jen.Id("w").Op(":=").Id("wire").Values(jen.Id("alias").Op(":").Parens(jen.Op("*").Id("alias")).Call(jen.Op("&").Id(receiver))),
 	}
+	for _, required := range orderedFields {
+		body = append(body, optionalWireFieldAssignmentCode(receiver, required.field)...)
+	}
 	body = append(body, commonAssignments...)
 	body = append(body,
 		jen.Switch(jen.Id(receiver).Dot(fieldName(discriminator))).Block(cases...),
@@ -313,7 +321,7 @@ func discriminatorUnionMarshalCode(name, discriminator string, requiredFields []
 	return jen.Comment("MarshalJSON implements json.Marshaler.").Line().Func().Params(jen.Id(receiver).Id(name)).Id("MarshalJSON").Params().Params(jen.Index().Byte(), jen.Error()).Block(body...)
 }
 
-func discriminatorlessUnionMarshalCode(name string, requiredFields []unionRequiredMarshalField, branchCount int) jen.Code {
+func discriminatorlessUnionMarshalCode(defs map[string]*jsonschema.Schema, name string, requiredFields []unionRequiredMarshalField, branchCount int) jen.Code {
 	receiver := receiverName(name)
 	fieldSeen := map[string]bool{}
 	fieldCounts := map[string]int{}
@@ -350,7 +358,7 @@ func discriminatorlessUnionMarshalCode(name string, requiredFields []unionRequir
 	for _, required := range orderedFields {
 		field := required.field
 		if commonFields[field.goName] || fieldCounts[field.goName] == branchCount {
-			body = append(body, marshalFieldAssignmentCode(receiver, required)...)
+			body = append(body, marshalFieldAssignmentCode(defs, receiver, required)...)
 			continue
 		}
 		body = append(body, optionalSliceFieldAssignmentCode(receiver, field)...)
@@ -359,18 +367,62 @@ func discriminatorlessUnionMarshalCode(name string, requiredFields []unionRequir
 	return jen.Comment("MarshalJSON implements json.Marshaler.").Line().Func().Params(jen.Id(receiver).Id(name)).Id("MarshalJSON").Params().Params(jen.Index().Byte(), jen.Error()).Block(body...)
 }
 
-func marshalFieldAssignmentCode(receiver string, required unionRequiredMarshalField) []jen.Code {
-	switch required.kind {
-	case unionRequiredEmptyObjectField:
-		return emptyObjectFieldAssignmentCode(receiver, required.field)
+func optionalWireFieldAssignmentCode(receiver string, field unionField) []jen.Code {
+	var condition jen.Code
+	switch {
+	case strings.HasPrefix(field.typeText, "[]"), strings.HasPrefix(field.typeText, "map["):
+		condition = jen.Len(jen.Id(receiver).Dot(field.goName)).Op(">").Lit(0)
+	case strings.HasPrefix(field.typeText, "*"), field.typeText == "any":
+		condition = jen.Id(receiver).Dot(field.goName).Op("!=").Nil()
 	default:
-		return sliceFieldAssignmentCode(receiver, required.field)
+		condition = jen.Op("!").Qual("reflect", "ValueOf").Call(jen.Id(receiver).Dot(field.goName)).Dot("IsZero").Call()
+	}
+	return []jen.Code{
+		jen.If(condition).Block(
+			jen.Id(field.goName).Op(":=").Id(receiver).Dot(field.goName),
+			jen.Id("w").Dot(field.goName).Op("=").Op("&").Id(field.goName),
+		),
 	}
 }
 
-func emptyObjectFieldAssignmentCode(receiver string, field unionField) []jen.Code {
+func marshalFieldAssignmentCode(defs map[string]*jsonschema.Schema, receiver string, required unionRequiredMarshalField) []jen.Code {
+	switch required.kind {
+	case unionRequiredSliceField:
+		return sliceFieldAssignmentCode(receiver, required.field)
+	case unionRequiredArrayUnionField:
+		return arrayUnionFieldAssignmentCode(defs, receiver, required.field)
+	default:
+		return valueFieldAssignmentCode(receiver, required.field)
+	}
+}
+
+func valueFieldAssignmentCode(receiver string, field unionField) []jen.Code {
 	return []jen.Code{
 		jen.Id(field.goName).Op(":=").Id(receiver).Dot(field.goName),
+		jen.Id("w").Dot(field.goName).Op("=").Op("&").Id(field.goName),
+	}
+}
+
+func arrayUnionFieldAssignmentCode(defs map[string]*jsonschema.Schema, receiver string, field unionField) []jen.Code {
+	arrayUnion := constructorArrayUnionSchema(defs, field.schema)
+	if arrayUnion == nil {
+		return valueFieldAssignmentCode(receiver, field)
+	}
+	variants := arrayUnionVariants(defs, field.typeText, unionBranches(arrayUnion))
+	if len(variants) == 0 {
+		return valueFieldAssignmentCode(receiver, field)
+	}
+	flatVariant, _ := arrayUnionDecodeVariants(defs, variants)
+	condition := jen.Id(field.goName).Dot(variants[0].fieldName).Op("==").Nil()
+	for _, variant := range variants[1:] {
+		condition.Op("&&").Id(field.goName).Dot(variant.fieldName).Op("==").Nil()
+	}
+	return []jen.Code{
+		jen.Id(field.goName).Op(":=").Id(receiver).Dot(field.goName),
+		jen.If(condition).Block(
+			jen.Id("flat").Op(":=").Id(flatVariant.typeName).Values(),
+			jen.Id(field.goName).Op("=").Id(field.typeText).Values(jen.Id(flatVariant.fieldName).Op(":").Op("&").Id("flat")),
+		),
 		jen.Id("w").Dot(field.goName).Op("=").Op("&").Id(field.goName),
 	}
 }

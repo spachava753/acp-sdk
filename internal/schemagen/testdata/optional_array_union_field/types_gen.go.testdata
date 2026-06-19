@@ -1,6 +1,9 @@
 package acp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"reflect"
+)
 
 // ConfigOption: Config option with variant-only array-union payload.
 type ConfigOption struct {
@@ -38,6 +41,38 @@ func SelectConfigOption(id string, options SelectOptions) ConfigOption {
 		ID:      id,
 		Options: options,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (o ConfigOption) MarshalJSON() ([]byte, error) {
+	type alias ConfigOption
+	type wire struct {
+		*alias
+		Enabled *bool          `json:"enabled,omitempty"`
+		Options *SelectOptions `json:"options,omitempty"`
+	}
+	w := wire{alias: (*alias)(&o)}
+	if !reflect.ValueOf(o.Enabled).IsZero() {
+		Enabled := o.Enabled
+		w.Enabled = &Enabled
+	}
+	if !reflect.ValueOf(o.Options).IsZero() {
+		Options := o.Options
+		w.Options = &Options
+	}
+	switch o.Type {
+	case ConfigOptionTypeToggle:
+		Enabled := o.Enabled
+		w.Enabled = &Enabled
+	case ConfigOptionTypeSelect:
+		Options := o.Options
+		if Options.Ungrouped == nil && Options.Groups == nil {
+			flat := UngroupedSelectOptions{}
+			Options = SelectOptions{Ungrouped: &flat}
+		}
+		w.Options = &Options
+	}
+	return json.Marshal(w)
 }
 
 type SelectGroup struct {

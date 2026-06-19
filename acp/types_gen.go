@@ -6,7 +6,10 @@
 
 package acp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"reflect"
+)
 
 // Meta: Reserved metadata for protocol extensions.
 type Meta map[string]any
@@ -250,6 +253,10 @@ func (m AuthMethod) MarshalJSON() ([]byte, error) {
 		Vars *[]AuthEnvVar `json:"vars,omitempty"`
 	}
 	w := wire{alias: (*alias)(&m)}
+	if len(m.Vars) > 0 {
+		Vars := m.Vars
+		w.Vars = &Vars
+	}
 	switch m.Type {
 	case AuthMethodTypeEnvVar:
 		Vars := m.Vars
@@ -724,6 +731,69 @@ func ResourceContentBlock(resource EmbeddedResourceResource) ContentBlock {
 	}
 }
 
+// MarshalJSON implements json.Marshaler.
+func (b ContentBlock) MarshalJSON() ([]byte, error) {
+	type alias ContentBlock
+	type wire struct {
+		*alias
+		Text     *string                   `json:"text,omitempty"`
+		Data     *string                   `json:"data,omitempty"`
+		MimeType **string                  `json:"mimeType,omitempty"`
+		Name     *string                   `json:"name,omitempty"`
+		URI      **string                  `json:"uri,omitempty"`
+		Resource *EmbeddedResourceResource `json:"resource,omitempty"`
+	}
+	w := wire{alias: (*alias)(&b)}
+	if !reflect.ValueOf(b.Text).IsZero() {
+		Text := b.Text
+		w.Text = &Text
+	}
+	if !reflect.ValueOf(b.Data).IsZero() {
+		Data := b.Data
+		w.Data = &Data
+	}
+	if b.MimeType != nil {
+		MimeType := b.MimeType
+		w.MimeType = &MimeType
+	}
+	if !reflect.ValueOf(b.Name).IsZero() {
+		Name := b.Name
+		w.Name = &Name
+	}
+	if b.URI != nil {
+		URI := b.URI
+		w.URI = &URI
+	}
+	if !reflect.ValueOf(b.Resource).IsZero() {
+		Resource := b.Resource
+		w.Resource = &Resource
+	}
+	switch b.Type {
+	case ContentBlockTypeText:
+		Text := b.Text
+		w.Text = &Text
+	case ContentBlockTypeImage:
+		Data := b.Data
+		w.Data = &Data
+		MimeType := b.MimeType
+		w.MimeType = &MimeType
+	case ContentBlockTypeAudio:
+		Data := b.Data
+		w.Data = &Data
+		MimeType := b.MimeType
+		w.MimeType = &MimeType
+	case ContentBlockTypeResourceLink:
+		Name := b.Name
+		w.Name = &Name
+		URI := b.URI
+		w.URI = &URI
+	case ContentBlockTypeResource:
+		Resource := b.Resource
+		w.Resource = &Resource
+	}
+	return json.Marshal(w)
+}
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (b *ContentBlock) UnmarshalJSON(data []byte) error {
 	type alias ContentBlock
@@ -810,12 +880,31 @@ func (r CreateElicitationRequest) MarshalJSON() ([]byte, error) {
 	type wire struct {
 		*alias
 		RequestedSchema *ElicitationSchema `json:"requestedSchema,omitempty"`
+		ElicitationID   *ElicitationId     `json:"elicitationId,omitempty"`
+		Url             *string            `json:"url,omitempty"`
 	}
 	w := wire{alias: (*alias)(&r)}
+	if !reflect.ValueOf(r.RequestedSchema).IsZero() {
+		RequestedSchema := r.RequestedSchema
+		w.RequestedSchema = &RequestedSchema
+	}
+	if !reflect.ValueOf(r.ElicitationID).IsZero() {
+		ElicitationID := r.ElicitationID
+		w.ElicitationID = &ElicitationID
+	}
+	if !reflect.ValueOf(r.Url).IsZero() {
+		Url := r.Url
+		w.Url = &Url
+	}
 	switch r.Mode {
 	case CreateElicitationRequestTypeForm:
 		RequestedSchema := r.RequestedSchema
 		w.RequestedSchema = &RequestedSchema
+	case CreateElicitationRequestTypeUrl:
+		ElicitationID := r.ElicitationID
+		w.ElicitationID = &ElicitationID
+		Url := r.Url
+		w.Url = &Url
 	}
 	return json.Marshal(w)
 }
@@ -1160,6 +1249,26 @@ func ArrayElicitationPropertySchema(items MultiSelectItems) ElicitationPropertyS
 		Type:  ElicitationPropertySchemaTypeArray,
 		Items: items,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (s ElicitationPropertySchema) MarshalJSON() ([]byte, error) {
+	type alias ElicitationPropertySchema
+	type wire struct {
+		*alias
+		Items *MultiSelectItems `json:"items,omitempty"`
+	}
+	w := wire{alias: (*alias)(&s)}
+	if !reflect.ValueOf(s.Items).IsZero() {
+		Items := s.Items
+		w.Items = &Items
+	}
+	switch s.Type {
+	case ElicitationPropertySchemaTypeArray:
+		Items := s.Items
+		w.Items = &Items
+	}
+	return json.Marshal(w)
 }
 
 // ElicitationRequestScope: **UNSTABLE**
@@ -1888,11 +1997,38 @@ func (s McpServer) MarshalJSON() ([]byte, error) {
 	type alias McpServer
 	type wire struct {
 		*alias
-		Headers *[]HttpHeader  `json:"headers,omitempty"`
-		Args    *[]string      `json:"args,omitempty"`
-		Env     *[]EnvVariable `json:"env,omitempty"`
+		Headers *[]HttpHeader   `json:"headers,omitempty"`
+		Url     *string         `json:"url,omitempty"`
+		ID      *McpServerAcpId `json:"id,omitempty"`
+		Args    *[]string       `json:"args,omitempty"`
+		Command *string         `json:"command,omitempty"`
+		Env     *[]EnvVariable  `json:"env,omitempty"`
 	}
 	w := wire{alias: (*alias)(&s)}
+	if len(s.Headers) > 0 {
+		Headers := s.Headers
+		w.Headers = &Headers
+	}
+	if !reflect.ValueOf(s.Url).IsZero() {
+		Url := s.Url
+		w.Url = &Url
+	}
+	if !reflect.ValueOf(s.ID).IsZero() {
+		ID := s.ID
+		w.ID = &ID
+	}
+	if len(s.Args) > 0 {
+		Args := s.Args
+		w.Args = &Args
+	}
+	if !reflect.ValueOf(s.Command).IsZero() {
+		Command := s.Command
+		w.Command = &Command
+	}
+	if len(s.Env) > 0 {
+		Env := s.Env
+		w.Env = &Env
+	}
 	switch s.Type {
 	case McpServerTypeHttp:
 		Headers := s.Headers
@@ -1900,18 +2036,27 @@ func (s McpServer) MarshalJSON() ([]byte, error) {
 			Headers = []HttpHeader{}
 		}
 		w.Headers = &Headers
+		Url := s.Url
+		w.Url = &Url
 	case McpServerTypeSse:
 		Headers := s.Headers
 		if Headers == nil {
 			Headers = []HttpHeader{}
 		}
 		w.Headers = &Headers
+		Url := s.Url
+		w.Url = &Url
+	case McpServerTypeAcp:
+		ID := s.ID
+		w.ID = &ID
 	case "":
 		Args := s.Args
 		if Args == nil {
 			Args = []string{}
 		}
 		w.Args = &Args
+		Command := s.Command
+		w.Command = &Command
 		Env := s.Env
 		if Env == nil {
 			Env = []EnvVariable{}
@@ -2650,9 +2795,33 @@ func (s NesSuggestion) MarshalJSON() ([]byte, error) {
 	type alias NesSuggestion
 	type wire struct {
 		*alias
-		Edits *[]NesTextEdit `json:"edits,omitempty"`
+		Edits    *[]NesTextEdit `json:"edits,omitempty"`
+		Position *Position      `json:"position,omitempty"`
+		NewName  *string        `json:"newName,omitempty"`
+		Replace  *string        `json:"replace,omitempty"`
+		Search   *string        `json:"search,omitempty"`
 	}
 	w := wire{alias: (*alias)(&s)}
+	if len(s.Edits) > 0 {
+		Edits := s.Edits
+		w.Edits = &Edits
+	}
+	if !reflect.ValueOf(s.Position).IsZero() {
+		Position := s.Position
+		w.Position = &Position
+	}
+	if !reflect.ValueOf(s.NewName).IsZero() {
+		NewName := s.NewName
+		w.NewName = &NewName
+	}
+	if !reflect.ValueOf(s.Replace).IsZero() {
+		Replace := s.Replace
+		w.Replace = &Replace
+	}
+	if !reflect.ValueOf(s.Search).IsZero() {
+		Search := s.Search
+		w.Search = &Search
+	}
 	switch s.Kind {
 	case NesSuggestionTypeEdit:
 		Edits := s.Edits
@@ -2660,6 +2829,19 @@ func (s NesSuggestion) MarshalJSON() ([]byte, error) {
 			Edits = []NesTextEdit{}
 		}
 		w.Edits = &Edits
+	case NesSuggestionTypeJump:
+		Position := s.Position
+		w.Position = &Position
+	case NesSuggestionTypeRename:
+		NewName := s.NewName
+		w.NewName = &NewName
+		Position := s.Position
+		w.Position = &Position
+	case NesSuggestionTypeSearchAndReplace:
+		Replace := s.Replace
+		w.Replace = &Replace
+		Search := s.Search
+		w.Search = &Search
 	}
 	return json.Marshal(w)
 }
@@ -3072,8 +3254,22 @@ func (c PlanUpdateContent) MarshalJSON() ([]byte, error) {
 	type wire struct {
 		*alias
 		Entries *[]PlanEntry `json:"entries,omitempty"`
+		URI     *string      `json:"uri,omitempty"`
+		Content *string      `json:"content,omitempty"`
 	}
 	w := wire{alias: (*alias)(&c)}
+	if len(c.Entries) > 0 {
+		Entries := c.Entries
+		w.Entries = &Entries
+	}
+	if !reflect.ValueOf(c.URI).IsZero() {
+		URI := c.URI
+		w.URI = &URI
+	}
+	if !reflect.ValueOf(c.Content).IsZero() {
+		Content := c.Content
+		w.Content = &Content
+	}
 	switch c.Type {
 	case PlanUpdateContentTypeItems:
 		Entries := c.Entries
@@ -3081,6 +3277,12 @@ func (c PlanUpdateContent) MarshalJSON() ([]byte, error) {
 			Entries = []PlanEntry{}
 		}
 		w.Entries = &Entries
+	case PlanUpdateContentTypeFile:
+		URI := c.URI
+		w.URI = &URI
+	case PlanUpdateContentTypeMarkdown:
+		Content := c.Content
+		w.Content = &Content
 	}
 	return json.Marshal(w)
 }
@@ -3358,6 +3560,26 @@ func SelectedRequestPermissionOutcome(optionID PermissionOptionId) RequestPermis
 	}
 }
 
+// MarshalJSON implements json.Marshaler.
+func (o RequestPermissionOutcome) MarshalJSON() ([]byte, error) {
+	type alias RequestPermissionOutcome
+	type wire struct {
+		*alias
+		OptionID *PermissionOptionId `json:"optionId,omitempty"`
+	}
+	w := wire{alias: (*alias)(&o)}
+	if !reflect.ValueOf(o.OptionID).IsZero() {
+		OptionID := o.OptionID
+		w.OptionID = &OptionID
+	}
+	switch o.Outcome {
+	case RequestPermissionOutcomeTypeSelected:
+		OptionID := o.OptionID
+		w.OptionID = &OptionID
+	}
+	return json.Marshal(w)
+}
+
 // RequestPermissionRequest: Request for user permission to execute a tool call.
 //
 // Sent when the agent needs authorization before performing a sensitive operation.
@@ -3622,6 +3844,30 @@ func BooleanSessionConfigOption(id SessionConfigId, name string, currentValue bo
 		ID:           id,
 		Name:         name,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (o SessionConfigOption) MarshalJSON() ([]byte, error) {
+	type alias SessionConfigOption
+	type wire struct {
+		*alias
+		Options *SessionConfigSelectOptions `json:"options,omitempty"`
+	}
+	w := wire{alias: (*alias)(&o)}
+	if !reflect.ValueOf(o.Options).IsZero() {
+		Options := o.Options
+		w.Options = &Options
+	}
+	switch o.Type {
+	case SessionConfigOptionTypeSelect:
+		Options := o.Options
+		if Options.Ungrouped == nil && Options.Groups == nil {
+			flat := UngroupedSessionConfigSelectOptions{}
+			Options = SessionConfigSelectOptions{Ungrouped: &flat}
+		}
+		w.Options = &Options
+	}
+	return json.Marshal(w)
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -4087,30 +4333,113 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 	type alias SessionUpdate
 	type wire struct {
 		*alias
+		Content           *any                   `json:"content,omitempty"`
+		Title             **string               `json:"title,omitempty"`
+		ToolCallID        *ToolCallId            `json:"toolCallId,omitempty"`
 		Entries           *[]PlanEntry           `json:"entries,omitempty"`
+		Plan              *PlanUpdateContent     `json:"plan,omitempty"`
+		ID                *PlanId                `json:"id,omitempty"`
 		AvailableCommands *[]AvailableCommand    `json:"availableCommands,omitempty"`
+		CurrentModeID     *SessionModeId         `json:"currentModeId,omitempty"`
 		ConfigOptions     *[]SessionConfigOption `json:"configOptions,omitempty"`
+		Size              *uint64                `json:"size,omitempty"`
+		Used              *uint64                `json:"used,omitempty"`
 	}
 	w := wire{alias: (*alias)(&u)}
+	if u.Content != nil {
+		Content := u.Content
+		w.Content = &Content
+	}
+	if u.Title != nil {
+		Title := u.Title
+		w.Title = &Title
+	}
+	if !reflect.ValueOf(u.ToolCallID).IsZero() {
+		ToolCallID := u.ToolCallID
+		w.ToolCallID = &ToolCallID
+	}
+	if len(u.Entries) > 0 {
+		Entries := u.Entries
+		w.Entries = &Entries
+	}
+	if !reflect.ValueOf(u.Plan).IsZero() {
+		Plan := u.Plan
+		w.Plan = &Plan
+	}
+	if !reflect.ValueOf(u.ID).IsZero() {
+		ID := u.ID
+		w.ID = &ID
+	}
+	if len(u.AvailableCommands) > 0 {
+		AvailableCommands := u.AvailableCommands
+		w.AvailableCommands = &AvailableCommands
+	}
+	if !reflect.ValueOf(u.CurrentModeID).IsZero() {
+		CurrentModeID := u.CurrentModeID
+		w.CurrentModeID = &CurrentModeID
+	}
+	if len(u.ConfigOptions) > 0 {
+		ConfigOptions := u.ConfigOptions
+		w.ConfigOptions = &ConfigOptions
+	}
+	if !reflect.ValueOf(u.Size).IsZero() {
+		Size := u.Size
+		w.Size = &Size
+	}
+	if !reflect.ValueOf(u.Used).IsZero() {
+		Used := u.Used
+		w.Used = &Used
+	}
 	switch u.SessionUpdate {
+	case SessionUpdateTypeUserMessageChunk:
+		Content := u.Content
+		w.Content = &Content
+	case SessionUpdateTypeAgentMessageChunk:
+		Content := u.Content
+		w.Content = &Content
+	case SessionUpdateTypeAgentThoughtChunk:
+		Content := u.Content
+		w.Content = &Content
+	case SessionUpdateTypeToolCall:
+		Title := u.Title
+		w.Title = &Title
+		ToolCallID := u.ToolCallID
+		w.ToolCallID = &ToolCallID
+	case SessionUpdateTypeToolCallUpdate:
+		ToolCallID := u.ToolCallID
+		w.ToolCallID = &ToolCallID
 	case SessionUpdateTypePlan:
 		Entries := u.Entries
 		if Entries == nil {
 			Entries = []PlanEntry{}
 		}
 		w.Entries = &Entries
+	case SessionUpdateTypePlanUpdate:
+		Plan := u.Plan
+		w.Plan = &Plan
+	case SessionUpdateTypePlanRemoved:
+		ID := u.ID
+		w.ID = &ID
 	case SessionUpdateTypeAvailableCommandsUpdate:
 		AvailableCommands := u.AvailableCommands
 		if AvailableCommands == nil {
 			AvailableCommands = []AvailableCommand{}
 		}
 		w.AvailableCommands = &AvailableCommands
+	case SessionUpdateTypeCurrentModeUpdate:
+		CurrentModeID := u.CurrentModeID
+		w.CurrentModeID = &CurrentModeID
 	case SessionUpdateTypeConfigOptionUpdate:
 		ConfigOptions := u.ConfigOptions
 		if ConfigOptions == nil {
 			ConfigOptions = []SessionConfigOption{}
 		}
 		w.ConfigOptions = &ConfigOptions
+	case SessionUpdateTypeUsageUpdate:
+		Size := u.Size
+		w.Size = &Size
+		Used := u.Used
+		w.Used = &Used
 	}
 	return json.Marshal(w)
 }
@@ -4731,6 +5060,49 @@ func TerminalToolCallContent(terminalID string) ToolCallContent {
 		Type:       ToolCallContentTypeTerminal,
 		TerminalID: terminalID,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (c ToolCallContent) MarshalJSON() ([]byte, error) {
+	type alias ToolCallContent
+	type wire struct {
+		*alias
+		Content    *ContentBlock `json:"content,omitempty"`
+		NewText    *string       `json:"newText,omitempty"`
+		Path       *string       `json:"path,omitempty"`
+		TerminalID *string       `json:"terminalId,omitempty"`
+	}
+	w := wire{alias: (*alias)(&c)}
+	if !reflect.ValueOf(c.Content).IsZero() {
+		Content := c.Content
+		w.Content = &Content
+	}
+	if !reflect.ValueOf(c.NewText).IsZero() {
+		NewText := c.NewText
+		w.NewText = &NewText
+	}
+	if !reflect.ValueOf(c.Path).IsZero() {
+		Path := c.Path
+		w.Path = &Path
+	}
+	if !reflect.ValueOf(c.TerminalID).IsZero() {
+		TerminalID := c.TerminalID
+		w.TerminalID = &TerminalID
+	}
+	switch c.Type {
+	case ToolCallContentTypeContent:
+		Content := c.Content
+		w.Content = &Content
+	case ToolCallContentTypeDiff:
+		NewText := c.NewText
+		w.NewText = &NewText
+		Path := c.Path
+		w.Path = &Path
+	case ToolCallContentTypeTerminal:
+		TerminalID := c.TerminalID
+		w.TerminalID = &TerminalID
+	}
+	return json.Marshal(w)
 }
 
 // ToolCallId: Unique identifier for a tool call within a session.

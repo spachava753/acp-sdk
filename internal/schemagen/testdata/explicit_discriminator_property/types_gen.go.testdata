@@ -1,5 +1,10 @@
 package acp
 
+import (
+	"encoding/json"
+	"reflect"
+)
+
 // ExplicitThing: Union with an explicit discriminator property.
 type ExplicitThing struct {
 	Type  ExplicitThingType `json:"type"`
@@ -29,4 +34,32 @@ func BetaExplicitThing(count int32) ExplicitThing {
 		Type:  ExplicitThingTypeBeta,
 		Count: count,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (t ExplicitThing) MarshalJSON() ([]byte, error) {
+	type alias ExplicitThing
+	type wire struct {
+		*alias
+		Value *string `json:"value,omitempty"`
+		Count *int32  `json:"count,omitempty"`
+	}
+	w := wire{alias: (*alias)(&t)}
+	if !reflect.ValueOf(t.Value).IsZero() {
+		Value := t.Value
+		w.Value = &Value
+	}
+	if !reflect.ValueOf(t.Count).IsZero() {
+		Count := t.Count
+		w.Count = &Count
+	}
+	switch t.Type {
+	case ExplicitThingTypeAlpha:
+		Value := t.Value
+		w.Value = &Value
+	case ExplicitThingTypeBeta:
+		Count := t.Count
+		w.Count = &Count
+	}
+	return json.Marshal(w)
 }

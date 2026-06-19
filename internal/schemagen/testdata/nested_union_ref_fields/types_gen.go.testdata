@@ -1,5 +1,10 @@
 package acp
 
+import (
+	"encoding/json"
+	"reflect"
+)
+
 // CreatePromptRequest: Request with branches that reference modes containing nested scope unions.
 type CreatePromptRequest struct {
 	Mode       CreatePromptRequestType `json:"mode"`
@@ -35,6 +40,34 @@ func UrlCreatePromptRequest(message string, url string) CreatePromptRequest {
 		Message: message,
 		Url:     url,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (r CreatePromptRequest) MarshalJSON() ([]byte, error) {
+	type alias CreatePromptRequest
+	type wire struct {
+		*alias
+		Schema *string `json:"schema,omitempty"`
+		Url    *string `json:"url,omitempty"`
+	}
+	w := wire{alias: (*alias)(&r)}
+	if !reflect.ValueOf(r.Schema).IsZero() {
+		Schema := r.Schema
+		w.Schema = &Schema
+	}
+	if !reflect.ValueOf(r.Url).IsZero() {
+		Url := r.Url
+		w.Url = &Url
+	}
+	switch r.Mode {
+	case CreatePromptRequestTypeForm:
+		Schema := r.Schema
+		w.Schema = &Schema
+	case CreatePromptRequestTypeUrl:
+		Url := r.Url
+		w.Url = &Url
+	}
+	return json.Marshal(w)
 }
 
 // FormMode: Form mode with a nested session-or-request scope.

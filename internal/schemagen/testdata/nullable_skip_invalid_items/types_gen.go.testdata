@@ -1,6 +1,9 @@
 package acp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"reflect"
+)
 
 // AnnotationSet: Object with nullable arrays that skip invalid entries.
 type AnnotationSet struct {
@@ -87,6 +90,26 @@ func OtherTaggedAnnotation(title string) TaggedAnnotation {
 		Kind:  TaggedAnnotationTypeOther,
 		Title: title,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (a TaggedAnnotation) MarshalJSON() ([]byte, error) {
+	type alias TaggedAnnotation
+	type wire struct {
+		*alias
+		Title *string `json:"title,omitempty"`
+	}
+	w := wire{alias: (*alias)(&a)}
+	if !reflect.ValueOf(a.Title).IsZero() {
+		Title := a.Title
+		w.Title = &Title
+	}
+	switch a.Kind {
+	case TaggedAnnotationTypeOther:
+		Title := a.Title
+		w.Title = &Title
+	}
+	return json.Marshal(w)
 }
 
 // UnmarshalJSON implements json.Unmarshaler.

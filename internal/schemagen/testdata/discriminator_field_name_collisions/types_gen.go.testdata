@@ -1,5 +1,10 @@
 package acp
 
+import (
+	"encoding/json"
+	"reflect"
+)
+
 // CollisionUnion: A discriminator union whose JSON fields normalize to duplicate Go names.
 type CollisionUnion struct {
 	Kind    CollisionUnionType `json:"kind"`
@@ -31,4 +36,39 @@ func AliasCollisionUnion(kind string) CollisionUnion {
 		Kind:  CollisionUnionTypeAlias,
 		Kind2: kind,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (u CollisionUnion) MarshalJSON() ([]byte, error) {
+	type alias CollisionUnion
+	type wire struct {
+		*alias
+		FooBar  *string `json:"foo-bar,omitempty"`
+		FooBar2 *int32  `json:"foo_bar,omitempty"`
+		Kind2   *string `json:"kind_,omitempty"`
+	}
+	w := wire{alias: (*alias)(&u)}
+	if !reflect.ValueOf(u.FooBar).IsZero() {
+		FooBar := u.FooBar
+		w.FooBar = &FooBar
+	}
+	if !reflect.ValueOf(u.FooBar2).IsZero() {
+		FooBar2 := u.FooBar2
+		w.FooBar2 = &FooBar2
+	}
+	if !reflect.ValueOf(u.Kind2).IsZero() {
+		Kind2 := u.Kind2
+		w.Kind2 = &Kind2
+	}
+	switch u.Kind {
+	case CollisionUnionTypePair:
+		FooBar := u.FooBar
+		w.FooBar = &FooBar
+		FooBar2 := u.FooBar2
+		w.FooBar2 = &FooBar2
+	case CollisionUnionTypeAlias:
+		Kind2 := u.Kind2
+		w.Kind2 = &Kind2
+	}
+	return json.Marshal(w)
 }

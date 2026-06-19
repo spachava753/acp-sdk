@@ -1,5 +1,10 @@
 package acp
 
+import (
+	"encoding/json"
+	"reflect"
+)
+
 // Meta: Reserved metadata for protocol extensions.
 type Meta map[string]any
 
@@ -43,6 +48,34 @@ func ToggleHybridOption(id string, name string, enabled bool) HybridOption {
 		ID:      id,
 		Name:    name,
 	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (o HybridOption) MarshalJSON() ([]byte, error) {
+	type alias HybridOption
+	type wire struct {
+		*alias
+		Text    *string `json:"text,omitempty"`
+		Enabled *bool   `json:"enabled,omitempty"`
+	}
+	w := wire{alias: (*alias)(&o)}
+	if !reflect.ValueOf(o.Text).IsZero() {
+		Text := o.Text
+		w.Text = &Text
+	}
+	if !reflect.ValueOf(o.Enabled).IsZero() {
+		Enabled := o.Enabled
+		w.Enabled = &Enabled
+	}
+	switch o.Kind {
+	case HybridOptionTypeText:
+		Text := o.Text
+		w.Text = &Text
+	case HybridOptionTypeToggle:
+		Enabled := o.Enabled
+		w.Enabled = &Enabled
+	}
+	return json.Marshal(w)
 }
 
 // HybridRequest: Flattened anyOf with common request identifiers.
