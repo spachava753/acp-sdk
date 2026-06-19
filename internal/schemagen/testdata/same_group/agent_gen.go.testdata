@@ -37,7 +37,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 	}
 	switch req.Method {
 	case MethodTaskStart:
-		handler, ok := agent.(TaskHandler)
+		handler, ok := agent.(interface {
+			StartTask(context.Context, *StartTaskRequest) (*StartTaskResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -47,7 +49,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.StartTask(ctx, params))
 	case MethodTaskStop:
-		handler, ok := agent.(TaskHandler)
+		handler, ok := agent.(interface {
+			StopTask(context.Context, *StopTaskRequest) (*StopTaskResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}

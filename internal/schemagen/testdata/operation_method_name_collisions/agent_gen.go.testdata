@@ -27,7 +27,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 	}
 	switch req.Method {
 	case MethodChatSendMessage:
-		handler, ok := agent.(ChatHandler)
+		handler, ok := agent.(interface {
+			SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -37,7 +39,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.SendMessage(ctx, params))
 	case MethodChatSendMessage2:
-		handler, ok := agent.(ChatHandler)
+		handler, ok := agent.(interface {
+			SendMessageAlt(context.Context, *SendMessageAltRequest) (*SendMessageAltResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}

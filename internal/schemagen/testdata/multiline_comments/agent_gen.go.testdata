@@ -28,7 +28,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 	}
 	switch req.Method {
 	case MethodDocsGenerate:
-		handler, ok := agent.(DocsHandler)
+		handler, ok := agent.(interface {
+			GenerateDocs(context.Context, *GenerateDocsRequest) (*GenerateDocsResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}

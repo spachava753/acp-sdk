@@ -53,9 +53,8 @@ func handleCase(ops []operation) jen.Code {
 }
 
 func handleSingleCase(op operation) jen.Code {
-	handlerName := pascal(op.group) + "Handler"
 	body := []jen.Code{
-		jen.Id("handler").Op(",").Id("ok").Op(":=").Id("agent").Assert(jen.Id(handlerName)),
+		jen.Id("handler").Op(",").Id("ok").Op(":=").Id("agent").Assert(jen.Interface(handlerMethod(op))),
 		jen.If(jen.Op("!").Id("ok")).Block(jen.Return(jen.Nil(), jen.Id("methodNotFound").Call(jen.Id("req").Dot("Method")))),
 		jen.Id("params").Op(",").Id("err").Op(":=").Id("decodeParams").Index(jen.Id(paramType(op))).Call(jen.Id("req")),
 		jen.If(jen.Id("err").Op("!=").Nil()).Block(jen.Return(jen.Nil(), jen.Id("err"))),
@@ -69,15 +68,16 @@ func handleSingleCase(op operation) jen.Code {
 }
 
 func handleOverloadedCase(callOp, notifyOp operation) jen.Code {
-	handlerName := pascal(callOp.group) + "Handler"
 	body := []jen.Code{
-		jen.Id("handler").Op(",").Id("ok").Op(":=").Id("agent").Assert(jen.Id(handlerName)),
-		jen.If(jen.Op("!").Id("ok")).Block(jen.Return(jen.Nil(), jen.Id("methodNotFound").Call(jen.Id("req").Dot("Method")))),
 		jen.If(jen.Id("req").Dot("IsCall").Call()).Block(
+			jen.Id("handler").Op(",").Id("ok").Op(":=").Id("agent").Assert(jen.Interface(handlerMethod(callOp))),
+			jen.If(jen.Op("!").Id("ok")).Block(jen.Return(jen.Nil(), jen.Id("methodNotFound").Call(jen.Id("req").Dot("Method")))),
 			jen.Id("params").Op(",").Id("err").Op(":=").Id("decodeParams").Index(jen.Id(paramType(callOp))).Call(jen.Id("req")),
 			jen.If(jen.Id("err").Op("!=").Nil()).Block(jen.Return(jen.Nil(), jen.Id("err"))),
 			jen.Return(jen.Id("rpcResult").Call(jen.Id("handler").Dot(callOp.funcName).Call(jen.Id("ctx"), jen.Id("params")))),
 		),
+		jen.Id("handler").Op(",").Id("ok").Op(":=").Id("agent").Assert(jen.Interface(handlerMethod(notifyOp))),
+		jen.If(jen.Op("!").Id("ok")).Block(jen.Return(jen.Nil(), jen.Id("methodNotFound").Call(jen.Id("req").Dot("Method")))),
 		jen.Id("params").Op(",").Id("err").Op(":=").Id("decodeParams").Index(jen.Id(paramType(notifyOp))).Call(jen.Id("req")),
 		jen.If(jen.Id("err").Op("!=").Nil()).Block(jen.Return(jen.Nil(), jen.Id("err"))),
 		jen.Return(jen.Nil(), jen.Id("handler").Dot(notifyOp.funcName).Call(jen.Id("ctx"), jen.Id("params"))),

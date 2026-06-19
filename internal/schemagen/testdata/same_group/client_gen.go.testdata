@@ -26,7 +26,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 	}
 	switch req.Method {
 	case MethodTaskRead:
-		handler, ok := c.handler.(TaskClientHandler)
+		handler, ok := c.handler.(interface {
+			ReadTask(context.Context, *ReadTaskRequest) (*ReadTaskResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -36,7 +38,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return rpcResult(handler.ReadTask(ctx, params))
 	case MethodTaskWrite:
-		handler, ok := c.handler.(TaskClientHandler)
+		handler, ok := c.handler.(interface {
+			WriteTask(context.Context, *WriteTaskRequest) (*WriteTaskResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}

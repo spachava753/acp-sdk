@@ -40,7 +40,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 	}
 	switch req.Method {
 	case MethodAlphaStart:
-		handler, ok := agent.(AlphaHandler)
+		handler, ok := agent.(interface {
+			StartAlpha(context.Context, *StartAlphaRequest) (*StartAlphaResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -50,7 +52,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.StartAlpha(ctx, params))
 	case MethodBetaStop:
-		handler, ok := agent.(BetaHandler)
+		handler, ok := agent.(interface {
+			StopBeta(context.Context, *StopBetaRequest) (*StopBetaResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}

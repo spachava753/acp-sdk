@@ -467,7 +467,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 	}
 	switch req.Method {
 	case MethodElicitationComplete:
-		handler, ok := c.handler.(ElicitationClientHandler)
+		handler, ok := c.handler.(interface {
+			Complete(context.Context, *CompleteElicitationNotification) error
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -477,7 +479,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return nil, handler.Complete(ctx, params)
 	case MethodElicitationCreate:
-		handler, ok := c.handler.(ElicitationClientHandler)
+		handler, ok := c.handler.(interface {
+			CreateElicitation(context.Context, *CreateElicitationRequest) (*CreateElicitationResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -487,7 +491,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return rpcResult(handler.CreateElicitation(ctx, params))
 	case MethodFsReadTextFile:
-		handler, ok := c.handler.(FsClientHandler)
+		handler, ok := c.handler.(interface {
+			ReadTextFile(context.Context, *ReadTextFileRequest) (*ReadTextFileResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -497,7 +503,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return rpcResult(handler.ReadTextFile(ctx, params))
 	case MethodFsWriteTextFile:
-		handler, ok := c.handler.(FsClientHandler)
+		handler, ok := c.handler.(interface {
+			WriteTextFile(context.Context, *WriteTextFileRequest) (*WriteTextFileResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -507,7 +515,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return rpcResult(handler.WriteTextFile(ctx, params))
 	case MethodMcpConnect:
-		handler, ok := c.handler.(McpClientHandler)
+		handler, ok := c.handler.(interface {
+			ConnectMcp(context.Context, *ConnectMcpRequest) (*ConnectMcpResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -517,7 +527,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return rpcResult(handler.ConnectMcp(ctx, params))
 	case MethodMcpDisconnect:
-		handler, ok := c.handler.(McpClientHandler)
+		handler, ok := c.handler.(interface {
+			DisconnectMcp(context.Context, *DisconnectMcpRequest) (*DisconnectMcpResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -527,16 +539,24 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return rpcResult(handler.DisconnectMcp(ctx, params))
 	case MethodMcpMessage:
-		handler, ok := c.handler.(McpClientHandler)
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
 		if req.IsCall() {
+			handler, ok := c.handler.(interface {
+				MessageMcp(context.Context, *MessageMcpRequest) (*MessageMcpResponse, error)
+			})
+			if !ok {
+				return nil, methodNotFound(req.Method)
+			}
 			params, err := decodeParams[MessageMcpRequest](req)
 			if err != nil {
 				return nil, err
 			}
 			return rpcResult(handler.MessageMcp(ctx, params))
+		}
+		handler, ok := c.handler.(interface {
+			Message(context.Context, *MessageMcpNotification) error
+		})
+		if !ok {
+			return nil, methodNotFound(req.Method)
 		}
 		params, err := decodeParams[MessageMcpNotification](req)
 		if err != nil {
@@ -544,7 +564,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return nil, handler.Message(ctx, params)
 	case MethodSessionRequestPermission:
-		handler, ok := c.handler.(SessionClientHandler)
+		handler, ok := c.handler.(interface {
+			RequestPermission(context.Context, *RequestPermissionRequest) (*RequestPermissionResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -554,7 +576,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return rpcResult(handler.RequestPermission(ctx, params))
 	case MethodSessionUpdate:
-		handler, ok := c.handler.(SessionClientHandler)
+		handler, ok := c.handler.(interface {
+			Update(context.Context, *SessionNotification) error
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -564,7 +588,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return nil, handler.Update(ctx, params)
 	case MethodTerminalCreate:
-		handler, ok := c.handler.(TerminalClientHandler)
+		handler, ok := c.handler.(interface {
+			CreateTerminal(context.Context, *CreateTerminalRequest) (*CreateTerminalResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -574,7 +600,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return rpcResult(handler.CreateTerminal(ctx, params))
 	case MethodTerminalKill:
-		handler, ok := c.handler.(TerminalClientHandler)
+		handler, ok := c.handler.(interface {
+			KillTerminal(context.Context, *KillTerminalRequest) (*KillTerminalResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -584,7 +612,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return rpcResult(handler.KillTerminal(ctx, params))
 	case MethodTerminalOutput:
-		handler, ok := c.handler.(TerminalClientHandler)
+		handler, ok := c.handler.(interface {
+			TerminalOutput(context.Context, *TerminalOutputRequest) (*TerminalOutputResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -594,7 +624,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return rpcResult(handler.TerminalOutput(ctx, params))
 	case MethodTerminalRelease:
-		handler, ok := c.handler.(TerminalClientHandler)
+		handler, ok := c.handler.(interface {
+			ReleaseTerminal(context.Context, *ReleaseTerminalRequest) (*ReleaseTerminalResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -604,7 +636,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return rpcResult(handler.ReleaseTerminal(ctx, params))
 	case MethodTerminalWaitForExit:
-		handler, ok := c.handler.(TerminalClientHandler)
+		handler, ok := c.handler.(interface {
+			WaitForTerminalExit(context.Context, *WaitForTerminalExitRequest) (*WaitForTerminalExitResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}

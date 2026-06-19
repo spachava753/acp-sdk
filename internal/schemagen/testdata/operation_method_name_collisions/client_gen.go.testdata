@@ -22,7 +22,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 	}
 	switch req.Method {
 	case MethodChatSendMessage:
-		handler, ok := c.handler.(ChatClientHandler)
+		handler, ok := c.handler.(interface {
+			SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -32,7 +34,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return rpcResult(handler.SendMessage(ctx, params))
 	case MethodChatSendMessage2:
-		handler, ok := c.handler.(ChatClientHandler)
+		handler, ok := c.handler.(interface {
+			SendMessageAlt(context.Context, *SendMessageAltRequest) (*SendMessageAltResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}

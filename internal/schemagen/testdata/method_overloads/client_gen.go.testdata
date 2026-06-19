@@ -26,16 +26,24 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 	}
 	switch req.Method {
 	case MethodMcpMessage:
-		handler, ok := c.handler.(McpClientHandler)
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
 		if req.IsCall() {
+			handler, ok := c.handler.(interface {
+				MessageMcp(context.Context, *MessageMcpRequest) (*MessageMcpResponse, error)
+			})
+			if !ok {
+				return nil, methodNotFound(req.Method)
+			}
 			params, err := decodeParams[MessageMcpRequest](req)
 			if err != nil {
 				return nil, err
 			}
 			return rpcResult(handler.MessageMcp(ctx, params))
+		}
+		handler, ok := c.handler.(interface {
+			Message(context.Context, *MessageMcpNotification) error
+		})
+		if !ok {
+			return nil, methodNotFound(req.Method)
 		}
 		params, err := decodeParams[MessageMcpNotification](req)
 		if err != nil {

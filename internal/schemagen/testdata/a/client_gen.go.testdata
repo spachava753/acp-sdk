@@ -26,7 +26,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 	}
 	switch req.Method {
 	case MethodGroupClientMethod:
-		handler, ok := c.handler.(GroupClientHandler)
+		handler, ok := c.handler.(interface {
+			ClientMethod(context.Context, *ClientMethodRequest) (*ClientMethodResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -36,7 +38,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return rpcResult(handler.ClientMethod(ctx, params))
 	case MethodGroupClientNotify:
-		handler, ok := c.handler.(GroupClientHandler)
+		handler, ok := c.handler.(interface {
+			ClientNotify(context.Context, *ClientMethodNotification) error
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}

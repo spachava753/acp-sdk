@@ -31,16 +31,24 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 	}
 	switch req.Method {
 	case MethodMcpMessage:
-		handler, ok := agent.(McpHandler)
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
 		if req.IsCall() {
+			handler, ok := agent.(interface {
+				MessageMcp(context.Context, *MessageMcpRequest) (*MessageMcpResponse, error)
+			})
+			if !ok {
+				return nil, methodNotFound(req.Method)
+			}
 			params, err := decodeParams[MessageMcpRequest](req)
 			if err != nil {
 				return nil, err
 			}
 			return rpcResult(handler.MessageMcp(ctx, params))
+		}
+		handler, ok := agent.(interface {
+			Message(context.Context, *MessageMcpNotification) error
+		})
+		if !ok {
+			return nil, methodNotFound(req.Method)
 		}
 		params, err := decodeParams[MessageMcpNotification](req)
 		if err != nil {

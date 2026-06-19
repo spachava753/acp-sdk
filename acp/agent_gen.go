@@ -763,7 +763,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 	}
 	switch req.Method {
 	case MethodAuthenticate:
-		handler, ok := agent.(AuthenticateHandler)
+		handler, ok := agent.(interface {
+			Authenticate(context.Context, *AuthenticateRequest) (*AuthenticateResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -773,7 +775,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.Authenticate(ctx, params))
 	case MethodDocumentDidChange:
-		handler, ok := agent.(DocumentHandler)
+		handler, ok := agent.(interface {
+			DidChange(context.Context, *DidChangeDocumentNotification) error
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -783,7 +787,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return nil, handler.DidChange(ctx, params)
 	case MethodDocumentDidClose:
-		handler, ok := agent.(DocumentHandler)
+		handler, ok := agent.(interface {
+			DidClose(context.Context, *DidCloseDocumentNotification) error
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -793,7 +799,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return nil, handler.DidClose(ctx, params)
 	case MethodDocumentDidFocus:
-		handler, ok := agent.(DocumentHandler)
+		handler, ok := agent.(interface {
+			DidFocus(context.Context, *DidFocusDocumentNotification) error
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -803,7 +811,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return nil, handler.DidFocus(ctx, params)
 	case MethodDocumentDidOpen:
-		handler, ok := agent.(DocumentHandler)
+		handler, ok := agent.(interface {
+			DidOpen(context.Context, *DidOpenDocumentNotification) error
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -813,7 +823,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return nil, handler.DidOpen(ctx, params)
 	case MethodDocumentDidSave:
-		handler, ok := agent.(DocumentHandler)
+		handler, ok := agent.(interface {
+			DidSave(context.Context, *DidSaveDocumentNotification) error
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -823,7 +835,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return nil, handler.DidSave(ctx, params)
 	case MethodInitialize:
-		handler, ok := agent.(InitializeHandler)
+		handler, ok := agent.(interface {
+			Initialize(context.Context, *InitializeRequest) (*InitializeResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -833,7 +847,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.Initialize(ctx, params))
 	case MethodLogout:
-		handler, ok := agent.(LogoutHandler)
+		handler, ok := agent.(interface {
+			Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -843,16 +859,24 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.Logout(ctx, params))
 	case MethodMcpMessage:
-		handler, ok := agent.(McpHandler)
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
 		if req.IsCall() {
+			handler, ok := agent.(interface {
+				MessageMcp(context.Context, *MessageMcpRequest) (*MessageMcpResponse, error)
+			})
+			if !ok {
+				return nil, methodNotFound(req.Method)
+			}
 			params, err := decodeParams[MessageMcpRequest](req)
 			if err != nil {
 				return nil, err
 			}
 			return rpcResult(handler.MessageMcp(ctx, params))
+		}
+		handler, ok := agent.(interface {
+			Message(context.Context, *MessageMcpNotification) error
+		})
+		if !ok {
+			return nil, methodNotFound(req.Method)
 		}
 		params, err := decodeParams[MessageMcpNotification](req)
 		if err != nil {
@@ -860,7 +884,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return nil, handler.Message(ctx, params)
 	case MethodNesAccept:
-		handler, ok := agent.(NesHandler)
+		handler, ok := agent.(interface {
+			Accept(context.Context, *AcceptNesNotification) error
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -870,7 +896,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return nil, handler.Accept(ctx, params)
 	case MethodNesClose:
-		handler, ok := agent.(NesHandler)
+		handler, ok := agent.(interface {
+			CloseNes(context.Context, *CloseNesRequest) (*CloseNesResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -880,7 +908,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.CloseNes(ctx, params))
 	case MethodNesReject:
-		handler, ok := agent.(NesHandler)
+		handler, ok := agent.(interface {
+			Reject(context.Context, *RejectNesNotification) error
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -890,7 +920,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return nil, handler.Reject(ctx, params)
 	case MethodNesStart:
-		handler, ok := agent.(NesHandler)
+		handler, ok := agent.(interface {
+			StartNes(context.Context, *StartNesRequest) (*StartNesResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -900,7 +932,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.StartNes(ctx, params))
 	case MethodNesSuggest:
-		handler, ok := agent.(NesHandler)
+		handler, ok := agent.(interface {
+			SuggestNes(context.Context, *SuggestNesRequest) (*SuggestNesResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -910,7 +944,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.SuggestNes(ctx, params))
 	case MethodProvidersDisable:
-		handler, ok := agent.(ProvidersHandler)
+		handler, ok := agent.(interface {
+			DisableProvider(context.Context, *DisableProviderRequest) (*DisableProviderResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -920,7 +956,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.DisableProvider(ctx, params))
 	case MethodProvidersList:
-		handler, ok := agent.(ProvidersHandler)
+		handler, ok := agent.(interface {
+			ListProviders(context.Context, *ListProvidersRequest) (*ListProvidersResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -930,7 +968,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.ListProviders(ctx, params))
 	case MethodProvidersSet:
-		handler, ok := agent.(ProvidersHandler)
+		handler, ok := agent.(interface {
+			SetProvider(context.Context, *SetProviderRequest) (*SetProviderResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -940,7 +980,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.SetProvider(ctx, params))
 	case MethodSessionCancel:
-		handler, ok := agent.(SessionHandler)
+		handler, ok := agent.(interface {
+			Cancel(context.Context, *CancelNotification) error
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -950,7 +992,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return nil, handler.Cancel(ctx, params)
 	case MethodSessionClose:
-		handler, ok := agent.(SessionHandler)
+		handler, ok := agent.(interface {
+			CloseSession(context.Context, *CloseSessionRequest) (*CloseSessionResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -960,7 +1004,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.CloseSession(ctx, params))
 	case MethodSessionDelete:
-		handler, ok := agent.(SessionHandler)
+		handler, ok := agent.(interface {
+			DeleteSession(context.Context, *DeleteSessionRequest) (*DeleteSessionResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -970,7 +1016,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.DeleteSession(ctx, params))
 	case MethodSessionFork:
-		handler, ok := agent.(SessionHandler)
+		handler, ok := agent.(interface {
+			ForkSession(context.Context, *ForkSessionRequest) (*ForkSessionResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -980,7 +1028,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.ForkSession(ctx, params))
 	case MethodSessionList:
-		handler, ok := agent.(SessionHandler)
+		handler, ok := agent.(interface {
+			ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -990,7 +1040,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.ListSessions(ctx, params))
 	case MethodSessionLoad:
-		handler, ok := agent.(SessionHandler)
+		handler, ok := agent.(interface {
+			LoadSession(context.Context, *LoadSessionRequest) (*LoadSessionResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -1000,7 +1052,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.LoadSession(ctx, params))
 	case MethodSessionNew:
-		handler, ok := agent.(SessionHandler)
+		handler, ok := agent.(interface {
+			NewSession(context.Context, *NewSessionRequest) (*NewSessionResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -1010,7 +1064,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.NewSession(ctx, params))
 	case MethodSessionPrompt:
-		handler, ok := agent.(SessionHandler)
+		handler, ok := agent.(interface {
+			Prompt(context.Context, *PromptRequest) (*PromptResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -1020,7 +1076,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.Prompt(ctx, params))
 	case MethodSessionResume:
-		handler, ok := agent.(SessionHandler)
+		handler, ok := agent.(interface {
+			ResumeSession(context.Context, *ResumeSessionRequest) (*ResumeSessionResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -1030,7 +1088,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.ResumeSession(ctx, params))
 	case MethodSessionSetConfigOption:
-		handler, ok := agent.(SessionHandler)
+		handler, ok := agent.(interface {
+			SetSessionConfigOption(context.Context, *SetSessionConfigOptionRequest) (*SetSessionConfigOptionResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -1040,7 +1100,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.SetSessionConfigOption(ctx, params))
 	case MethodSessionSetMode:
-		handler, ok := agent.(SessionHandler)
+		handler, ok := agent.(interface {
+			SetSessionMode(context.Context, *SetSessionModeRequest) (*SetSessionModeResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}

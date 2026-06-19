@@ -29,7 +29,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 	}
 	switch req.Method {
 	case MethodDeltaWrite:
-		handler, ok := c.handler.(DeltaClientHandler)
+		handler, ok := c.handler.(interface {
+			WriteDelta(context.Context, *WriteDeltaRequest) (*WriteDeltaResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -39,7 +41,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return rpcResult(handler.WriteDelta(ctx, params))
 	case MethodGammaRead:
-		handler, ok := c.handler.(GammaClientHandler)
+		handler, ok := c.handler.(interface {
+			ReadGamma(context.Context, *ReadGammaRequest) (*ReadGammaResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}

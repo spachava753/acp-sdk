@@ -23,7 +23,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 	}
 	switch req.Method {
 	case MethodMcpMessage:
-		handler, ok := agent.(McpHandler)
+		handler, ok := agent.(interface {
+			Message(context.Context, *MessageRequest) (*MessageResponse, error)
+		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
