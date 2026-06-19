@@ -132,7 +132,7 @@ func TestContentBlockWireShapes(t *testing.T) {
 				Resource: EmbeddedResourceResource{
 					URI:      "file:///repo/main.go",
 					MimeType: ptr("text/x-go"),
-					Text:     "package main\n",
+					Text:     ptr("package main\n"),
 				},
 			},
 			want: `{"type":"resource","resource":{"uri":"file:///repo/main.go","mimeType":"text/x-go","text":"package main\n"}}`,

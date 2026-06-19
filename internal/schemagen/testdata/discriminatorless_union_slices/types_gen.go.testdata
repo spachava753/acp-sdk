@@ -4,7 +4,7 @@ import "encoding/json"
 
 // Items: Untagged item options with required slice fields.
 type Items struct {
-	Mode    string         `json:"mode,omitempty"`
+	Mode    *string        `json:"mode,omitempty"`
 	Options []TitledOption `json:"options,omitempty"`
 	Values  []string       `json:"values,omitempty"`
 }
@@ -15,7 +15,7 @@ func NewPlainItems(mode string, values []string) Items {
 		values = []string{}
 	}
 	return Items{
-		Mode:   mode,
+		Mode:   &mode,
 		Values: values,
 	}
 }

@@ -1150,9 +1150,9 @@ type ElicitationFormCapabilities struct {
 //
 // Form-based elicitation mode where the client renders a form from the provided schema.
 type ElicitationFormMode struct {
-	RequestID       RequestId         `json:"requestId,omitempty"`
+	RequestID       *RequestId        `json:"requestId,omitempty"`
 	RequestedSchema ElicitationSchema `json:"requestedSchema"`
-	SessionID       SessionId         `json:"sessionId,omitempty"`
+	SessionID       *SessionId        `json:"sessionId,omitempty"`
 	ToolCallID      *ToolCallId       `json:"toolCallId,omitempty"`
 }
 
@@ -1160,7 +1160,7 @@ type ElicitationFormMode struct {
 func SessionElicitationFormMode(requestedSchema ElicitationSchema, sessionID SessionId) ElicitationFormMode {
 	return ElicitationFormMode{
 		RequestedSchema: requestedSchema,
-		SessionID:       sessionID,
+		SessionID:       &sessionID,
 	}
 }
 
@@ -1168,7 +1168,7 @@ func SessionElicitationFormMode(requestedSchema ElicitationSchema, sessionID Ses
 // (e.g., during auth/configuration phases before any session is started).
 func RequestElicitationFormMode(requestedSchema ElicitationSchema, requestID RequestId) ElicitationFormMode {
 	return ElicitationFormMode{
-		RequestID:       requestID,
+		RequestID:       &requestID,
 		RequestedSchema: requestedSchema,
 	}
 }
@@ -1340,8 +1340,8 @@ type ElicitationUrlCapabilities struct {
 // URL-based elicitation mode where the client directs the user to a URL.
 type ElicitationUrlMode struct {
 	ElicitationID ElicitationId `json:"elicitationId"`
-	RequestID     RequestId     `json:"requestId,omitempty"`
-	SessionID     SessionId     `json:"sessionId,omitempty"`
+	RequestID     *RequestId    `json:"requestId,omitempty"`
+	SessionID     *SessionId    `json:"sessionId,omitempty"`
 	ToolCallID    *ToolCallId   `json:"toolCallId,omitempty"`
 	Url           string        `json:"url"`
 }
@@ -1350,7 +1350,7 @@ type ElicitationUrlMode struct {
 func SessionElicitationUrlMode(elicitationID ElicitationId, url string, sessionID SessionId) ElicitationUrlMode {
 	return ElicitationUrlMode{
 		ElicitationID: elicitationID,
-		SessionID:     sessionID,
+		SessionID:     &sessionID,
 		Url:           url,
 	}
 }
@@ -1360,7 +1360,7 @@ func SessionElicitationUrlMode(elicitationID ElicitationId, url string, sessionI
 func RequestElicitationUrlMode(elicitationID ElicitationId, url string, requestID RequestId) ElicitationUrlMode {
 	return ElicitationUrlMode{
 		ElicitationID: elicitationID,
-		RequestID:     requestID,
+		RequestID:     &requestID,
 		Url:           url,
 	}
 }
@@ -1393,16 +1393,16 @@ func (r *EmbeddedResource) UnmarshalJSON(data []byte) error {
 // EmbeddedResourceResource: Resource content that can be embedded in a message.
 type EmbeddedResourceResource struct {
 	Meta     Meta    `json:"_meta,omitzero"`
-	Blob     string  `json:"blob,omitempty"`
+	Blob     *string `json:"blob,omitempty"`
 	MimeType *string `json:"mimeType,omitempty"`
-	Text     string  `json:"text,omitempty"`
+	Text     *string `json:"text,omitempty"`
 	URI      string  `json:"uri"`
 }
 
 // TextResourceContentsEmbeddedResourceResource creates an EmbeddedResourceResource variant:
 func TextResourceContentsEmbeddedResourceResource(text string, uri string) EmbeddedResourceResource {
 	return EmbeddedResourceResource{
-		Text: text,
+		Text: &text,
 		URI:  uri,
 	}
 }
@@ -1410,7 +1410,7 @@ func TextResourceContentsEmbeddedResourceResource(text string, uri string) Embed
 // BlobResourceContentsEmbeddedResourceResource creates an EmbeddedResourceResource variant:
 func BlobResourceContentsEmbeddedResourceResource(blob string, uri string) EmbeddedResourceResource {
 	return EmbeddedResourceResource{
-		Blob: blob,
+		Blob: &blob,
 		URI:  uri,
 	}
 }

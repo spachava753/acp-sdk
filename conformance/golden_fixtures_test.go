@@ -31,7 +31,7 @@ func goldenFixtures() map[string]goldenCase {
 			raw:    `{"type":"resource","resource":{"uri":"file:///home/user/script.py","mimeType":"text/x-python","text":"def hello():\n    print('Hello, world!')"}}`,
 			decode: func() any { return &acp.ContentBlock{} },
 			value: func() any {
-				return acp.ContentBlock{Type: acp.ContentBlockTypeResource, Resource: acp.EmbeddedResourceResource{URI: "file:///home/user/script.py", MimeType: stringPtr("text/x-python"), Text: "def hello():\n    print('Hello, world!')"}}
+				return acp.ContentBlock{Type: acp.ContentBlockTypeResource, Resource: acp.EmbeddedResourceResource{URI: "file:///home/user/script.py", MimeType: stringPtr("text/x-python"), Text: stringPtr("def hello():\n    print('Hello, world!')")}}
 			},
 		},
 		"content_text": {
@@ -102,7 +102,7 @@ func goldenFixtures() map[string]goldenCase {
 			raw:    `{"sessionId":"sess_abc123def456","prompt":[{"type":"text","text":"Can you analyze this code for potential issues?"},{"type":"resource","resource":{"uri":"file:///home/user/project/main.py","mimeType":"text/x-python","text":"def process_data(items):\n    for item in items:\n        print(item)"}}]}`,
 			decode: func() any { return &acp.PromptRequest{} },
 			value: func() any {
-				return acp.PromptRequest{SessionID: sess, Prompt: []acp.ContentBlock{{Type: acp.ContentBlockTypeText, Text: "Can you analyze this code for potential issues?"}, {Type: acp.ContentBlockTypeResource, Resource: acp.EmbeddedResourceResource{URI: "file:///home/user/project/main.py", MimeType: stringPtr("text/x-python"), Text: "def process_data(items):\n    for item in items:\n        print(item)"}}}}
+				return acp.PromptRequest{SessionID: sess, Prompt: []acp.ContentBlock{{Type: acp.ContentBlockTypeText, Text: "Can you analyze this code for potential issues?"}, {Type: acp.ContentBlockTypeResource, Resource: acp.EmbeddedResourceResource{URI: "file:///home/user/project/main.py", MimeType: stringPtr("text/x-python"), Text: stringPtr("def process_data(items):\n    for item in items:\n        print(item)")}}}}
 			},
 		},
 		"request_permission_request": {

@@ -1,0 +1,42 @@
+package acp
+
+// Choice: Untagged union with branch-required zero-value fields.
+type Choice struct {
+	Count   *int64   `json:"count,omitempty"`
+	Enabled *bool    `json:"enabled,omitempty"`
+	Payload *Payload `json:"payload,omitempty,omitzero"`
+	Text    *string  `json:"text,omitempty"`
+}
+
+// TextChoice creates text branch with a required string.
+func TextChoice(text string) Choice {
+	return Choice{
+		Text: &text,
+	}
+}
+
+// FlagChoice creates flag branch with a required boolean.
+func FlagChoice(enabled bool) Choice {
+	return Choice{
+		Enabled: &enabled,
+	}
+}
+
+// CountChoice creates count branch with a required integer.
+func CountChoice(count int64) Choice {
+	return Choice{
+		Count: &count,
+	}
+}
+
+// PayloadChoice creates payload branch with a required object.
+func PayloadChoice(payload Payload) Choice {
+	return Choice{
+		Payload: &payload,
+	}
+}
+
+// Payload: Payload object.
+type Payload struct {
+	ID string `json:"id"`
+}

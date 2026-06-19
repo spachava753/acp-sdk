@@ -72,9 +72,9 @@ func (r CreatePromptRequest) MarshalJSON() ([]byte, error) {
 
 // FormMode: Form mode with a nested session-or-request scope.
 type FormMode struct {
-	RequestID  string  `json:"requestId,omitempty"`
+	RequestID  *string `json:"requestId,omitempty"`
 	Schema     string  `json:"schema"`
-	SessionID  string  `json:"sessionId,omitempty"`
+	SessionID  *string `json:"sessionId,omitempty"`
 	ToolCallID *string `json:"toolCallId,omitempty"`
 }
 
@@ -82,14 +82,14 @@ type FormMode struct {
 func SessionFormMode(schema string, sessionID string) FormMode {
 	return FormMode{
 		Schema:    schema,
-		SessionID: sessionID,
+		SessionID: &sessionID,
 	}
 }
 
 // RequestFormMode creates an FormMode variant: Request scope.
 func RequestFormMode(schema string, requestID string) FormMode {
 	return FormMode{
-		RequestID: requestID,
+		RequestID: &requestID,
 		Schema:    schema,
 	}
 }
@@ -107,8 +107,8 @@ type SessionScope struct {
 
 // UrlMode: URL mode with a nested session-or-request scope.
 type UrlMode struct {
-	RequestID  string  `json:"requestId,omitempty"`
-	SessionID  string  `json:"sessionId,omitempty"`
+	RequestID  *string `json:"requestId,omitempty"`
+	SessionID  *string `json:"sessionId,omitempty"`
 	ToolCallID *string `json:"toolCallId,omitempty"`
 	Url        string  `json:"url"`
 }
@@ -116,7 +116,7 @@ type UrlMode struct {
 // SessionUrlMode creates an UrlMode variant: Session scope.
 func SessionUrlMode(url string, sessionID string) UrlMode {
 	return UrlMode{
-		SessionID: sessionID,
+		SessionID: &sessionID,
 		Url:       url,
 	}
 }
@@ -124,7 +124,7 @@ func SessionUrlMode(url string, sessionID string) UrlMode {
 // RequestUrlMode creates an UrlMode variant: Request scope.
 func RequestUrlMode(url string, requestID string) UrlMode {
 	return UrlMode{
-		RequestID: requestID,
+		RequestID: &requestID,
 		Url:       url,
 	}
 }

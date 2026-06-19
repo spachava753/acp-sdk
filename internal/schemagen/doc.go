@@ -146,12 +146,15 @@
 // variant. Required slice fields on that default variant still need the same
 // nil-as-empty-array marshal handling as const-tagged variants.
 //
-// Untagged flattened unions can also have variant-required slice fields. Without
-// a discriminator, the marshaler cannot infer a variant from a nil slice alone,
-// so constructors for those variants should normalize nil required-slice
-// arguments to empty slices. The union MarshalJSON method should then preserve
-// non-nil empty slices by overlaying pointer fields, avoiding omitempty dropping
-// a selected empty array.
+// Untagged flattened unions can also have variant-required fields. Without a
+// discriminator, the marshaler cannot infer a variant from a zero scalar or a
+// nil slice alone. Branch-specific required scalar/object fields should use
+// pointer fields so constructors can record presence while still accepting value
+// parameters. Required slice fields keep value-slice fields, but constructors
+// for those variants should normalize nil required-slice arguments to empty
+// slices. The union MarshalJSON method should then preserve non-nil empty slices
+// by overlaying pointer fields, avoiding omitempty dropping a selected empty
+// array.
 //
 // Primitive const unions with a single scalar kind and an open fallback branch,
 // such as LlmProtocol or ErrorCode, should be represented as named primitive

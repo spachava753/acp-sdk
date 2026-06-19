@@ -32,7 +32,7 @@ func TestBinaryContentMarshalsAsBase64Strings(t *testing.T) {
 			in: acp.ContentBlock{Type: acp.ContentBlockTypeResource, Resource: acp.EmbeddedResourceResource{
 				URI:      "file:///data.bin",
 				MimeType: stringPtr("application/octet-stream"),
-				Blob:     "BwgJ",
+				Blob:     stringPtr("BwgJ"),
 			}},
 			want: `{"type":"resource","resource":{"uri":"file:///data.bin","mimeType":"application/octet-stream","blob":"BwgJ"}}`,
 		},

@@ -73,6 +73,7 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 	}
 
 	var requiredMarshalFields []unionRequiredMarshalField
+	discriminatorlessPresenceFields := map[string]bool{}
 	for _, branch := range branches {
 		value, _ := variantConst(defs, branch, discriminator)
 		branchRequired := variantRequired(defs, branch)
@@ -88,6 +89,8 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 				switch {
 				case strings.HasPrefix(text, "[]"):
 					requiredMarshalFields = append(requiredMarshalFields, unionRequiredMarshalField{discriminatorValue: value, field: field, kind: unionRequiredSliceField})
+				case discriminator == "" && needsDiscriminatorlessPresencePointer(defs, prop, text):
+					discriminatorlessPresenceFields[jsonName] = true
 				case discriminator != "" && !strings.HasPrefix(text, "*") && constructorArrayUnionSchema(defs, prop) != nil:
 					requiredMarshalFields = append(requiredMarshalFields, unionRequiredMarshalField{discriminatorValue: value, field: field, kind: unionRequiredArrayUnionField})
 				case discriminator != "":
@@ -118,6 +121,18 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 	for _, jsonName := range fieldOrder {
 		field := fieldsByJSON[jsonName]
 		field.goName = goNames[jsonName]
+		fieldsByJSON[jsonName] = field
+	}
+	for jsonName := range discriminatorlessPresenceFields {
+		if isRequiredInAllVariants(parentRequired, requiredCount, jsonName, len(branches)) {
+			continue
+		}
+		field := fieldsByJSON[jsonName]
+		if field.typeText == "" || strings.HasPrefix(field.typeText, "*") {
+			continue
+		}
+		field.typeCode = jen.Op("*").Add(field.typeCode)
+		field.typeText = "*" + field.typeText
 		fieldsByJSON[jsonName] = field
 	}
 	filteredRequiredMarshalFields := requiredMarshalFields[:0]
@@ -701,6 +716,14 @@ func schemaKind(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) s
 		return schemaKind(defs, nonNull)
 	}
 	return schemaTypeName(schema)
+}
+
+func needsDiscriminatorlessPresencePointer(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema, typeText string) bool {
+	if typeText == "" || strings.HasPrefix(typeText, "*") || strings.HasPrefix(typeText, "[]") {
+		return false
+	}
+	_, constField := constructorConstFieldName(defs, schema)
+	return !constField
 }
 
 func assignUnionField(fieldType, paramType, paramName string) jen.Code {

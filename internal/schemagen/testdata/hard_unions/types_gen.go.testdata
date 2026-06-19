@@ -209,21 +209,21 @@ type PlainRight struct {
 
 // PlainUnion: Titled referenced object union without a const discriminator.
 type PlainUnion struct {
-	Left  string `json:"left,omitempty"`
-	Right string `json:"right,omitempty"`
+	Left  *string `json:"left,omitempty"`
+	Right *string `json:"right,omitempty"`
 }
 
 // LeftPlainUnion creates an PlainUnion variant: Left branch.
 func LeftPlainUnion(left string) PlainUnion {
 	return PlainUnion{
-		Left: left,
+		Left: &left,
 	}
 }
 
 // RightPlainUnion creates an PlainUnion variant: Right branch.
 func RightPlainUnion(right string) PlainUnion {
 	return PlainUnion{
-		Right: right,
+		Right: &right,
 	}
 }
 
