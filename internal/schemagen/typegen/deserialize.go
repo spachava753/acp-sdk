@@ -270,6 +270,9 @@ func deserializeUnmarshalCode(name string, fields []deserializeField) (jen.Code,
 
 func deserializeFieldUnmarshalCode(field deserializeField) jen.Code {
 	if field.skipInvalidItems && field.itemTypeCode != nil {
+		if field.typeText == "any" {
+			return jen.If(jen.Len(jen.Id("raw").Dot(field.goName)).Op(">").Lit(0)).Block(skipInvalidAnyItemsCode(field)...)
+		}
 		if pointer, ok := skipInvalidItemsTarget(field); ok {
 			return jen.If(jen.Len(jen.Id("raw").Dot(field.goName)).Op(">").Lit(0)).Block(skipInvalidItemsCode(field, pointer)...)
 		}
@@ -341,6 +344,33 @@ func skipInvalidItemsCode(field deserializeField, pointer bool) []jen.Code {
 	return []jen.Code{
 		jen.Var().Id("values").Index().Qual("encoding/json", "RawMessage"),
 		jen.If(jen.Err().Op(":=").Qual("encoding/json", "Unmarshal").Call(jen.Id("raw").Dot(field.goName), jen.Op("&").Id("values")), jen.Err().Op("!=").Nil()).Block(jen.Return(jen.Err())).Else().Block(decodeValues...),
+	}
+}
+
+func skipInvalidAnyItemsCode(field deserializeField) []jen.Code {
+	fallback := []jen.Code{
+		jen.Id("_").Op("=").Qual("encoding/json", "Unmarshal").Call(jen.Id("raw").Dot(field.goName), jen.Op("&").Id("decoded").Dot(field.goName)),
+	}
+	if !field.defaultOnError {
+		fallback = []jen.Code{
+			jen.If(jen.Err().Op(":=").Qual("encoding/json", "Unmarshal").Call(jen.Id("raw").Dot(field.goName), jen.Op("&").Id("decoded").Dot(field.goName)), jen.Err().Op("!=").Nil()).Block(jen.Return(jen.Err())),
+		}
+	}
+	return []jen.Code{
+		jen.Var().Id("values").Index().Qual("encoding/json", "RawMessage"),
+		jen.If(jen.Err().Op(":=").Qual("encoding/json", "Unmarshal").Call(jen.Id("raw").Dot(field.goName), jen.Op("&").Id("values")), jen.Err().Op("==").Nil().Op("&&").Id("values").Op("!=").Nil()).Block(skipInvalidAnyItemsDecodeValues(field)...).Else().Block(fallback...),
+	}
+}
+
+func skipInvalidAnyItemsDecodeValues(field deserializeField) []jen.Code {
+	appendItem := jen.Id("items").Op("=").Append(jen.Id("items"), jen.Id("item"))
+	return []jen.Code{
+		jen.Id("items").Op(":=").Index().Add(field.itemTypeCode).Values(),
+		jen.For(jen.List(jen.Id("_"), jen.Id("value")).Op(":=").Range().Id("values")).Block(
+			jen.Var().Id("item").Add(field.itemTypeCode),
+			skipInvalidItemDecodeCode(field, appendItem),
+		),
+		jen.Id("decoded").Dot(field.goName).Op("=").Id("items"),
 	}
 }
 

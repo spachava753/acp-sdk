@@ -1,0 +1,152 @@
+package acp
+
+import (
+	"encoding/json"
+	"reflect"
+)
+
+// TextPayload: Message payload.
+type TextPayload struct {
+	Text string `json:"text"`
+}
+
+// ToolContent: Tool content item.
+type ToolContent struct {
+	Type       ToolContentType `json:"type"`
+	TerminalID string          `json:"terminalId,omitempty"`
+	Text       string          `json:"text,omitempty"`
+}
+
+// ToolContentType is the discriminator for ToolContent variants.
+type ToolContentType string
+
+const (
+	ToolContentTypeText     ToolContentType = "text"
+	ToolContentTypeTerminal ToolContentType = "terminal"
+)
+
+// TextToolContent creates text item.
+func TextToolContent(text string) ToolContent {
+	return ToolContent{
+		Type: ToolContentTypeText,
+		Text: text,
+	}
+}
+
+// TerminalToolContent creates terminal item.
+func TerminalToolContent(terminalID string) ToolContent {
+	return ToolContent{
+		Type:       ToolContentTypeTerminal,
+		TerminalID: terminalID,
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (c ToolContent) MarshalJSON() ([]byte, error) {
+	type alias ToolContent
+	type wire struct {
+		*alias
+		Text       *string `json:"text,omitempty"`
+		TerminalID *string `json:"terminalId,omitempty"`
+	}
+	w := wire{alias: (*alias)(&c)}
+	if !reflect.ValueOf(c.Text).IsZero() {
+		Text := c.Text
+		w.Text = &Text
+	}
+	if !reflect.ValueOf(c.TerminalID).IsZero() {
+		TerminalID := c.TerminalID
+		w.TerminalID = &TerminalID
+	}
+	switch c.Type {
+	case ToolContentTypeText:
+		Text := c.Text
+		w.Text = &Text
+	case ToolContentTypeTerminal:
+		TerminalID := c.TerminalID
+		w.TerminalID = &TerminalID
+	}
+	return json.Marshal(w)
+}
+
+// Update: Update union with a shared field that merges to any.
+type Update struct {
+	Kind    UpdateType `json:"kind"`
+	Payload any        `json:"payload,omitempty,omitzero"`
+}
+
+// UpdateType is the discriminator for Update variants.
+type UpdateType string
+
+const (
+	UpdateTypeMessage UpdateType = "message"
+	UpdateTypeTool    UpdateType = "tool"
+)
+
+// MessageUpdate creates message update with an object payload.
+func MessageUpdate(payload TextPayload) Update {
+	return Update{
+		Kind:    UpdateTypeMessage,
+		Payload: payload,
+	}
+}
+
+// ToolUpdate creates tool update with tolerant array payload.
+func ToolUpdate() Update {
+	return Update{
+		Kind: UpdateTypeTool,
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (u Update) MarshalJSON() ([]byte, error) {
+	type alias Update
+	type wire struct {
+		*alias
+		Payload *any `json:"payload,omitempty"`
+	}
+	w := wire{alias: (*alias)(&u)}
+	if u.Payload != nil {
+		Payload := u.Payload
+		w.Payload = &Payload
+	}
+	switch u.Kind {
+	case UpdateTypeMessage:
+		Payload := u.Payload
+		w.Payload = &Payload
+	}
+	return json.Marshal(w)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *Update) UnmarshalJSON(data []byte) error {
+	type alias Update
+	decoded := alias{}
+	raw := struct {
+		Payload json.RawMessage `json:"payload"`
+		*alias
+	}{alias: &decoded}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Payload) > 0 {
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Payload, &values); err == nil && values != nil {
+			items := []ToolContent{}
+			for _, value := range values {
+				var item ToolContent
+				if err := json.Unmarshal(value, &item); err == nil {
+					switch item.Type {
+					case ToolContentTypeText, ToolContentTypeTerminal:
+						items = append(items, item)
+					}
+				}
+			}
+			decoded.Payload = items
+		} else {
+			_ = json.Unmarshal(raw.Payload, &decoded.Payload)
+		}
+	}
+	*u = Update(decoded)
+	return nil
+}

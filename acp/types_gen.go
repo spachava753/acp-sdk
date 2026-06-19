@@ -4490,7 +4490,22 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.Content) > 0 {
-		_ = json.Unmarshal(raw.Content, &decoded.Content)
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Content, &values); err == nil && values != nil {
+			items := []ToolCallContent{}
+			for _, value := range values {
+				var item ToolCallContent
+				if err := json.Unmarshal(value, &item); err == nil {
+					switch item.Type {
+					case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
+						items = append(items, item)
+					}
+				}
+			}
+			decoded.Content = items
+		} else {
+			_ = json.Unmarshal(raw.Content, &decoded.Content)
+		}
 	}
 	if len(raw.Cost) > 0 {
 		_ = json.Unmarshal(raw.Cost, &decoded.Cost)

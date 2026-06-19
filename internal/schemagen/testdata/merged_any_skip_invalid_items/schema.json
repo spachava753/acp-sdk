@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Merged Any Skip Invalid Items",
+  "$defs": {
+    "Update": {
+      "description": "Update union with a shared field that merges to any.",
+      "oneOf": [
+        {
+          "description": "Message update with an object payload.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "message"
+            },
+            "payload": {
+              "$ref": "#/$defs/TextPayload"
+            }
+          },
+          "required": ["kind", "payload"]
+        },
+        {
+          "description": "Tool update with tolerant array payload.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "tool"
+            },
+            "payload": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ToolContent"
+              },
+              "x-deserialize-default-on-error": true,
+              "x-deserialize-skip-invalid-items": true
+            }
+          },
+          "required": ["kind"]
+        }
+      ],
+      "discriminator": {
+        "propertyName": "kind"
+      }
+    },
+    "TextPayload": {
+      "description": "Message payload.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": ["text"]
+    },
+    "ToolContent": {
+      "description": "Tool content item.",
+      "oneOf": [
+        {
+          "description": "Text item.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "text"
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": ["type", "text"]
+        },
+        {
+          "description": "Terminal item.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "terminal"
+            },
+            "terminalId": {
+              "type": "string"
+            }
+          },
+          "required": ["type", "terminalId"]
+        }
+      ],
+      "discriminator": {
+        "propertyName": "type"
+      }
+    }
+  }
+}
