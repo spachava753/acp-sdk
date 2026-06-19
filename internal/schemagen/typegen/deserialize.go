@@ -67,6 +67,9 @@ func skipInvalidItemsValidator(defs map[string]*jsonschema.Schema, schema *jsons
 	if cases := stringConstEnumItemCases(defs, schema); len(cases) > 0 {
 		return &skipInvalidItemValidator{cases: cases}
 	}
+	if cases := stringEnumItemCases(defs, schema); len(cases) > 0 {
+		return &skipInvalidItemValidator{cases: cases}
+	}
 	return nil
 }
 
@@ -125,6 +128,18 @@ func stringConstEnumItemCases(defs map[string]*jsonschema.Schema, schema *jsonsc
 			continue
 		}
 		cases = append(cases, jen.Id(uniqueConstName(typeName+primitiveConstName(branch), used)))
+	}
+	return cases
+}
+
+func stringEnumItemCases(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) []jen.Code {
+	values := stringEnumValues(defs, schema)
+	if len(values) == 0 {
+		return nil
+	}
+	cases := make([]jen.Code, 0, len(values))
+	for _, value := range values {
+		cases = append(cases, jen.Lit(value))
 	}
 	return cases
 }

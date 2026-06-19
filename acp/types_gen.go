@@ -121,7 +121,10 @@ func (a *Annotations) UnmarshalJSON(data []byte) error {
 			for _, value := range values {
 				var item Role
 				if err := json.Unmarshal(value, &item); err == nil {
-					items = append(items, item)
+					switch item {
+					case "assistant", "user":
+						items = append(items, item)
+					}
 				}
 			}
 			decoded.Audience = &items
