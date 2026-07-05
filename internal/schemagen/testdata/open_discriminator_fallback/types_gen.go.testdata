@@ -1,0 +1,54 @@
+package acp
+
+import (
+	"encoding/json"
+	"reflect"
+)
+
+// OpenAction: Tagged union with an open fallback discriminator branch.
+type OpenAction struct {
+	Action OpenActionType `json:"action"`
+	Value  string         `json:"value,omitempty"`
+}
+
+// OpenActionType is the discriminator for OpenAction variants.
+type OpenActionType string
+
+const (
+	OpenActionTypeAccept OpenActionType = "accept"
+)
+
+// AcceptOpenAction creates known accept action.
+func AcceptOpenAction(value string) OpenAction {
+	return OpenAction{
+		Action: OpenActionTypeAccept,
+		Value:  value,
+	}
+}
+
+// OtherOpenAction creates custom action value.
+func OtherOpenAction(action string) OpenAction {
+	return OpenAction{
+		Action: OpenActionType(action),
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (a OpenAction) MarshalJSON() ([]byte, error) {
+	type alias OpenAction
+	type wire struct {
+		*alias
+		Value *string `json:"value,omitempty"`
+	}
+	w := wire{alias: (*alias)(&a)}
+	if !reflect.ValueOf(a.Value).IsZero() {
+		Value := a.Value
+		w.Value = &Value
+	}
+	switch a.Action {
+	case OpenActionTypeAccept:
+		Value := a.Value
+		w.Value = &Value
+	}
+	return json.Marshal(w)
+}

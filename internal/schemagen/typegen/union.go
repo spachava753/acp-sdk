@@ -513,6 +513,10 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 			continue
 		}
 		field := fieldsByJSON[jsonName]
+		if jsonName == discriminator {
+			field.goName = fieldName(discriminator)
+			field.typeText = discriminatorTypeName(defs, unionName)
+		}
 		if constName := constFields[jsonName]; constName != "" {
 			literalFields = append(literalFields, jen.Id(field.goName).Op(":").Id(constName))
 			continue
@@ -681,6 +685,9 @@ func needsOmitZero(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema
 	}
 	if schema.Ref != "" {
 		def := defs[refName(schema.Ref)]
+		if def == nil {
+			panic(fmt.Sprintf("unresolved schema ref %q", schema.Ref))
+		}
 		return isObjectSchema(def) || isDiscriminatorUnion(defs, def) || isArrayUnion(def)
 	}
 	if len(schema.AllOf) == 1 && schema.AllOf[0].Ref != "" {
@@ -694,7 +701,11 @@ func objectSchemaHasNoRequiredFields(defs map[string]*jsonschema.Schema, schema 
 		return false
 	}
 	if schema.Ref != "" {
-		return objectSchemaHasNoRequiredFields(defs, defs[refName(schema.Ref)])
+		def := defs[refName(schema.Ref)]
+		if def == nil {
+			panic(fmt.Sprintf("unresolved schema ref %q", schema.Ref))
+		}
+		return objectSchemaHasNoRequiredFields(defs, def)
 	}
 	if len(schema.AllOf) == 1 && schema.AllOf[0].Ref != "" {
 		return objectSchemaHasNoRequiredFields(defs, schema.AllOf[0])
@@ -707,10 +718,19 @@ func schemaKind(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) s
 		return ""
 	}
 	if schema.Ref != "" {
-		return schemaKind(defs, defs[refName(schema.Ref)])
+		def := defs[refName(schema.Ref)]
+		if def == nil {
+			panic(fmt.Sprintf("unresolved schema ref %q", schema.Ref))
+		}
+		return schemaKind(defs, def)
 	}
 	if len(schema.AllOf) == 1 && schema.AllOf[0].Ref != "" {
-		return schemaKind(defs, defs[refName(schema.AllOf[0].Ref)])
+		ref := schema.AllOf[0].Ref
+		def := defs[refName(ref)]
+		if def == nil {
+			panic(fmt.Sprintf("unresolved schema ref %q", ref))
+		}
+		return schemaKind(defs, def)
 	}
 	if nonNull, nullable := nullableSchema(schema); nullable {
 		return schemaKind(defs, nonNull)
@@ -854,10 +874,12 @@ func unionBranches(schema *jsonschema.Schema) []*jsonschema.Schema {
 func variantProperties(defs map[string]*jsonschema.Schema, branch *jsonschema.Schema) map[string]*jsonschema.Schema {
 	properties := map[string]*jsonschema.Schema{}
 	if ref := variantRef(branch); ref != "" {
-		if def := defs[ref]; def != nil {
-			for name, prop := range schemaVariantProperties(defs, def) {
-				properties[name] = prop
-			}
+		def := defs[ref]
+		if def == nil {
+			panic(fmt.Sprintf("unresolved variant ref %q", ref))
+		}
+		for name, prop := range schemaVariantProperties(defs, def) {
+			properties[name] = prop
 		}
 	}
 	for name, prop := range branch.Properties {
@@ -882,9 +904,11 @@ func schemaVariantProperties(defs map[string]*jsonschema.Schema, schema *jsonsch
 func variantRequired(defs map[string]*jsonschema.Schema, branch *jsonschema.Schema) []string {
 	var required []string
 	if ref := variantRef(branch); ref != "" {
-		if def := defs[ref]; def != nil {
-			required = append(required, schemaVariantRequired(defs, def)...)
+		def := defs[ref]
+		if def == nil {
+			panic(fmt.Sprintf("unresolved variant ref %q", ref))
 		}
+		required = append(required, schemaVariantRequired(defs, def)...)
 	}
 	for _, req := range branch.Required {
 		if !contains(required, req) {

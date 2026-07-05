@@ -290,6 +290,9 @@
 //   - testdata/fallback_union_slices: partially tagged flattened unions apply
 //     required nil-slice marshal handling to a no-const default variant and emit
 //     one grouped switch case for that fallback branch.
+//   - testdata/open_discriminator_fallback: tagged unions with an open fallback
+//     branch whose discriminator is a required string parameter generate a valid
+//     constructor that assigns the discriminator field.
 //   - testdata/discriminatorless_union_slices: untagged flattened unions preserve
 //     constructor-selected empty required arrays instead of letting omitempty
 //     drop those variant-defining fields.

@@ -40,7 +40,7 @@ func Generate(schema *jsonschema.Schema) []byte {
 
 	var out bytes.Buffer
 	if err := file.Render(&out); err != nil {
-		return nil
+		panic(err)
 	}
 	return out.Bytes()
 }

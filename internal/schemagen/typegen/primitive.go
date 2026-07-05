@@ -5,6 +5,7 @@
 package typegen
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/dave/jennifer/jen"
@@ -46,6 +47,9 @@ func schemaType(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema, o
 	case "integer":
 		return integerType(schema.Format)
 	case "number":
+		if schema.Format != "" && schema.Format != "double" {
+			panic(fmt.Sprintf("unsupported number format %q", schema.Format))
+		}
 		return jen.Float64(), "float64"
 	case "boolean":
 		return jen.Bool(), "bool"
@@ -56,12 +60,14 @@ func schemaType(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema, o
 	case "null", "":
 		return jen.Any(), "any"
 	default:
-		return jen.Any(), "any"
+		panic(fmt.Sprintf("unsupported schema type %q", schemaTypeName(schema)))
 	}
 }
 
 func integerType(format string) (jen.Code, string) {
 	switch format {
+	case "", "int64":
+		return jen.Int64(), "int64"
 	case "int32":
 		return jen.Id("int32"), "int32"
 	case "uint16":
@@ -71,7 +77,7 @@ func integerType(format string) (jen.Code, string) {
 	case "uint64":
 		return jen.Id("uint64"), "uint64"
 	default:
-		return jen.Int64(), "int64"
+		panic(fmt.Sprintf("unsupported integer format %q", format))
 	}
 }
 
@@ -80,13 +86,16 @@ func schemaDefaultTrue(schema *jsonschema.Schema) bool {
 }
 
 func refType(defs map[string]*jsonschema.Schema, ref string, optional bool) (jen.Code, string) {
-	rawName := refName(ref)
-	name := goDefinitionName(defs, rawName)
-	if !optional || rawName == "" {
-		return jen.Id(name), name
+	if !strings.HasPrefix(ref, "#/$defs/") {
+		panic(fmt.Sprintf("unsupported schema ref %q: only #/$defs refs are supported", ref))
 	}
+	rawName := refName(ref)
 	def := defs[rawName]
 	if def == nil {
+		panic(fmt.Sprintf("unresolved schema ref %q", ref))
+	}
+	name := goDefinitionName(defs, rawName)
+	if !optional || rawName == "" {
 		return jen.Id(name), name
 	}
 	// Optional references to object definitions are pointers so callers can tell

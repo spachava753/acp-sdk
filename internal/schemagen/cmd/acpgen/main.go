@@ -48,7 +48,11 @@ func run(schemaPath, outDir string) error {
 	if err := os.MkdirAll(outDir, 0755); err != nil {
 		return err
 	}
-	for _, file := range schemagen.Generate(&schema) {
+	files := schemagen.Generate(&schema)
+	if len(files) == 0 {
+		return fmt.Errorf("schemagen produced no files for %s", schemaPath)
+	}
+	for _, file := range files {
 		contents := addGeneratedFileScaffolding(file.Filename, file.Contents)
 		if err := os.WriteFile(filepath.Join(outDir, file.Filename), contents, 0644); err != nil {
 			return err

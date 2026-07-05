@@ -5,6 +5,7 @@
 package typegen
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/dave/jennifer/jen"
@@ -38,11 +39,16 @@ func newDeserializeField(defs map[string]*jsonschema.Schema, jsonName string, pr
 		defaultOnError:   schemaBoolExtra(prop, "x-deserialize-default-on-error"),
 		skipInvalidItems: schemaBoolExtra(prop, "x-deserialize-skip-invalid-items"),
 	}
-	if _, ok := skipInvalidItemsTarget(field); ok {
-		if itemSchema := deserializeItemSchema(prop); itemSchema != nil {
-			field.itemTypeCode, _ = schemaType(defs, itemSchema, false)
-			field.itemValidator = skipInvalidItemsValidator(defs, itemSchema)
+	if field.skipInvalidItems {
+		if _, ok := skipInvalidItemsTarget(field); !ok {
+			panic(fmt.Sprintf("x-deserialize-skip-invalid-items is only supported for array fields: %s", jsonName))
 		}
+		itemSchema := deserializeItemSchema(prop)
+		if itemSchema == nil {
+			panic(fmt.Sprintf("x-deserialize-skip-invalid-items field %s has no array item schema", jsonName))
+		}
+		field.itemTypeCode, _ = schemaType(defs, itemSchema, false)
+		field.itemValidator = skipInvalidItemsValidator(defs, itemSchema)
 	}
 	return field
 }
