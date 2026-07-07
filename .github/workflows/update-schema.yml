@@ -1,0 +1,79 @@
+name: Update ACP schema
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 8 * * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-schema:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: "1.26"
+
+      - name: Regenerate schema and ACP types
+        run: |
+          go generate ./internal/schemagen
+          go generate ./acp
+
+      - name: Test generated code
+        run: go test ./...
+
+      - name: Detect generated changes
+        id: changes
+        run: |
+          if git diff --quiet -- internal/schemagen/schema.json acp/agent_gen.go acp/client_gen.go acp/types_gen.go; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --name-only -- internal/schemagen/schema.json acp/agent_gen.go acp/client_gen.go acp/types_gen.go
+          fi
+
+      - name: Create or update pull request
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="automation/update-acp-schema"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add internal/schemagen/schema.json acp/agent_gen.go acp/client_gen.go acp/types_gen.go
+          git commit -m "acp: update generated schema"
+          git push --force-with-lease origin "$branch"
+
+          body=$(cat <<'EOF'
+          This automated PR updates the checked-in ACP schema from the latest schema release and regenerates the ACP Go types/RPC glue.
+
+          Verification run by the workflow:
+
+          - `go generate ./internal/schemagen`
+          - `go generate ./acp`
+          - `go test ./...`
+          EOF
+          )
+
+          if gh pr view "$branch" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh pr edit "$branch" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "acp: update generated schema" \
+              --body "$body"
+          else
+            gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --head "$branch" \
+              --base "main" \
+              --title "acp: update generated schema" \
+              --body "$body"
+          fi

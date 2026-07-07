@@ -18,13 +18,14 @@ The module path is `github.com/spachava753/acp-sdk`.
 
 ## Schema And Code Generation
 
-`internal/schemagen/schema.json` is copied from the ACP upstream unstable v1 schema:
+`internal/schemagen/schema.json` is fetched from the latest ACP schema release asset:
 
-`https://raw.githubusercontent.com/agentclientprotocol/agent-client-protocol/refs/heads/main/schema/v1/schema.unstable.json`
+`https://github.com/agentclientprotocol/agent-client-protocol/releases/latest/download/schema.unstable.json`
 
 Generated ACP package files are written into `acp/` from that schema. Do not edit `acp/*_gen.go` directly; update the schema and/or generator, then regenerate.
 
-- Regenerate ACP code: `go generate ./acp`
+- Refresh the checked-in schema from the latest release: `go generate ./internal/schemagen`
+- Regenerate ACP code from the checked-in schema: `go generate ./acp`
 - Generator entry point: `internal/schemagen/cmd/acpgen`
 - Go generate directive: `acp/acp.go`
 - Generated outputs: `acp/types_gen.go`, `acp/agent_gen.go`, `acp/client_gen.go`

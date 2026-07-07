@@ -614,11 +614,7 @@ func (c *BlobResourceContents) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// BooleanConfigOptionCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Capabilities for boolean session configuration options.
+// BooleanConfigOptionCapabilities: Capabilities for boolean session configuration options.
 //
 // Supplying `{}` means the client supports boolean session configuration options.
 type BooleanConfigOptionCapabilities struct {
@@ -777,11 +773,7 @@ func (c *ClientNesCapabilities) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ClientSessionCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Session-related capabilities supported by the client.
+// ClientSessionCapabilities: Session-related capabilities supported by the client.
 type ClientSessionCapabilities struct {
 	Meta          Meta                              `json:"_meta,omitzero"`
 	ConfigOptions *SessionConfigOptionsCapabilities `json:"configOptions,omitempty"`
@@ -2032,11 +2024,30 @@ func (r *EmbeddedResourceResource) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// EnumOption: A titled enum option with a const value and human-readable title.
+// EnumOption: A titled enum option with a const value, human-readable title, and optional description.
 type EnumOption struct {
-	Meta  Meta   `json:"_meta,omitzero"`
-	Const string `json:"const"`
-	Title string `json:"title"`
+	Meta        Meta    `json:"_meta,omitzero"`
+	Const       string  `json:"const"`
+	Description *string `json:"description,omitempty"`
+	Title       string  `json:"title"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *EnumOption) UnmarshalJSON(data []byte) error {
+	type alias EnumOption
+	decoded := alias{}
+	raw := struct {
+		Description json.RawMessage `json:"description"`
+		*alias
+	}{alias: &decoded}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Description) > 0 {
+		_ = json.Unmarshal(raw.Description, &decoded.Description)
+	}
+	*o = EnumOption(decoded)
+	return nil
 }
 
 // EnvVariable: An environment variable to set when launching an MCP server.
@@ -4790,11 +4801,7 @@ type SessionCloseCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
-// SessionConfigBoolean: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A boolean on/off toggle session configuration option payload.
+// SessionConfigBoolean: A boolean on/off toggle session configuration option payload.
 type SessionConfigBoolean struct {
 	CurrentValue bool `json:"currentValue"`
 }
@@ -4840,11 +4847,7 @@ func SelectSessionConfigOption(id SessionConfigId, name string, currentValue Ses
 	}
 }
 
-// BooleanSessionConfigOption creates an SessionConfigOption variant: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Boolean on/off toggle.
+// BooleanSessionConfigOption creates an SessionConfigOption variant: Boolean on/off toggle.
 func BooleanSessionConfigOption(id SessionConfigId, name string, currentValue bool) SessionConfigOption {
 	return SessionConfigOption{
 		Type:         SessionConfigOptionTypeBoolean,
@@ -4922,11 +4925,7 @@ const (
 	SessionConfigOptionCategoryThoughtLevel SessionConfigOptionCategory = "thought_level"
 )
 
-// SessionConfigOptionsCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Session configuration option capabilities supported by the client.
+// SessionConfigOptionsCapabilities: Session configuration option capabilities supported by the client.
 type SessionConfigOptionsCapabilities struct {
 	Meta    Meta                             `json:"_meta,omitzero"`
 	Boolean *BooleanConfigOptionCapabilities `json:"boolean,omitempty"`
