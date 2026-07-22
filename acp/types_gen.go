@@ -5320,6 +5320,7 @@ type SessionUpdate struct {
 	Kind              *ToolKind             `json:"kind,omitempty"`
 	Locations         *[]ToolCallLocation   `json:"locations,omitempty"`
 	MessageID         *MessageId            `json:"messageId,omitempty"`
+	Name              *string               `json:"name,omitempty"`
 	Plan              PlanUpdateContent     `json:"plan,omitempty,omitzero"`
 	PlanID            PlanId                `json:"planId,omitempty"`
 	RawInput          any                   `json:"rawInput,omitempty"`
@@ -5596,6 +5597,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		Kind              json.RawMessage `json:"kind"`
 		Locations         json.RawMessage `json:"locations"`
 		MessageID         json.RawMessage `json:"messageId"`
+		Name              json.RawMessage `json:"name"`
 		RawInput          json.RawMessage `json:"rawInput"`
 		RawOutput         json.RawMessage `json:"rawOutput"`
 		Status            json.RawMessage `json:"status"`
@@ -5690,6 +5692,9 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 	}
 	if len(raw.MessageID) > 0 {
 		_ = json.Unmarshal(raw.MessageID, &decoded.MessageID)
+	}
+	if len(raw.Name) > 0 {
+		_ = json.Unmarshal(raw.Name, &decoded.Name)
 	}
 	if len(raw.RawInput) > 0 {
 		_ = json.Unmarshal(raw.RawInput, &decoded.RawInput)
@@ -6173,6 +6178,7 @@ type ToolCall struct {
 	Content    []ToolCallContent  `json:"content,omitempty"`
 	Kind       ToolKind           `json:"kind,omitempty"`
 	Locations  []ToolCallLocation `json:"locations,omitempty"`
+	Name       *string            `json:"name,omitempty"`
 	RawInput   any                `json:"rawInput,omitempty"`
 	RawOutput  any                `json:"rawOutput,omitempty"`
 	Status     ToolCallStatus     `json:"status,omitempty"`
@@ -6188,6 +6194,7 @@ func (c *ToolCall) UnmarshalJSON(data []byte) error {
 		Content   json.RawMessage `json:"content"`
 		Kind      json.RawMessage `json:"kind"`
 		Locations json.RawMessage `json:"locations"`
+		Name      json.RawMessage `json:"name"`
 		RawInput  json.RawMessage `json:"rawInput"`
 		RawOutput json.RawMessage `json:"rawOutput"`
 		Status    json.RawMessage `json:"status"`
@@ -6231,6 +6238,9 @@ func (c *ToolCall) UnmarshalJSON(data []byte) error {
 				}
 			}
 		}
+	}
+	if len(raw.Name) > 0 {
+		_ = json.Unmarshal(raw.Name, &decoded.Name)
 	}
 	if len(raw.RawInput) > 0 {
 		_ = json.Unmarshal(raw.RawInput, &decoded.RawInput)
@@ -6429,6 +6439,7 @@ type ToolCallUpdate struct {
 	Content    *[]ToolCallContent  `json:"content,omitempty"`
 	Kind       *ToolKind           `json:"kind,omitempty"`
 	Locations  *[]ToolCallLocation `json:"locations,omitempty"`
+	Name       *string             `json:"name,omitempty"`
 	RawInput   any                 `json:"rawInput,omitempty"`
 	RawOutput  any                 `json:"rawOutput,omitempty"`
 	Status     *ToolCallStatus     `json:"status,omitempty"`
@@ -6444,6 +6455,7 @@ func (u *ToolCallUpdate) UnmarshalJSON(data []byte) error {
 		Content   json.RawMessage `json:"content"`
 		Kind      json.RawMessage `json:"kind"`
 		Locations json.RawMessage `json:"locations"`
+		Name      json.RawMessage `json:"name"`
 		RawInput  json.RawMessage `json:"rawInput"`
 		RawOutput json.RawMessage `json:"rawOutput"`
 		Status    json.RawMessage `json:"status"`
@@ -6490,6 +6502,9 @@ func (u *ToolCallUpdate) UnmarshalJSON(data []byte) error {
 			}
 			decoded.Locations = &items
 		}
+	}
+	if len(raw.Name) > 0 {
+		_ = json.Unmarshal(raw.Name, &decoded.Name)
 	}
 	if len(raw.RawInput) > 0 {
 		_ = json.Unmarshal(raw.RawInput, &decoded.RawInput)
