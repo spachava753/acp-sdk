@@ -1,0 +1,10 @@
+package acp
+
+// HeadingThing: A type with a prose section.
+//
+// # Configuration
+//
+// Details about the configuration.
+type HeadingThing struct {
+	Value string `json:"value"`
+}

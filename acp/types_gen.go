@@ -2767,7 +2767,7 @@ func SseMcpServer(name string, url string, headers []HttpHeader) McpServer {
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
 //
-// ACP transport configuration
+// # ACP transport configuration
 //
 // Only available when the Agent capabilities indicate `mcp_capabilities.acp` is `true`.
 // The MCP server is provided by an ACP component and communicates over the ACP channel.

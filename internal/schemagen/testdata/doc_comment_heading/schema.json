@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "HeadingThing": {
+      "description": "A type with a prose section.\n\nConfiguration\n\nDetails about the configuration.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": ["value"]
+    }
+  }
+}

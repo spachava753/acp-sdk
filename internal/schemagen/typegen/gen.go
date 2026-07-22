@@ -6,6 +6,7 @@ package typegen
 
 import (
 	"bytes"
+	"go/format"
 	"sort"
 	"strings"
 
@@ -56,7 +57,11 @@ func Generate(schema *jsonschema.Schema) []byte {
 	if err := file.Render(&out); err != nil {
 		panic(err)
 	}
-	return out.Bytes()
+	formatted, err := format.Source(out.Bytes())
+	if err != nil {
+		panic(err)
+	}
+	return formatted
 }
 
 func definition(defs map[string]*jsonschema.Schema, name string, schema *jsonschema.Schema) ([]jen.Code, bool, []jen.Code) {
