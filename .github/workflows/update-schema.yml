@@ -6,12 +6,15 @@ on:
     - cron: '17 8 * * *'
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
 jobs:
   update-schema:
     runs-on: ubuntu-latest
+    env:
+      UPDATE_BRANCH: automation/update-acp-schema
     steps:
       - name: Check out code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -47,7 +50,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          branch="automation/update-acp-schema"
+          branch="$UPDATE_BRANCH"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -59,11 +62,13 @@ jobs:
           body=$(cat <<'EOF'
           This automated PR updates the checked-in ACP schema from the latest schema release and regenerates the ACP Go types/RPC glue.
 
-          Verification run by the workflow:
+          Verification run before updating this PR:
 
           - `go generate ./internal/schemagen`
           - `go generate ./acp`
           - `go test ./...`
+
+          The full Test workflow is dispatched for the PR head after every automated update.
           EOF
           )
 
@@ -88,3 +93,12 @@ jobs:
               --title "acp: update generated schema" \
               --body "$body"
           fi
+
+      - name: Dispatch pull request checks
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run test.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "$UPDATE_BRANCH"
