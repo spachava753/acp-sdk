@@ -1,7 +1,7 @@
 name: Update ACP schema
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
   schedule:
     - cron: '17 8 * * *'
 
@@ -15,6 +15,9 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
@@ -64,8 +67,16 @@ jobs:
           EOF
           )
 
-          if gh pr view "$branch" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh pr edit "$branch" \
+          pr=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --head "$branch" \
+            --base "main" \
+            --state "open" \
+            --json number \
+            --jq '.[0].number')
+
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" \
               --repo "$GITHUB_REPOSITORY" \
               --title "acp: update generated schema" \
               --body "$body"
