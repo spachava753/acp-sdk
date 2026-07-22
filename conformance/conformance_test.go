@@ -147,7 +147,6 @@ func assertJSONEqual(t *testing.T, got, want string) {
 }
 
 func stringPtr(v string) *string { return &v }
-func intPtr(v int) *int          { return &v }
 func int64Ptr(v int64) *int64    { return &v }
 func genericPtr[T any](v T) *T   { return &v }
 

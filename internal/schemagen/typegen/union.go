@@ -668,9 +668,7 @@ func mergedProperties(parent, variant map[string]*jsonschema.Schema) map[string]
 
 func mergedRequired(parent, variant []string) []string {
 	required := make([]string, 0, len(parent)+len(variant))
-	for _, name := range parent {
-		required = append(required, name)
-	}
+	required = append(required, parent...)
 	for _, name := range variant {
 		if !contains(required, name) {
 			required = append(required, name)
@@ -694,23 +692,6 @@ func needsOmitZero(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema
 		return needsOmitZero(defs, schema.AllOf[0])
 	}
 	return isObjectSchema(schema) || isDiscriminatorUnion(defs, schema) || isArrayUnion(schema)
-}
-
-func objectSchemaHasNoRequiredFields(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) bool {
-	if schema == nil {
-		return false
-	}
-	if schema.Ref != "" {
-		def := defs[refName(schema.Ref)]
-		if def == nil {
-			panic(fmt.Sprintf("unresolved schema ref %q", schema.Ref))
-		}
-		return objectSchemaHasNoRequiredFields(defs, def)
-	}
-	if len(schema.AllOf) == 1 && schema.AllOf[0].Ref != "" {
-		return objectSchemaHasNoRequiredFields(defs, schema.AllOf[0])
-	}
-	return isObjectSchema(schema) && len(schema.Required) == 0
 }
 
 func schemaKind(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) string {
