@@ -15,18 +15,14 @@ import (
 
 // ElicitationClientHandler handles all elicitation related client methods.
 type ElicitationClientHandler interface {
-	// Complete: **UNSTABLE**
+	// Complete: Notification that a URL-based elicitation has completed.
 	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Notification that a URL-based elicitation has completed.
+	// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation#url-completion)
 	Complete(context.Context, *CompleteElicitationNotification) error
 
-	// CreateElicitation: **UNSTABLE**
+	// CreateElicitation: Requests structured user input via a form or URL.
 	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Requests structured user input via a form or URL.
+	// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation)
 	CreateElicitation(context.Context, *CreateElicitationRequest) (*CreateElicitationResponse, error)
 }
 
@@ -171,7 +167,8 @@ type TerminalClientHandler interface {
 // Authenticate: Authenticates the client using the specified authentication method.
 //
 // Called when the agent requires authentication before allowing session creation.
-// The client provides the authentication method ID that was advertised during initialization.
+// The client provides an authentication method ID that was advertised during
+// initialization and whose type defines the `authenticate` flow.
 //
 // After successful authentication, the client can proceed to create sessions with
 // `new_session` without receiving an `auth_required` error.

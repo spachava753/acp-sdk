@@ -188,11 +188,7 @@ func (c *AudioContent) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AuthCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Authentication capabilities supported by the client.
+// AuthCapabilities: Authentication capabilities supported by the client.
 //
 // Advertised during initialization to inform the agent which authentication
 // method types the client can handle. This governs opt-in types that require
@@ -220,45 +216,6 @@ func (c *AuthCapabilities) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AuthEnvVar: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Describes a single environment variable for an [`AuthMethodEnvVar`] authentication method.
-type AuthEnvVar struct {
-	Meta     Meta    `json:"_meta,omitzero"`
-	Label    *string `json:"label,omitempty"`
-	Name     string  `json:"name"`
-	Optional bool    `json:"optional,omitempty"`
-	Secret   *bool   `json:"secret,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (v *AuthEnvVar) UnmarshalJSON(data []byte) error {
-	type alias AuthEnvVar
-	decoded := alias{}
-	raw := struct {
-		Label    json.RawMessage `json:"label"`
-		Optional json.RawMessage `json:"optional"`
-		Secret   json.RawMessage `json:"secret"`
-		*alias
-	}{alias: &decoded}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Label) > 0 {
-		_ = json.Unmarshal(raw.Label, &decoded.Label)
-	}
-	if len(raw.Optional) > 0 {
-		_ = json.Unmarshal(raw.Optional, &decoded.Optional)
-	}
-	if len(raw.Secret) > 0 {
-		_ = json.Unmarshal(raw.Secret, &decoded.Secret)
-	}
-	*v = AuthEnvVar(decoded)
-	return nil
-}
-
 // AuthMethod: Describes an available authentication method.
 //
 // The `type` field acts as the discriminator in the serialized JSON form.
@@ -270,38 +227,18 @@ type AuthMethod struct {
 	Description *string           `json:"description,omitempty"`
 	Env         map[string]string `json:"env,omitempty"`
 	ID          AuthMethodId      `json:"id"`
-	Link        *string           `json:"link,omitempty"`
 	Name        string            `json:"name"`
-	Vars        []AuthEnvVar      `json:"vars,omitempty"`
 }
 
 // AuthMethodType is the discriminator for AuthMethod variants.
 type AuthMethodType string
 
 const (
-	AuthMethodTypeEnvVar   AuthMethodType = "env_var"
 	AuthMethodTypeTerminal AuthMethodType = "terminal"
 )
 
-// EnvVarAuthMethod creates an AuthMethod variant: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// User provides a key that the client passes to the agent as an environment variable.
-func EnvVarAuthMethod(id AuthMethodId, name string, vars []AuthEnvVar) AuthMethod {
-	return AuthMethod{
-		Type: AuthMethodTypeEnvVar,
-		ID:   id,
-		Name: name,
-		Vars: vars,
-	}
-}
-
-// TerminalAuthMethod creates an AuthMethod variant: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Client runs an interactive terminal for the user to authenticate via a TUI.
+// TerminalAuthMethod creates an AuthMethod variant: Client runs the configured agent program as a separate interactive
+// process, without passing this method to `authenticate`.
 func TerminalAuthMethod(id AuthMethodId, name string) AuthMethod {
 	return AuthMethod{
 		Type: AuthMethodTypeTerminal,
@@ -310,7 +247,7 @@ func TerminalAuthMethod(id AuthMethodId, name string) AuthMethod {
 	}
 }
 
-// AgentAuthMethod creates an AuthMethod variant: Agent handles authentication itself.
+// AgentAuthMethod creates an AuthMethod variant: Agent handles authentication itself through `authenticate`.
 //
 // This is the default when no `type` is specified.
 func AgentAuthMethod(id AuthMethodId, name string) AuthMethod {
@@ -318,29 +255,6 @@ func AgentAuthMethod(id AuthMethodId, name string) AuthMethod {
 		ID:   id,
 		Name: name,
 	}
-}
-
-// MarshalJSON implements json.Marshaler.
-func (m AuthMethod) MarshalJSON() ([]byte, error) {
-	type alias AuthMethod
-	type wire struct {
-		*alias
-		Vars *[]AuthEnvVar `json:"vars,omitempty"`
-	}
-	w := wire{alias: (*alias)(&m)}
-	if len(m.Vars) > 0 {
-		Vars := m.Vars
-		w.Vars = &Vars
-	}
-	switch m.Type {
-	case AuthMethodTypeEnvVar:
-		Vars := m.Vars
-		if Vars == nil {
-			Vars = []AuthEnvVar{}
-		}
-		w.Vars = &Vars
-	}
-	return json.Marshal(w)
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -351,8 +265,6 @@ func (m *AuthMethod) UnmarshalJSON(data []byte) error {
 		Args        json.RawMessage `json:"args"`
 		Description json.RawMessage `json:"description"`
 		Env         json.RawMessage `json:"env"`
-		Link        json.RawMessage `json:"link"`
-		Vars        json.RawMessage `json:"vars"`
 		*alias
 	}{alias: &decoded}
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -376,26 +288,11 @@ func (m *AuthMethod) UnmarshalJSON(data []byte) error {
 	if len(raw.Env) > 0 {
 		_ = json.Unmarshal(raw.Env, &decoded.Env)
 	}
-	if len(raw.Link) > 0 {
-		_ = json.Unmarshal(raw.Link, &decoded.Link)
-	}
-	if len(raw.Vars) > 0 {
-		var values []json.RawMessage
-		if err := json.Unmarshal(raw.Vars, &values); err == nil {
-			decoded.Vars = []AuthEnvVar{}
-			for _, value := range values {
-				var item AuthEnvVar
-				if err := json.Unmarshal(value, &item); err == nil {
-					decoded.Vars = append(decoded.Vars, item)
-				}
-			}
-		}
-	}
 	*m = AuthMethod(decoded)
 	return nil
 }
 
-// AuthMethodAgent: Agent handles authentication itself.
+// AuthMethodAgent: Agent handles authentication itself through `authenticate`.
 //
 // This is the default authentication method type.
 type AuthMethodAgent struct {
@@ -423,32 +320,16 @@ func (a *AuthMethodAgent) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AuthMethodEnvVar: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Environment variable authentication method.
-//
-// The user provides credentials that the client passes to the agent as environment variables.
-type AuthMethodEnvVar struct {
-	Meta        Meta         `json:"_meta,omitzero"`
-	Description *string      `json:"description,omitempty"`
-	ID          AuthMethodId `json:"id"`
-	Link        *string      `json:"link,omitempty"`
-	Name        string       `json:"name"`
-	Vars        []AuthEnvVar `json:"vars"`
-}
-
 // AuthMethodId: Typed identifier used for auth method values on the wire.
 type AuthMethodId string
 
-// AuthMethodTerminal: **UNSTABLE**
+// AuthMethodTerminal: Terminal-based authentication method.
 //
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Terminal-based authentication method.
-//
-// The client runs an interactive terminal for the user to authenticate via a TUI.
+// The client runs the configured agent program as a separate interactive
+// process for the user to authenticate via a TUI. Agents MUST advertise this
+// method only when the client enabled its terminal authentication capability.
+// A zero exit status signals success; any other termination signals failure.
+// The client MUST NOT pass this method to `authenticate`.
 type AuthMethodTerminal struct {
 	Meta        Meta              `json:"_meta,omitzero"`
 	Args        []string          `json:"args,omitempty"`
@@ -776,6 +657,7 @@ func (c *ClientNesCapabilities) UnmarshalJSON(data []byte) error {
 // ClientSessionCapabilities: Session-related capabilities supported by the client.
 type ClientSessionCapabilities struct {
 	Meta          Meta                              `json:"_meta,omitzero"`
+	Compaction    *CompactionCapabilities           `json:"compaction,omitempty"`
 	ConfigOptions *SessionConfigOptionsCapabilities `json:"configOptions,omitempty"`
 }
 
@@ -784,11 +666,15 @@ func (c *ClientSessionCapabilities) UnmarshalJSON(data []byte) error {
 	type alias ClientSessionCapabilities
 	decoded := alias{}
 	raw := struct {
+		Compaction    json.RawMessage `json:"compaction"`
 		ConfigOptions json.RawMessage `json:"configOptions"`
 		*alias
 	}{alias: &decoded}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
+	}
+	if len(raw.Compaction) > 0 {
+		_ = json.Unmarshal(raw.Compaction, &decoded.Compaction)
 	}
 	if len(raw.ConfigOptions) > 0 {
 		_ = json.Unmarshal(raw.ConfigOptions, &decoded.ConfigOptions)
@@ -828,11 +714,109 @@ type CloseSessionResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
-// CompleteElicitationNotification: **UNSTABLE**
+// CompactionCapabilities: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
 //
-// Notification sent by the agent when a URL-based elicitation is complete.
+// Client support for ID-addressed context compaction updates.
+type CompactionCapabilities map[string]any
+
+// CompactionId: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Unique identifier for a context compaction within a session.
+type CompactionId string
+
+// CompactionStatus: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Lifecycle state of a context compaction.
+type CompactionStatus string
+
+const (
+	// CompactionStatusInProgress: Compaction has started and has not finished.
+	CompactionStatusInProgress CompactionStatus = "in_progress"
+	// CompactionStatusCompleted: Compaction finished successfully.
+	CompactionStatusCompleted CompactionStatus = "completed"
+	// CompactionStatusFailed: Compaction finished unsuccessfully.
+	CompactionStatusFailed CompactionStatus = "failed"
+	// CompactionStatusCancelled: Compaction was cancelled before it finished.
+	CompactionStatusCancelled CompactionStatus = "cancelled"
+)
+
+// CompactionSummaryChunk: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// A content block appended to the retained summary of an in-progress
+// compaction. Agents send chunks only after an `in_progress` update and before
+// the terminal update for the same ID. Agents MUST only send this update when
+// the Client advertised [`ClientSessionCapabilities::compaction`].
+type CompactionSummaryChunk struct {
+	Meta         Meta         `json:"_meta,omitzero"`
+	CompactionID CompactionId `json:"compactionId"`
+	Content      ContentBlock `json:"content"`
+}
+
+// CompactionUpdate: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// A context compaction upsert. The first update fixes the compaction's
+// timeline position. Later updates with the same ID patch that entity in place.
+// Agents MUST only send this update when the Client advertised
+// [`ClientSessionCapabilities::compaction`].
+//
+// `summary`, `error`, and `_meta` have patch semantics: omission leaves the
+// stored value unchanged, `null` clears it, and a concrete value replaces it.
+// `summary: []` also clears the retained summary. A non-empty summary is only
+// valid with `completed`; `error` is only valid with `failed`.
+type CompactionUpdate struct {
+	Meta         Meta             `json:"_meta,omitzero"`
+	CompactionID CompactionId     `json:"compactionId"`
+	Error        *string          `json:"error,omitempty"`
+	Status       CompactionStatus `json:"status"`
+	Summary      *[]ContentBlock  `json:"summary,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *CompactionUpdate) UnmarshalJSON(data []byte) error {
+	type alias CompactionUpdate
+	decoded := alias{}
+	raw := struct {
+		Error   json.RawMessage `json:"error"`
+		Summary json.RawMessage `json:"summary"`
+		*alias
+	}{alias: &decoded}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Error) > 0 {
+		_ = json.Unmarshal(raw.Error, &decoded.Error)
+	}
+	if len(raw.Summary) > 0 {
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Summary, &values); err == nil && values != nil {
+			items := []ContentBlock{}
+			for _, value := range values {
+				var item ContentBlock
+				if err := json.Unmarshal(value, &item); err == nil {
+					switch item.Type {
+					case ContentBlockTypeText, ContentBlockTypeImage, ContentBlockTypeAudio, ContentBlockTypeResourceLink, ContentBlockTypeResource:
+						items = append(items, item)
+					}
+				}
+			}
+			decoded.Summary = &items
+		}
+	}
+	*u = CompactionUpdate(decoded)
+	return nil
+}
+
+// CompleteElicitationNotification: Notification sent by the agent when a URL-based elicitation is complete.
 type CompleteElicitationNotification struct {
 	Meta          Meta          `json:"_meta,omitzero"`
 	ElicitationID ElicitationId `json:"elicitationId"`
@@ -1092,7 +1076,31 @@ func (b *ContentBlock) UnmarshalJSON(data []byte) error {
 		_ = json.Unmarshal(raw.Description, &decoded.Description)
 	}
 	if len(raw.MimeType) > 0 {
-		_ = json.Unmarshal(raw.MimeType, &decoded.MimeType)
+		switch decoded.Type {
+		case ContentBlockTypeImage:
+			var value string
+			if err := json.Unmarshal(raw.MimeType, &value); err != nil {
+				return err
+			}
+			decoded.MimeType = func(v string) *string {
+				converted := string(v)
+				return &converted
+			}(value)
+		case ContentBlockTypeAudio:
+			var value string
+			if err := json.Unmarshal(raw.MimeType, &value); err != nil {
+				return err
+			}
+			decoded.MimeType = func(v string) *string {
+				converted := string(v)
+				return &converted
+			}(value)
+		case ContentBlockTypeResourceLink:
+			var value *string
+			if err := json.Unmarshal(raw.MimeType, &value); err == nil {
+				decoded.MimeType = value
+			}
+		}
 	}
 	if len(raw.Size) > 0 {
 		_ = json.Unmarshal(raw.Size, &decoded.Size)
@@ -1101,7 +1109,22 @@ func (b *ContentBlock) UnmarshalJSON(data []byte) error {
 		_ = json.Unmarshal(raw.Title, &decoded.Title)
 	}
 	if len(raw.URI) > 0 {
-		_ = json.Unmarshal(raw.URI, &decoded.URI)
+		switch decoded.Type {
+		case ContentBlockTypeImage:
+			var value *string
+			if err := json.Unmarshal(raw.URI, &value); err == nil {
+				decoded.URI = value
+			}
+		case ContentBlockTypeResourceLink:
+			var value string
+			if err := json.Unmarshal(raw.URI, &value); err != nil {
+				return err
+			}
+			decoded.URI = func(v string) *string {
+				converted := string(v)
+				return &converted
+			}(value)
+		}
 	}
 	*b = ContentBlock(decoded)
 	return nil
@@ -1139,11 +1162,7 @@ type Cost struct {
 	Currency string  `json:"currency"`
 }
 
-// CreateElicitationRequest: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Request from the agent to elicit structured user input.
+// CreateElicitationRequest: Request from the agent to elicit structured user input.
 //
 // The agent sends this to the client to request information from the user,
 // either via a form or by directing them to a URL.
@@ -1256,11 +1275,7 @@ func (r *CreateElicitationRequest) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// CreateElicitationResponse: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Response from the client to an elicitation request.
+// CreateElicitationResponse: Response from the client to an elicitation request.
 type CreateElicitationResponse struct {
 	Action  CreateElicitationResponseType       `json:"action"`
 	Meta    Meta                                `json:"_meta,omitzero"`
@@ -1546,20 +1561,12 @@ type DisconnectMcpResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
-// ElicitationAcceptAction: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// The user accepted the elicitation and provided content.
+// ElicitationAcceptAction: The user accepted the elicitation and provided content.
 type ElicitationAcceptAction struct {
 	Content *map[string]ElicitationContentValue `json:"content,omitempty"`
 }
 
-// ElicitationCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Elicitation capabilities supported by the client.
+// ElicitationCapabilities: Elicitation capabilities supported by the client.
 type ElicitationCapabilities struct {
 	Meta Meta                         `json:"_meta,omitzero"`
 	Form *ElicitationFormCapabilities `json:"form,omitempty"`
@@ -1591,22 +1598,14 @@ func (c *ElicitationCapabilities) UnmarshalJSON(data []byte) error {
 // ElicitationContentValue: Allowed wire representations for [`ElicitationContentValue`].
 type ElicitationContentValue = json.RawMessage
 
-// ElicitationFormCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Form-based elicitation capabilities.
+// ElicitationFormCapabilities: Form-based elicitation capabilities.
 //
 // Supplying `{}` means the client supports form-based elicitation.
 type ElicitationFormCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
-// ElicitationFormMode: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Form-based elicitation mode where the client renders a form from the provided schema.
+// ElicitationFormMode: Form-based elicitation mode where the client renders a form from the provided schema.
 type ElicitationFormMode struct {
 	RequestID       *RequestId        `json:"requestId,omitempty"`
 	RequestedSchema ElicitationSchema `json:"requestedSchema"`
@@ -1649,11 +1648,7 @@ func (m *ElicitationFormMode) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ElicitationId: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Unique identifier for an elicitation.
+// ElicitationId: Unique identifier for an elicitation.
 type ElicitationId string
 
 // ElicitationPropertySchema: Property schema for elicitation form fields.
@@ -1776,18 +1771,39 @@ func (s *ElicitationPropertySchema) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(raw.Default) > 0 {
-		var values []json.RawMessage
-		if err := json.Unmarshal(raw.Default, &values); err == nil && values != nil {
-			items := []string{}
-			for _, value := range values {
-				var item string
-				if err := json.Unmarshal(value, &item); err == nil {
-					items = append(items, item)
-				}
+		switch decoded.Type {
+		case ElicitationPropertySchemaTypeString:
+			var value *string
+			if err := json.Unmarshal(raw.Default, &value); err == nil {
+				decoded.Default = value
 			}
-			decoded.Default = items
-		} else {
-			_ = json.Unmarshal(raw.Default, &decoded.Default)
+		case ElicitationPropertySchemaTypeNumber:
+			var value *float64
+			if err := json.Unmarshal(raw.Default, &value); err == nil {
+				decoded.Default = value
+			}
+		case ElicitationPropertySchemaTypeInteger:
+			var value *int64
+			if err := json.Unmarshal(raw.Default, &value); err == nil {
+				decoded.Default = value
+			}
+		case ElicitationPropertySchemaTypeBoolean:
+			var value *bool
+			if err := json.Unmarshal(raw.Default, &value); err == nil {
+				decoded.Default = value
+			}
+		case ElicitationPropertySchemaTypeArray:
+			var values []json.RawMessage
+			if err := json.Unmarshal(raw.Default, &values); err == nil && values != nil {
+				items := []string{}
+				for _, rawItem := range values {
+					var item string
+					if err := json.Unmarshal(rawItem, &item); err == nil {
+						items = append(items, item)
+					}
+				}
+				decoded.Default = &items
+			}
 		}
 	}
 	if len(raw.Description) > 0 {
@@ -1800,11 +1816,7 @@ func (s *ElicitationPropertySchema) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ElicitationRequestScope: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Request-scoped elicitation, tied to a specific JSON-RPC request outside of a session
+// ElicitationRequestScope: Request-scoped elicitation, tied to a specific JSON-RPC request outside of a session
 // (e.g., during auth/configuration phases before any session is started).
 type ElicitationRequestScope struct {
 	RequestID RequestId `json:"requestId"`
@@ -1863,11 +1875,7 @@ const (
 	ElicitationSchemaTypeObject ElicitationSchemaType = "object"
 )
 
-// ElicitationSessionScope: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Session-scoped elicitation, optionally tied to a specific tool call.
+// ElicitationSessionScope: Session-scoped elicitation, optionally tied to a specific tool call.
 //
 // When `tool_call_id` is set, the elicitation is tied to a specific tool call.
 // This is useful when an agent receives an elicitation from an MCP server
@@ -1895,22 +1903,14 @@ func (s *ElicitationSessionScope) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ElicitationUrlCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// URL-based elicitation capabilities.
+// ElicitationUrlCapabilities: URL-based elicitation capabilities.
 //
 // Supplying `{}` means the client supports URL-based elicitation.
 type ElicitationUrlCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
-// ElicitationUrlMode: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// URL-based elicitation mode where the client directs the user to a URL.
+// ElicitationUrlMode: URL-based elicitation mode where the client directs the user to a URL.
 type ElicitationUrlMode struct {
 	ElicitationID ElicitationId `json:"elicitationId"`
 	RequestID     *RequestId    `json:"requestId,omitempty"`
@@ -2415,7 +2415,7 @@ func (r *InitializeResponse) UnmarshalJSON(data []byte) error {
 				var item AuthMethod
 				if err := json.Unmarshal(value, &item); err == nil {
 					switch item.Type {
-					case AuthMethodTypeEnvVar, AuthMethodTypeTerminal, "":
+					case AuthMethodTypeTerminal, "":
 						decoded.AuthMethods = append(decoded.AuthMethods, item)
 					}
 				}
@@ -5312,11 +5312,13 @@ type SessionUpdate struct {
 	SessionUpdate     SessionUpdateType     `json:"sessionUpdate"`
 	Meta              Meta                  `json:"_meta,omitzero"`
 	AvailableCommands []AvailableCommand    `json:"availableCommands,omitempty"`
+	CompactionID      CompactionId          `json:"compactionId,omitempty"`
 	ConfigOptions     []SessionConfigOption `json:"configOptions,omitempty"`
 	Content           any                   `json:"content,omitempty,omitzero"`
 	Cost              *Cost                 `json:"cost,omitempty"`
 	CurrentModeID     SessionModeId         `json:"currentModeId,omitempty"`
 	Entries           []PlanEntry           `json:"entries,omitempty"`
+	Error             *string               `json:"error,omitempty"`
 	Kind              *ToolKind             `json:"kind,omitempty"`
 	Locations         *[]ToolCallLocation   `json:"locations,omitempty"`
 	MessageID         *MessageId            `json:"messageId,omitempty"`
@@ -5327,6 +5329,7 @@ type SessionUpdate struct {
 	RawOutput         any                   `json:"rawOutput,omitempty"`
 	Size              uint64                `json:"size,omitempty"`
 	Status            *ToolCallStatus       `json:"status,omitempty"`
+	Summary           *[]ContentBlock       `json:"summary,omitempty"`
 	Title             *string               `json:"title,omitempty"`
 	ToolCallID        ToolCallId            `json:"toolCallId,omitempty"`
 	UpdatedAt         *string               `json:"updatedAt,omitempty"`
@@ -5350,6 +5353,8 @@ const (
 	SessionUpdateTypeConfigOptionUpdate      SessionUpdateType = "config_option_update"
 	SessionUpdateTypeSessionInfoUpdate       SessionUpdateType = "session_info_update"
 	SessionUpdateTypeUsageUpdate             SessionUpdateType = "usage_update"
+	SessionUpdateTypeCompactionUpdate        SessionUpdateType = "compaction_update"
+	SessionUpdateTypeCompactionSummaryChunk  SessionUpdateType = "compaction_summary_chunk"
 )
 
 // UserMessageChunkSessionUpdate creates an SessionUpdate variant: A chunk of the user's message being streamed.
@@ -5468,6 +5473,41 @@ func UsageUpdateSessionUpdate(used uint64, size uint64) SessionUpdate {
 	}
 }
 
+// CompactionUpdateSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// A context compaction has been created or updated.
+//
+// Agents MUST only send this update when the Client advertised
+// [`ClientSessionCapabilities::compaction`].
+func CompactionUpdateSessionUpdate(compactionID CompactionId, status CompactionStatus) SessionUpdate {
+	return SessionUpdate{
+		SessionUpdate: SessionUpdateTypeCompactionUpdate,
+		CompactionID:  compactionID,
+		Status: func(v CompactionStatus) *ToolCallStatus {
+			converted := ToolCallStatus(v)
+			return &converted
+		}(status),
+	}
+}
+
+// CompactionSummaryChunkSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// A content block appended to a context compaction's retained summary.
+//
+// Agents MUST only send this update when the Client advertised
+// [`ClientSessionCapabilities::compaction`].
+func CompactionSummaryChunkSessionUpdate(compactionID CompactionId, content ContentBlock) SessionUpdate {
+	return SessionUpdate{
+		SessionUpdate: SessionUpdateTypeCompactionSummaryChunk,
+		CompactionID:  compactionID,
+		Content:       content,
+	}
+}
+
 // MarshalJSON implements json.Marshaler.
 func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 	type alias SessionUpdate
@@ -5484,6 +5524,8 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 		ConfigOptions     *[]SessionConfigOption `json:"configOptions,omitempty"`
 		Size              *uint64                `json:"size,omitempty"`
 		Used              *uint64                `json:"used,omitempty"`
+		CompactionID      *CompactionId          `json:"compactionId,omitempty"`
+		Status            **ToolCallStatus       `json:"status,omitempty"`
 	}
 	w := wire{alias: (*alias)(&u)}
 	if u.Content != nil {
@@ -5529,6 +5571,14 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 	if !reflect.ValueOf(u.Used).IsZero() {
 		Used := u.Used
 		w.Used = &Used
+	}
+	if !reflect.ValueOf(u.CompactionID).IsZero() {
+		CompactionID := u.CompactionID
+		w.CompactionID = &CompactionID
+	}
+	if u.Status != nil {
+		Status := u.Status
+		w.Status = &Status
 	}
 	switch u.SessionUpdate {
 	case SessionUpdateTypeUserMessageChunk:
@@ -5580,6 +5630,16 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 		w.Size = &Size
 		Used := u.Used
 		w.Used = &Used
+	case SessionUpdateTypeCompactionUpdate:
+		CompactionID := u.CompactionID
+		w.CompactionID = &CompactionID
+		Status := u.Status
+		w.Status = &Status
+	case SessionUpdateTypeCompactionSummaryChunk:
+		CompactionID := u.CompactionID
+		w.CompactionID = &CompactionID
+		Content := u.Content
+		w.Content = &Content
 	}
 	return json.Marshal(w)
 }
@@ -5594,6 +5654,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		Content           json.RawMessage `json:"content"`
 		Cost              json.RawMessage `json:"cost"`
 		Entries           json.RawMessage `json:"entries"`
+		Error             json.RawMessage `json:"error"`
 		Kind              json.RawMessage `json:"kind"`
 		Locations         json.RawMessage `json:"locations"`
 		MessageID         json.RawMessage `json:"messageId"`
@@ -5601,6 +5662,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		RawInput          json.RawMessage `json:"rawInput"`
 		RawOutput         json.RawMessage `json:"rawOutput"`
 		Status            json.RawMessage `json:"status"`
+		Summary           json.RawMessage `json:"summary"`
 		Title             json.RawMessage `json:"title"`
 		UpdatedAt         json.RawMessage `json:"updatedAt"`
 		*alias
@@ -5636,21 +5698,61 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.Content) > 0 {
-		var values []json.RawMessage
-		if err := json.Unmarshal(raw.Content, &values); err == nil && values != nil {
-			items := []ToolCallContent{}
-			for _, value := range values {
-				var item ToolCallContent
-				if err := json.Unmarshal(value, &item); err == nil {
-					switch item.Type {
-					case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
-						items = append(items, item)
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeUserMessageChunk:
+			var value ContentBlock
+			if err := json.Unmarshal(raw.Content, &value); err != nil {
+				return err
+			}
+			decoded.Content = value
+		case SessionUpdateTypeAgentMessageChunk:
+			var value ContentBlock
+			if err := json.Unmarshal(raw.Content, &value); err != nil {
+				return err
+			}
+			decoded.Content = value
+		case SessionUpdateTypeAgentThoughtChunk:
+			var value ContentBlock
+			if err := json.Unmarshal(raw.Content, &value); err != nil {
+				return err
+			}
+			decoded.Content = value
+		case SessionUpdateTypeToolCall:
+			var values []json.RawMessage
+			if err := json.Unmarshal(raw.Content, &values); err == nil {
+				items := []ToolCallContent{}
+				for _, rawItem := range values {
+					var item ToolCallContent
+					if err := json.Unmarshal(rawItem, &item); err == nil {
+						switch item.Type {
+						case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
+							items = append(items, item)
+						}
 					}
 				}
+				decoded.Content = items
 			}
-			decoded.Content = items
-		} else {
-			_ = json.Unmarshal(raw.Content, &decoded.Content)
+		case SessionUpdateTypeToolCallUpdate:
+			var values []json.RawMessage
+			if err := json.Unmarshal(raw.Content, &values); err == nil && values != nil {
+				items := []ToolCallContent{}
+				for _, rawItem := range values {
+					var item ToolCallContent
+					if err := json.Unmarshal(rawItem, &item); err == nil {
+						switch item.Type {
+						case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
+							items = append(items, item)
+						}
+					}
+				}
+				decoded.Content = &items
+			}
+		case SessionUpdateTypeCompactionSummaryChunk:
+			var value ContentBlock
+			if err := json.Unmarshal(raw.Content, &value); err != nil {
+				return err
+			}
+			decoded.Content = value
 		}
 	}
 	if len(raw.Cost) > 0 {
@@ -5668,26 +5770,61 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 			}
 		}
 	}
+	if len(raw.Error) > 0 {
+		_ = json.Unmarshal(raw.Error, &decoded.Error)
+	}
 	if len(raw.Kind) > 0 {
-		var value ToolKind
-		if err := json.Unmarshal(raw.Kind, &value); err == nil {
-			switch string(value) {
-			case "read", "edit", "delete", "move", "search", "execute", "think", "fetch", "switch_mode", "other":
-				decoded.Kind = &value
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeToolCall:
+			var value ToolKind
+			if err := json.Unmarshal(raw.Kind, &value); err == nil {
+				switch string(value) {
+				case "read", "edit", "delete", "move", "search", "execute", "think", "fetch", "switch_mode", "other":
+					decoded.Kind = func(v ToolKind) *ToolKind {
+						converted := ToolKind(v)
+						return &converted
+					}(value)
+				}
+			}
+		case SessionUpdateTypeToolCallUpdate:
+			var value ToolKind
+			if err := json.Unmarshal(raw.Kind, &value); err == nil {
+				switch string(value) {
+				case "read", "edit", "delete", "move", "search", "execute", "think", "fetch", "switch_mode", "other":
+					decoded.Kind = &value
+				}
 			}
 		}
 	}
 	if len(raw.Locations) > 0 {
-		var values []json.RawMessage
-		if err := json.Unmarshal(raw.Locations, &values); err == nil && values != nil {
-			items := []ToolCallLocation{}
-			for _, value := range values {
-				var item ToolCallLocation
-				if err := json.Unmarshal(value, &item); err == nil {
-					items = append(items, item)
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeToolCall:
+			var values []json.RawMessage
+			if err := json.Unmarshal(raw.Locations, &values); err == nil {
+				items := []ToolCallLocation{}
+				for _, rawItem := range values {
+					var item ToolCallLocation
+					if err := json.Unmarshal(rawItem, &item); err == nil {
+						items = append(items, item)
+					}
 				}
+				decoded.Locations = func(v []ToolCallLocation) *[]ToolCallLocation {
+					converted := []ToolCallLocation(v)
+					return &converted
+				}(items)
 			}
-			decoded.Locations = &items
+		case SessionUpdateTypeToolCallUpdate:
+			var values []json.RawMessage
+			if err := json.Unmarshal(raw.Locations, &values); err == nil && values != nil {
+				items := []ToolCallLocation{}
+				for _, rawItem := range values {
+					var item ToolCallLocation
+					if err := json.Unmarshal(rawItem, &item); err == nil {
+						items = append(items, item)
+					}
+				}
+				decoded.Locations = &items
+			}
 		}
 	}
 	if len(raw.MessageID) > 0 {
@@ -5703,16 +5840,75 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		_ = json.Unmarshal(raw.RawOutput, &decoded.RawOutput)
 	}
 	if len(raw.Status) > 0 {
-		var value ToolCallStatus
-		if err := json.Unmarshal(raw.Status, &value); err == nil {
-			switch string(value) {
-			case "pending", "in_progress", "completed", "failed":
-				decoded.Status = &value
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeToolCall:
+			var value ToolCallStatus
+			if err := json.Unmarshal(raw.Status, &value); err == nil {
+				switch string(value) {
+				case "pending", "in_progress", "completed", "failed":
+					decoded.Status = func(v ToolCallStatus) *ToolCallStatus {
+						converted := ToolCallStatus(v)
+						return &converted
+					}(value)
+				}
 			}
+		case SessionUpdateTypeToolCallUpdate:
+			var value ToolCallStatus
+			if err := json.Unmarshal(raw.Status, &value); err == nil {
+				switch string(value) {
+				case "pending", "in_progress", "completed", "failed":
+					decoded.Status = &value
+				}
+			}
+		case SessionUpdateTypeCompactionUpdate:
+			var value CompactionStatus
+			if err := json.Unmarshal(raw.Status, &value); err != nil {
+				return err
+			}
+			decoded.Status = func(v CompactionStatus) *ToolCallStatus {
+				converted := ToolCallStatus(v)
+				return &converted
+			}(value)
+		}
+	}
+	if len(raw.Summary) > 0 {
+		var values []json.RawMessage
+		if err := json.Unmarshal(raw.Summary, &values); err == nil && values != nil {
+			items := []ContentBlock{}
+			for _, value := range values {
+				var item ContentBlock
+				if err := json.Unmarshal(value, &item); err == nil {
+					switch item.Type {
+					case ContentBlockTypeText, ContentBlockTypeImage, ContentBlockTypeAudio, ContentBlockTypeResourceLink, ContentBlockTypeResource:
+						items = append(items, item)
+					}
+				}
+			}
+			decoded.Summary = &items
 		}
 	}
 	if len(raw.Title) > 0 {
-		_ = json.Unmarshal(raw.Title, &decoded.Title)
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeToolCall:
+			var value string
+			if err := json.Unmarshal(raw.Title, &value); err != nil {
+				return err
+			}
+			decoded.Title = func(v string) *string {
+				converted := string(v)
+				return &converted
+			}(value)
+		case SessionUpdateTypeToolCallUpdate:
+			var value *string
+			if err := json.Unmarshal(raw.Title, &value); err == nil {
+				decoded.Title = value
+			}
+		case SessionUpdateTypeSessionInfoUpdate:
+			var value *string
+			if err := json.Unmarshal(raw.Title, &value); err == nil {
+				decoded.Title = value
+			}
+		}
 	}
 	if len(raw.UpdatedAt) > 0 {
 		_ = json.Unmarshal(raw.UpdatedAt, &decoded.UpdatedAt)
@@ -6688,51 +6884,6 @@ type WriteTextFileRequest struct {
 // WriteTextFileResponse: Response to `fs/write_text_file`
 type WriteTextFileResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
-}
-
-// MarshalJSON implements json.Marshaler.
-func (v AuthMethodEnvVar) MarshalJSON() ([]byte, error) {
-	type alias AuthMethodEnvVar
-	a := alias(v)
-	if a.Vars == nil {
-		a.Vars = []AuthEnvVar{}
-	}
-	return json.Marshal(a)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (v *AuthMethodEnvVar) UnmarshalJSON(data []byte) error {
-	type alias AuthMethodEnvVar
-	decoded := alias{}
-	raw := struct {
-		Description json.RawMessage `json:"description"`
-		Link        json.RawMessage `json:"link"`
-		Vars        json.RawMessage `json:"vars"`
-		*alias
-	}{alias: &decoded}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Description) > 0 {
-		_ = json.Unmarshal(raw.Description, &decoded.Description)
-	}
-	if len(raw.Link) > 0 {
-		_ = json.Unmarshal(raw.Link, &decoded.Link)
-	}
-	if len(raw.Vars) > 0 {
-		var values []json.RawMessage
-		if err := json.Unmarshal(raw.Vars, &values); err == nil {
-			decoded.Vars = []AuthEnvVar{}
-			for _, value := range values {
-				var item AuthEnvVar
-				if err := json.Unmarshal(value, &item); err == nil {
-					decoded.Vars = append(decoded.Vars, item)
-				}
-			}
-		}
-	}
-	*v = AuthMethodEnvVar(decoded)
-	return nil
 }
 
 // MarshalJSON implements json.Marshaler.
