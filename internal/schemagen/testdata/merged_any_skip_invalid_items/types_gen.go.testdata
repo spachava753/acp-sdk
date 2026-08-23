@@ -130,21 +130,28 @@ func (u *Update) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(raw.Payload) > 0 {
-		var values []json.RawMessage
-		if err := json.Unmarshal(raw.Payload, &values); err == nil && values != nil {
-			items := []ToolContent{}
-			for _, value := range values {
-				var item ToolContent
-				if err := json.Unmarshal(value, &item); err == nil {
-					switch item.Type {
-					case ToolContentTypeText, ToolContentTypeTerminal:
-						items = append(items, item)
+		switch decoded.Kind {
+		case UpdateTypeMessage:
+			var value TextPayload
+			if err := json.Unmarshal(raw.Payload, &value); err != nil {
+				return err
+			}
+			decoded.Payload = value
+		case UpdateTypeTool:
+			var values []json.RawMessage
+			if err := json.Unmarshal(raw.Payload, &values); err == nil {
+				items := []ToolContent{}
+				for _, rawItem := range values {
+					var item ToolContent
+					if err := json.Unmarshal(rawItem, &item); err == nil {
+						switch item.Type {
+						case ToolContentTypeText, ToolContentTypeTerminal:
+							items = append(items, item)
+						}
 					}
 				}
+				decoded.Payload = items
 			}
-			decoded.Payload = items
-		} else {
-			_ = json.Unmarshal(raw.Payload, &decoded.Payload)
 		}
 	}
 	*u = Update(decoded)

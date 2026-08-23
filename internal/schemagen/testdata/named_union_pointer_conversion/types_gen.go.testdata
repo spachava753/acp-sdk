@@ -1,0 +1,167 @@
+package acp
+
+import "encoding/json"
+
+// FixedStatus: Single status used by a constant-valued variant.
+type FixedStatus string
+
+const (
+	FixedStatusFixed FixedStatus = "fixed"
+)
+
+// PrimaryStatus: Status used by the first update variant.
+type PrimaryStatus string
+
+const (
+	PrimaryStatusRunning PrimaryStatus = "running"
+)
+
+// SecondaryStatus: Status used by the second update variant.
+type SecondaryStatus string
+
+const (
+	SecondaryStatusCompleted SecondaryStatus = "completed"
+	SecondaryStatusFailed    SecondaryStatus = "failed"
+)
+
+// Update: Flattened union with distinct named status types.
+type Update struct {
+	Kind   UpdateType     `json:"kind"`
+	Status *PrimaryStatus `json:"status,omitempty"`
+}
+
+// UpdateType is the discriminator for Update variants.
+type UpdateType string
+
+const (
+	UpdateTypePrimary           UpdateType = "primary"
+	UpdateTypeSecondary         UpdateType = "secondary"
+	UpdateTypeNullableSecondary UpdateType = "nullable_secondary"
+	UpdateTypeFixed             UpdateType = "fixed"
+)
+
+// PrimaryUpdate creates update with a nullable primary status.
+func PrimaryUpdate() Update {
+	return Update{
+		Kind: UpdateTypePrimary,
+	}
+}
+
+// SecondaryUpdate creates update with a required secondary status.
+func SecondaryUpdate(status SecondaryStatus) Update {
+	return Update{
+		Kind: UpdateTypeSecondary,
+		Status: func(v SecondaryStatus) *PrimaryStatus {
+			converted := PrimaryStatus(v)
+			return &converted
+		}(status),
+	}
+}
+
+// NullableSecondaryUpdate creates update with a required nullable secondary status.
+func NullableSecondaryUpdate(status *SecondaryStatus) Update {
+	return Update{
+		Kind: UpdateTypeNullableSecondary,
+		Status: func(v *SecondaryStatus) *PrimaryStatus {
+			if v == nil {
+				return nil
+			}
+			converted := PrimaryStatus(*v)
+			return &converted
+		}(status),
+	}
+}
+
+// FixedUpdate creates update with a constant status.
+func FixedUpdate() Update {
+	return Update{
+		Kind: UpdateTypeFixed,
+		Status: func(v FixedStatus) *PrimaryStatus {
+			converted := PrimaryStatus(v)
+			return &converted
+		}(FixedStatusFixed),
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (u Update) MarshalJSON() ([]byte, error) {
+	type alias Update
+	type wire struct {
+		*alias
+		Status **PrimaryStatus `json:"status,omitempty"`
+	}
+	w := wire{alias: (*alias)(&u)}
+	if u.Status != nil {
+		Status := u.Status
+		w.Status = &Status
+	}
+	switch u.Kind {
+	case UpdateTypeSecondary:
+		Status := u.Status
+		w.Status = &Status
+	case UpdateTypeNullableSecondary:
+		Status := u.Status
+		w.Status = &Status
+	case UpdateTypeFixed:
+		Status := u.Status
+		w.Status = &Status
+	}
+	return json.Marshal(w)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *Update) UnmarshalJSON(data []byte) error {
+	type alias Update
+	decoded := alias{}
+	raw := struct {
+		Status json.RawMessage `json:"status"`
+		*alias
+	}{alias: &decoded}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Status) > 0 {
+		switch decoded.Kind {
+		case UpdateTypePrimary:
+			var value PrimaryStatus
+			if err := json.Unmarshal(raw.Status, &value); err == nil {
+				switch string(value) {
+				case "running":
+					decoded.Status = &value
+				}
+			}
+		case UpdateTypeSecondary:
+			var value SecondaryStatus
+			if err := json.Unmarshal(raw.Status, &value); err != nil {
+				return err
+			}
+			decoded.Status = func(v SecondaryStatus) *PrimaryStatus {
+				converted := PrimaryStatus(v)
+				return &converted
+			}(value)
+		case UpdateTypeNullableSecondary:
+			var value *SecondaryStatus
+			if err := json.Unmarshal(raw.Status, &value); err != nil {
+				return err
+			}
+			decoded.Status = func(v *SecondaryStatus) *PrimaryStatus {
+				if v == nil {
+					return nil
+				}
+				converted := PrimaryStatus(*v)
+				return &converted
+			}(value)
+		case UpdateTypeFixed:
+			var value FixedStatus
+			if err := json.Unmarshal(raw.Status, &value); err != nil {
+				return err
+			}
+			decoded.Status = func(v FixedStatus) *PrimaryStatus {
+				converted := PrimaryStatus(v)
+				return &converted
+			}(value)
+		}
+	}
+	*u = Update(decoded)
+	return nil
+}

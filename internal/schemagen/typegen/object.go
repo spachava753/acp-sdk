@@ -88,7 +88,7 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 	for _, f := range fields {
 		deserializeFields = append(deserializeFields, f.deserializeField)
 	}
-	unmarshalMethod, hasUnmarshal := deserializeUnmarshalCode(name, deserializeFields)
+	unmarshalMethod, hasUnmarshal := deserializeUnmarshalCode(name, deserializeFields, nil)
 	if (len(requiredSlices) == 0 && len(requiredArrayUnions) == 0) || hasRequiredMap {
 		if hasUnmarshal {
 			codes = append(codes, unmarshalMethod)

@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Named Union Pointer Conversion",
+  "$defs": {
+    "FixedStatus": {
+      "description": "Single status used by a constant-valued variant.",
+      "oneOf": [
+        {
+          "const": "fixed",
+          "type": "string"
+        }
+      ]
+    },
+    "PrimaryStatus": {
+      "description": "Status used by the first update variant.",
+      "oneOf": [
+        {
+          "const": "running",
+          "type": "string"
+        }
+      ]
+    },
+    "SecondaryStatus": {
+      "description": "Status used by the second update variant.",
+      "oneOf": [
+        {
+          "const": "completed",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        },
+        {
+          "title": "other",
+          "type": "string"
+        }
+      ]
+    },
+    "Update": {
+      "description": "Flattened union with distinct named status types.",
+      "oneOf": [
+        {
+          "title": "Primary",
+          "description": "Update with a nullable primary status.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "primary",
+              "type": "string"
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/PrimaryStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "x-deserialize-default-on-error": true
+            }
+          },
+          "required": ["kind"]
+        },
+        {
+          "title": "Secondary",
+          "description": "Update with a required secondary status.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "secondary",
+              "type": "string"
+            },
+            "status": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/SecondaryStatus"
+                }
+              ]
+            }
+          },
+          "required": ["kind", "status"]
+        },
+        {
+          "title": "NullableSecondary",
+          "description": "Update with a required nullable secondary status.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "nullable_secondary",
+              "type": "string"
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/SecondaryStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": ["kind", "status"]
+        },
+        {
+          "title": "Fixed",
+          "description": "Update with a constant status.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "fixed",
+              "type": "string"
+            },
+            "status": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/FixedStatus"
+                }
+              ]
+            }
+          },
+          "required": ["kind", "status"]
+        }
+      ],
+      "discriminator": {
+        "propertyName": "kind"
+      }
+    }
+  }
+}

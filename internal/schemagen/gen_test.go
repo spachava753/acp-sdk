@@ -3,6 +3,11 @@ package schemagen_test
 import (
 	"bytes"
 	"encoding/json"
+	"go/ast"
+	"go/importer"
+	"go/parser"
+	"go/token"
+	"go/types"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,6 +42,7 @@ func TestGenerate(t *testing.T) {
 
 			want := readExpectedFiles(t, filepath.Dir(schemaPath))
 			got := generatedFilesByName(t, schemagen.Generate(&schema))
+			typeCheckGeneratedTypes(t, got["types_gen.go"])
 
 			for filename, wantContents := range want {
 				gotContents, ok := got[filename]
@@ -83,6 +89,23 @@ func TestGenerateDeterministic(t *testing.T) {
 		for filename := range got {
 			t.Fatalf("Generate() run %d returned unexpected file %q", i+1, filename)
 		}
+	}
+}
+
+func typeCheckGeneratedTypes(t *testing.T, src []byte) {
+	t.Helper()
+	if len(src) == 0 {
+		return
+	}
+
+	files := token.NewFileSet()
+	file, err := parser.ParseFile(files, "types_gen.go", src, parser.AllErrors)
+	if err != nil {
+		t.Fatalf("parse generated types: %v", err)
+	}
+	config := types.Config{Importer: importer.Default()}
+	if _, err := config.Check("acp", files, []*ast.File{file}, nil); err != nil {
+		t.Fatalf("type-check generated types: %v", err)
 	}
 }
 
