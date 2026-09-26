@@ -659,6 +659,7 @@ type ClientSessionCapabilities struct {
 	Meta          Meta                              `json:"_meta,omitzero"`
 	Compaction    *CompactionCapabilities           `json:"compaction,omitempty"`
 	ConfigOptions *SessionConfigOptionsCapabilities `json:"configOptions,omitempty"`
+	Notices       *NoticeCapabilities               `json:"notices,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -668,6 +669,7 @@ func (c *ClientSessionCapabilities) UnmarshalJSON(data []byte) error {
 	raw := struct {
 		Compaction    json.RawMessage `json:"compaction"`
 		ConfigOptions json.RawMessage `json:"configOptions"`
+		Notices       json.RawMessage `json:"notices"`
 		*alias
 	}{alias: &decoded}
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -678,6 +680,9 @@ func (c *ClientSessionCapabilities) UnmarshalJSON(data []byte) error {
 	}
 	if len(raw.ConfigOptions) > 0 {
 		_ = json.Unmarshal(raw.ConfigOptions, &decoded.ConfigOptions)
+	}
+	if len(raw.Notices) > 0 {
+		_ = json.Unmarshal(raw.Notices, &decoded.Notices)
 	}
 	*c = ClientSessionCapabilities(decoded)
 	return nil
@@ -3840,6 +3845,67 @@ func (r *NewSessionResponse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// Notice: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Fire-and-forget advisory information for the user.
+//
+// Notices are live events rather than session history. Agents must not rely on
+// a notice being received, displayed, or seen by the user.
+// Agents MUST only send notices when the Client advertised
+// [`ClientSessionCapabilities::notices`]. Otherwise, Agents may use an agent
+// message when the information should still be surfaced to the user.
+//
+// See RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)
+type Notice struct {
+	Meta        Meta           `json:"_meta,omitzero"`
+	Description *string        `json:"description,omitempty"`
+	Severity    NoticeSeverity `json:"severity"`
+	Title       string         `json:"title"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (n *Notice) UnmarshalJSON(data []byte) error {
+	type alias Notice
+	decoded := alias{}
+	raw := struct {
+		Description json.RawMessage `json:"description"`
+		*alias
+	}{alias: &decoded}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Description) > 0 {
+		_ = json.Unmarshal(raw.Description, &decoded.Description)
+	}
+	*n = Notice(decoded)
+	return nil
+}
+
+// NoticeCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Client support for presenting live advisory notices to the user.
+type NoticeCapabilities map[string]any
+
+// NoticeSeverity: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Severity hint for a session notice.
+type NoticeSeverity string
+
+const (
+	// NoticeSeverityInfo: Informational notice.
+	NoticeSeverityInfo NoticeSeverity = "info"
+	// NoticeSeverityWarning: Warning notice.
+	NoticeSeverityWarning NoticeSeverity = "warning"
+	// NoticeSeverityError: Error notice.
+	NoticeSeverityError NoticeSeverity = "error"
+)
+
 // NumberPropertySchema: Schema for number (floating-point) properties in an elicitation form.
 type NumberPropertySchema struct {
 	Meta        Meta     `json:"_meta,omitzero"`
@@ -5317,6 +5383,7 @@ type SessionUpdate struct {
 	Content           any                   `json:"content,omitempty,omitzero"`
 	Cost              *Cost                 `json:"cost,omitempty"`
 	CurrentModeID     SessionModeId         `json:"currentModeId,omitempty"`
+	Description       *string               `json:"description,omitempty"`
 	Entries           []PlanEntry           `json:"entries,omitempty"`
 	Error             *string               `json:"error,omitempty"`
 	Kind              *ToolKind             `json:"kind,omitempty"`
@@ -5327,6 +5394,7 @@ type SessionUpdate struct {
 	PlanID            PlanId                `json:"planId,omitempty"`
 	RawInput          any                   `json:"rawInput,omitempty"`
 	RawOutput         any                   `json:"rawOutput,omitempty"`
+	Severity          NoticeSeverity        `json:"severity,omitempty"`
 	Size              uint64                `json:"size,omitempty"`
 	Status            *ToolCallStatus       `json:"status,omitempty"`
 	Summary           *[]ContentBlock       `json:"summary,omitempty"`
@@ -5353,6 +5421,7 @@ const (
 	SessionUpdateTypeConfigOptionUpdate      SessionUpdateType = "config_option_update"
 	SessionUpdateTypeSessionInfoUpdate       SessionUpdateType = "session_info_update"
 	SessionUpdateTypeUsageUpdate             SessionUpdateType = "usage_update"
+	SessionUpdateTypeNotice                  SessionUpdateType = "notice"
 	SessionUpdateTypeCompactionUpdate        SessionUpdateType = "compaction_update"
 	SessionUpdateTypeCompactionSummaryChunk  SessionUpdateType = "compaction_summary_chunk"
 )
@@ -5473,6 +5542,22 @@ func UsageUpdateSessionUpdate(used uint64, size uint64) SessionUpdate {
 	}
 }
 
+// NoticeSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Advisory information for the user that is not part of session history.
+//
+// Agents MUST only send this update when the Client advertised
+// [`ClientSessionCapabilities::notices`].
+func NoticeSessionUpdate(severity NoticeSeverity, title string) SessionUpdate {
+	return SessionUpdate{
+		SessionUpdate: SessionUpdateTypeNotice,
+		Severity:      severity,
+		Title:         &title,
+	}
+}
+
 // CompactionUpdateSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -5524,6 +5609,7 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 		ConfigOptions     *[]SessionConfigOption `json:"configOptions,omitempty"`
 		Size              *uint64                `json:"size,omitempty"`
 		Used              *uint64                `json:"used,omitempty"`
+		Severity          *NoticeSeverity        `json:"severity,omitempty"`
 		CompactionID      *CompactionId          `json:"compactionId,omitempty"`
 		Status            **ToolCallStatus       `json:"status,omitempty"`
 	}
@@ -5571,6 +5657,10 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 	if !reflect.ValueOf(u.Used).IsZero() {
 		Used := u.Used
 		w.Used = &Used
+	}
+	if !reflect.ValueOf(u.Severity).IsZero() {
+		Severity := u.Severity
+		w.Severity = &Severity
 	}
 	if !reflect.ValueOf(u.CompactionID).IsZero() {
 		CompactionID := u.CompactionID
@@ -5630,6 +5720,11 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 		w.Size = &Size
 		Used := u.Used
 		w.Used = &Used
+	case SessionUpdateTypeNotice:
+		Severity := u.Severity
+		w.Severity = &Severity
+		Title := u.Title
+		w.Title = &Title
 	case SessionUpdateTypeCompactionUpdate:
 		CompactionID := u.CompactionID
 		w.CompactionID = &CompactionID
@@ -5653,6 +5748,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		ConfigOptions     json.RawMessage `json:"configOptions"`
 		Content           json.RawMessage `json:"content"`
 		Cost              json.RawMessage `json:"cost"`
+		Description       json.RawMessage `json:"description"`
 		Entries           json.RawMessage `json:"entries"`
 		Error             json.RawMessage `json:"error"`
 		Kind              json.RawMessage `json:"kind"`
@@ -5757,6 +5853,9 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 	}
 	if len(raw.Cost) > 0 {
 		_ = json.Unmarshal(raw.Cost, &decoded.Cost)
+	}
+	if len(raw.Description) > 0 {
+		_ = json.Unmarshal(raw.Description, &decoded.Description)
 	}
 	if len(raw.Entries) > 0 {
 		var values []json.RawMessage
@@ -5908,6 +6007,15 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 			if err := json.Unmarshal(raw.Title, &value); err == nil {
 				decoded.Title = value
 			}
+		case SessionUpdateTypeNotice:
+			var value string
+			if err := json.Unmarshal(raw.Title, &value); err != nil {
+				return err
+			}
+			decoded.Title = func(v string) *string {
+				converted := string(v)
+				return &converted
+			}(value)
 		}
 	}
 	if len(raw.UpdatedAt) > 0 {
