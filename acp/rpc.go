@@ -6,7 +6,6 @@ package acp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -63,7 +62,7 @@ func decodeParams[T any](req *jsonrpc.Request) (*T, error) {
 	if len(req.Params) == 0 {
 		return &params, nil
 	}
-	if err := json.Unmarshal(req.Params, &params); err != nil {
+	if err := unmarshalJSON(req.Params, &params); err != nil {
 		return nil, fmt.Errorf("%w: %v", jsonrpc2.ErrInvalidParams, err)
 	}
 	return &params, nil

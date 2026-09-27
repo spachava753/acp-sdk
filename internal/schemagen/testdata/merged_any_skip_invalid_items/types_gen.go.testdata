@@ -126,24 +126,24 @@ func (u *Update) UnmarshalJSON(data []byte) error {
 		Payload json.RawMessage `json:"payload"`
 		*alias
 	}{alias: &decoded}
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
 	if len(raw.Payload) > 0 {
 		switch decoded.Kind {
 		case UpdateTypeMessage:
 			var value TextPayload
-			if err := json.Unmarshal(raw.Payload, &value); err != nil {
+			if err := unmarshalJSON(raw.Payload, &value); err != nil {
 				return err
 			}
 			decoded.Payload = value
 		case UpdateTypeTool:
 			var values []json.RawMessage
-			if err := json.Unmarshal(raw.Payload, &values); err == nil {
+			if err := unmarshalJSON(raw.Payload, &values); err == nil {
 				items := []ToolContent{}
 				for _, rawItem := range values {
 					var item ToolContent
-					if err := json.Unmarshal(rawItem, &item); err == nil {
+					if err := unmarshalJSON(rawItem, &item); err == nil {
 						switch item.Type {
 						case ToolContentTypeText, ToolContentTypeTerminal:
 							items = append(items, item)

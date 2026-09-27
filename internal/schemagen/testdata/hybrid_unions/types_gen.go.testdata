@@ -5,8 +5,14 @@ import (
 	"reflect"
 )
 
-// Meta: Reserved metadata for protocol extensions.
+// Meta: Reserved metadata for protocol extensions. Decoded numbers are json.Number values.
 type Meta map[string]any
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (m *Meta) UnmarshalJSON(data []byte) error {
+	type plain Meta
+	return unmarshalJSON(data, (*plain)(m))
+}
 
 // HybridOption: Flattened union with common parent option fields.
 type HybridOption struct {
@@ -111,4 +117,10 @@ func ValueIdHybridRequest(sessionID string, configID string, value string) Hybri
 		SessionID: sessionID,
 		Value:     value,
 	}
+}
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (r *HybridRequest) UnmarshalJSON(data []byte) error {
+	type plain HybridRequest
+	return unmarshalJSON(data, (*plain)(r))
 }

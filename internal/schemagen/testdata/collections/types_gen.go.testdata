@@ -14,6 +14,12 @@ type CollectionRequest struct {
 	Resources  map[string]ResourceSpec `json:"resources"`
 }
 
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (r *CollectionRequest) UnmarshalJSON(data []byte) error {
+	type plain CollectionRequest
+	return unmarshalJSON(data, (*plain)(r))
+}
+
 // EnvVariable: An environment variable.
 type EnvVariable struct {
 	Name  string `json:"name"`

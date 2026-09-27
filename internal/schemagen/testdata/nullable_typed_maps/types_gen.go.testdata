@@ -7,6 +7,12 @@ type MapContainer struct {
 	Name       string               `json:"name"`
 }
 
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (c *MapContainer) UnmarshalJSON(data []byte) error {
+	type plain MapContainer
+	return unmarshalJSON(data, (*plain)(c))
+}
+
 // MapValue: Typed map value.
 type MapValue struct {
 	Value string `json:"value"`

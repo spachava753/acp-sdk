@@ -77,16 +77,16 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 		Items         json.RawMessage `json:"items"`
 		*alias
 	}{alias: &decoded}
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
 	if len(raw.FallbackItems) > 0 {
 		var values []json.RawMessage
-		if err := json.Unmarshal(raw.FallbackItems, &values); err == nil {
+		if err := unmarshalJSON(raw.FallbackItems, &values); err == nil {
 			decoded.FallbackItems = []FallbackItem{}
 			for _, value := range values {
 				var item FallbackItem
-				if err := json.Unmarshal(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil {
 					switch item.Type {
 					case FallbackItemTypeRemote, "":
 						decoded.FallbackItems = append(decoded.FallbackItems, item)
@@ -97,11 +97,11 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 	}
 	if len(raw.Items) > 0 {
 		var values []json.RawMessage
-		if err := json.Unmarshal(raw.Items, &values); err == nil {
+		if err := unmarshalJSON(raw.Items, &values); err == nil {
 			decoded.Items = []TaggedItem{}
 			for _, value := range values {
 				var item TaggedItem
-				if err := json.Unmarshal(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil {
 					switch item.Kind {
 					case TaggedItemTypeText, TaggedItemTypeImage:
 						decoded.Items = append(decoded.Items, item)

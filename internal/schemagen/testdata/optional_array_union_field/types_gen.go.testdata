@@ -124,7 +124,7 @@ func (o *SelectOptions) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	var raw []json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
 	if len(raw) == 0 {
@@ -135,19 +135,19 @@ func (o *SelectOptions) UnmarshalJSON(data []byte) error {
 	var probe struct {
 		Name string `json:"name"`
 	}
-	if err := json.Unmarshal(raw[0], &probe); err != nil {
+	if err := unmarshalJSON(raw[0], &probe); err != nil {
 		return err
 	}
 	if probe.Name != "" {
 		var groups GroupedSelectOptions
-		if err := json.Unmarshal(data, &groups); err != nil {
+		if err := unmarshalJSON(data, &groups); err != nil {
 			return err
 		}
 		*o = SelectOptions{Groups: &groups}
 		return nil
 	}
 	var flat UngroupedSelectOptions
-	if err := json.Unmarshal(data, &flat); err != nil {
+	if err := unmarshalJSON(data, &flat); err != nil {
 		return err
 	}
 	*o = SelectOptions{Ungrouped: &flat}

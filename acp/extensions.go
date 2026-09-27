@@ -32,7 +32,7 @@ func CallExtension[R any](ctx context.Context, peer ExtensionCaller, method stri
 		return nil, err
 	}
 	var result R
-	if err := json.Unmarshal(raw, &result); err != nil {
+	if err := unmarshalJSON(raw, &result); err != nil {
 		return nil, fmt.Errorf("decoding extension %q result: %w", method, err)
 	}
 	return &result, nil

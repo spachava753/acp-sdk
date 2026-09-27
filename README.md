@@ -294,6 +294,38 @@ capabilities := acp.AgentCapabilities{
 Registration does not automatically advertise capabilities. See the
 [ACP extensibility specification](https://agentclientprotocol.com/protocol/v1/extensibility).
 
+## Unstructured JSON Numbers
+
+Numbers decoded into unstructured values use `json.Number`, including `_meta`,
+custom capability maps, tool inputs and outputs, and extension parameters and
+results. This preserves large integers and precise decimals through a JSON round
+trip, including numbers nested in objects and arrays.
+
+```go
+var meta acp.Meta
+if err := json.Unmarshal([]byte(`{"id":9007199254740993}`), &meta); err != nil {
+    return err
+}
+id := meta["id"].(json.Number)
+fmt.Println(id.String()) // 9007199254740993
+```
+
+Use `Int64()` or `Float64()` when you need a Go numeric value, and check the
+conversion error. Converting to `float64` can lose precision. Explicitly typed
+numeric fields retain their schema-defined types.
+
+This changes decoded unstructured numbers from `float64` to `json.Number`;
+update any type assertions accordingly. When constructing outgoing values,
+ordinary Go numbers still work, and `json.Number` can represent an exact JSON
+number without first converting it to a float.
+
+Generated structs and map/slice types preserve numbers even when decoded with
+`json.Unmarshal`. SDK calls also preserve numbers in standalone unstructured
+responses. If you decode a plain `any`, a bare `map[string]any`, or a named
+interface such as `ExtResponse` yourself, use `json.Decoder.UseNumber()`.
+Custom `UnmarshalJSON` implementations must likewise preserve numbers in any
+unstructured values they decode.
+
 ## Union Types
 
 Many ACP schema types are discriminated unions. Prefer the generated variant constructors so the correct discriminator and payload fields are set:

@@ -27,3 +27,9 @@ func ToggleMixedDefault() MixedDefault {
 		Kind: MixedDefaultTypeToggle,
 	}
 }
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (d *MixedDefault) UnmarshalJSON(data []byte) error {
+	type plain MixedDefault
+	return unmarshalJSON(data, (*plain)(d))
+}

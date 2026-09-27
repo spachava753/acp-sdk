@@ -23,6 +23,10 @@ func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{dec: dec}
 }
 
+func (d *Decoder) UseNumber() {
+	d.dec.UseNumber()
+}
+
 func (d *Decoder) Decode(v any) error {
 	return d.dec.Decode(v)
 }

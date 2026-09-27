@@ -117,14 +117,14 @@ func (u *Update) UnmarshalJSON(data []byte) error {
 		Status json.RawMessage `json:"status"`
 		*alias
 	}{alias: &decoded}
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
 	if len(raw.Status) > 0 {
 		switch decoded.Kind {
 		case UpdateTypePrimary:
 			var value PrimaryStatus
-			if err := json.Unmarshal(raw.Status, &value); err == nil {
+			if err := unmarshalJSON(raw.Status, &value); err == nil {
 				switch string(value) {
 				case "running":
 					decoded.Status = &value
@@ -132,7 +132,7 @@ func (u *Update) UnmarshalJSON(data []byte) error {
 			}
 		case UpdateTypeSecondary:
 			var value SecondaryStatus
-			if err := json.Unmarshal(raw.Status, &value); err != nil {
+			if err := unmarshalJSON(raw.Status, &value); err != nil {
 				return err
 			}
 			decoded.Status = func(v SecondaryStatus) *PrimaryStatus {
@@ -141,7 +141,7 @@ func (u *Update) UnmarshalJSON(data []byte) error {
 			}(value)
 		case UpdateTypeNullableSecondary:
 			var value *SecondaryStatus
-			if err := json.Unmarshal(raw.Status, &value); err != nil {
+			if err := unmarshalJSON(raw.Status, &value); err != nil {
 				return err
 			}
 			decoded.Status = func(v *SecondaryStatus) *PrimaryStatus {
@@ -153,7 +153,7 @@ func (u *Update) UnmarshalJSON(data []byte) error {
 			}(value)
 		case UpdateTypeFixed:
 			var value FixedStatus
-			if err := json.Unmarshal(raw.Status, &value); err != nil {
+			if err := unmarshalJSON(raw.Status, &value); err != nil {
 				return err
 			}
 			decoded.Status = func(v FixedStatus) *PrimaryStatus {

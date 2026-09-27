@@ -25,16 +25,16 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 		Encodings json.RawMessage `json:"encodings"`
 		*alias
 	}{alias: &decoded}
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
 	if len(raw.Encodings) > 0 {
 		var values []json.RawMessage
-		if err := json.Unmarshal(raw.Encodings, &values); err == nil {
+		if err := unmarshalJSON(raw.Encodings, &values); err == nil {
 			decoded.Encodings = []Encoding{}
 			for _, value := range values {
 				var item Encoding
-				if err := json.Unmarshal(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil {
 					switch item {
 					case EncodingUtf8, EncodingUtf16:
 						decoded.Encodings = append(decoded.Encodings, item)

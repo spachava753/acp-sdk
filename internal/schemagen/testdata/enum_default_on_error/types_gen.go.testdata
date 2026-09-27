@@ -18,12 +18,12 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 		Status json.RawMessage `json:"status"`
 		*alias
 	}{alias: &decoded}
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
 	if len(raw.Role) > 0 {
 		var value Role
-		if err := json.Unmarshal(raw.Role, &value); err == nil {
+		if err := unmarshalJSON(raw.Role, &value); err == nil {
 			switch string(value) {
 			case "assistant", "user":
 				decoded.Role = value
@@ -32,7 +32,7 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 	}
 	if len(raw.Status) > 0 {
 		var value Status
-		if err := json.Unmarshal(raw.Status, &value); err == nil {
+		if err := unmarshalJSON(raw.Status, &value); err == nil {
 			switch string(value) {
 			case "queued", "running":
 				decoded.Status = &value

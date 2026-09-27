@@ -38,31 +38,31 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 		RequiredItems json.RawMessage `json:"requiredItems"`
 		*alias
 	}{alias: &decoded}
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
 	if len(raw.Items) > 0 {
 		var values []json.RawMessage
-		if err := json.Unmarshal(raw.Items, &values); err == nil {
+		if err := unmarshalJSON(raw.Items, &values); err == nil {
 			decoded.Items = []Item{}
 			for _, value := range values {
 				var item Item
-				if err := json.Unmarshal(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil {
 					decoded.Items = append(decoded.Items, item)
 				}
 			}
 		}
 	}
 	if len(raw.Name) > 0 {
-		_ = json.Unmarshal(raw.Name, &decoded.Name)
+		_ = unmarshalJSON(raw.Name, &decoded.Name)
 	}
 	if len(raw.RequiredItems) > 0 {
 		var values []json.RawMessage
-		if err := json.Unmarshal(raw.RequiredItems, &values); err == nil {
+		if err := unmarshalJSON(raw.RequiredItems, &values); err == nil {
 			decoded.RequiredItems = []string{}
 			for _, value := range values {
 				var item string
-				if err := json.Unmarshal(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil {
 					decoded.RequiredItems = append(decoded.RequiredItems, item)
 				}
 			}
@@ -131,23 +131,23 @@ func (t *Tagged) UnmarshalJSON(data []byte) error {
 		Title  json.RawMessage `json:"title"`
 		*alias
 	}{alias: &decoded}
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
 	if len(raw.Labels) > 0 {
 		var values []json.RawMessage
-		if err := json.Unmarshal(raw.Labels, &values); err == nil {
+		if err := unmarshalJSON(raw.Labels, &values); err == nil {
 			decoded.Labels = []string{}
 			for _, value := range values {
 				var item string
-				if err := json.Unmarshal(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil {
 					decoded.Labels = append(decoded.Labels, item)
 				}
 			}
 		}
 	}
 	if len(raw.Title) > 0 {
-		_ = json.Unmarshal(raw.Title, &decoded.Title)
+		_ = unmarshalJSON(raw.Title, &decoded.Title)
 	}
 	*t = Tagged(decoded)
 	return nil

@@ -1,0 +1,58 @@
+package acp
+
+// Meta: Reserved metadata for protocol extensions. Decoded numbers are json.Number values.
+type Meta map[string]any
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (m *Meta) UnmarshalJSON(data []byte) error {
+	type plain Meta
+	return unmarshalJSON(data, (*plain)(m))
+}
+
+type Envelope struct {
+	Meta           Meta             `json:"_meta,omitzero"`
+	Count          int64            `json:"count"`
+	Fraction       float64          `json:"fraction"`
+	Map            MapAlias         `json:"map,omitempty"`
+	Nested         map[string][]any `json:"nested,omitempty"`
+	NullableValues NullableValues   `json:"nullableValues,omitempty"`
+	Payload        any              `json:"payload"`
+	Value          ValueAlias       `json:"value,omitempty"`
+	Values         Values           `json:"values,omitempty"`
+}
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (e *Envelope) UnmarshalJSON(data []byte) error {
+	type plain Envelope
+	return unmarshalJSON(data, (*plain)(e))
+}
+
+type JSONValue any
+
+type MapAlias ValueMap
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (a *MapAlias) UnmarshalJSON(data []byte) error {
+	type plain MapAlias
+	return unmarshalJSON(data, (*plain)(a))
+}
+
+type NullableValues *[]any
+
+type ValueAlias JSONValue
+
+type ValueMap map[string]ValueAlias
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (m *ValueMap) UnmarshalJSON(data []byte) error {
+	type plain ValueMap
+	return unmarshalJSON(data, (*plain)(m))
+}
+
+type Values []ValueAlias
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (v *Values) UnmarshalJSON(data []byte) error {
+	type plain Values
+	return unmarshalJSON(data, (*plain)(v))
+}

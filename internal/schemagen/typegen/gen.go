@@ -43,8 +43,9 @@ func Generate(schema *jsonschema.Schema) []byte {
 	}
 
 	if needsMeta {
-		file.Add(commented("Meta", "Reserved metadata for protocol extensions.", jen.Type().Id("Meta").Map(jen.String()).Any()))
+		file.Add(commented("Meta", "Reserved metadata for protocol extensions. Decoded numbers are json.Number values.", jen.Type().Id("Meta").Map(jen.String()).Any()))
 		file.Line()
+		file.Add(numberUnmarshalCode("Meta")).Line()
 	}
 	for _, code := range definitions {
 		file.Add(code)
@@ -90,7 +91,11 @@ func definition(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 			decl.Op("=")
 		}
 		decl.Add(typ)
-		return []jen.Code{commented(name, schema.Description, decl), jen.Line()}, false, nil
+		codes := []jen.Code{commented(name, schema.Description, decl), jen.Line()}
+		if !requiresContainerDecoder(defs, text) && unstructuredType(defs, text) {
+			codes = append(codes, numberUnmarshalCode(name), jen.Line())
+		}
+		return codes, false, nil
 	}
 }
 

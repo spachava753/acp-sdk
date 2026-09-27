@@ -5,8 +5,14 @@ import (
 	"reflect"
 )
 
-// Meta: Reserved metadata for protocol extensions.
+// Meta: Reserved metadata for protocol extensions. Decoded numbers are json.Number values.
 type Meta map[string]any
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (m *Meta) UnmarshalJSON(data []byte) error {
+	type plain Meta
+	return unmarshalJSON(data, (*plain)(m))
+}
 
 // BranchMetaUnion: Flattened union whose variants inherit _meta from referenced objects.
 type BranchMetaUnion struct {

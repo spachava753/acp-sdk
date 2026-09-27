@@ -94,6 +94,11 @@
 // Object field names are derived from JSON property names. JSON tags should omit
 // optional fields and keep required fields non-omitempty. The _meta property maps
 // to Meta and should use omitzero to match the existing ACP package style.
+// Unstructured numbers should decode as json.Number, including Meta, maps,
+// slices, and any-valued fields. Generated decoders must preserve this behavior
+// through nested decoding and tolerant fallback paths. Concrete numeric fields
+// retain their schema-defined types. Named interfaces cannot have methods, so
+// SDK decoding must also use the number-preserving helper for those responses.
 // JSON Schema integer formats should map to the corresponding Go integer widths:
 // int32, int64, uint16, uint32, and uint64. Unformatted integers remain int64.
 // Required slice fields need custom MarshalJSON methods that encode nil slices

@@ -5,6 +5,7 @@
 package jsonrpc2
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -388,6 +389,7 @@ func (ac *AsyncCall) retire(response *Response) {
 
 // Await waits for (and decodes) the results of a Call.
 // The response will be unmarshaled from JSON into the result.
+// Numbers in interface values are decoded as json.Number.
 //
 // If the call is cancelled due to context cancellation, the result is
 // ctx.Err().
@@ -403,7 +405,9 @@ func (ac *AsyncCall) Await(ctx context.Context, result any) error {
 	if result == nil {
 		return nil
 	}
-	return json.Unmarshal(ac.response.Result, result)
+	decoder := json.NewDecoder(bytes.NewReader(ac.response.Result))
+	decoder.UseNumber()
+	return decoder.Decode(result)
 }
 
 // Cancel cancels the Context passed to the Handle call for the inbound message

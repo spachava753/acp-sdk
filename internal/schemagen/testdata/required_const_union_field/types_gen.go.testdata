@@ -19,6 +19,12 @@ type TextWidget struct {
 	Label string   `json:"label"`
 }
 
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (w *TextWidget) UnmarshalJSON(data []byte) error {
+	type plain TextWidget
+	return unmarshalJSON(data, (*plain)(w))
+}
+
 // Widget: Union with a branch-required const field.
 type Widget struct {
 	Kind  TextKind `json:"kind,omitempty"`
@@ -39,4 +45,10 @@ func NewLinkWidget(url string) Widget {
 	return Widget{
 		Url: &url,
 	}
+}
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (w *Widget) UnmarshalJSON(data []byte) error {
+	type plain Widget
+	return unmarshalJSON(data, (*plain)(w))
 }

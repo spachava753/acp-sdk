@@ -103,8 +103,13 @@ func typeCheckGeneratedTypes(t *testing.T, src []byte) {
 	if err != nil {
 		t.Fatalf("parse generated types: %v", err)
 	}
+	// Generated decoders share the handwritten ACP JSON helper.
+	helper, err := parser.ParseFile(files, filepath.Join("..", "..", "acp", "json.go"), nil, parser.AllErrors)
+	if err != nil {
+		t.Fatalf("parse JSON helper: %v", err)
+	}
 	config := types.Config{Importer: importer.Default()}
-	if _, err := config.Check("acp", files, []*ast.File{file}, nil); err != nil {
+	if _, err := config.Check("acp", files, []*ast.File{file, helper}, nil); err != nil {
 		t.Fatalf("type-check generated types: %v", err)
 	}
 }

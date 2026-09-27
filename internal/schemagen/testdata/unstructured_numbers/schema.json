@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Unstructured Number Preservation",
+  "$defs": {
+    "JSONValue": {},
+    "ValueAlias": {
+      "$ref": "#/$defs/JSONValue"
+    },
+    "Values": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ValueAlias"
+      }
+    },
+    "ValueMap": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/ValueAlias"
+      }
+    },
+    "MapAlias": {
+      "$ref": "#/$defs/ValueMap"
+    },
+    "Envelope": {
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "payload": {},
+        "value": {
+          "$ref": "#/$defs/ValueAlias"
+        },
+        "values": {
+          "$ref": "#/$defs/Values"
+        },
+        "map": {
+          "$ref": "#/$defs/MapAlias"
+        },
+        "nested": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "count": {
+          "type": "integer"
+        },
+        "fraction": {
+          "type": "number"
+        },
+        "nullableValues": {
+          "$ref": "#/$defs/NullableValues"
+        }
+      },
+      "required": [
+        "payload",
+        "count",
+        "fraction"
+      ]
+    },
+    "NullableValues": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {}
+    }
+  }
+}

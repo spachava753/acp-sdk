@@ -21,16 +21,16 @@ func (s *AnnotationSet) UnmarshalJSON(data []byte) error {
 		Labels   json.RawMessage `json:"labels"`
 		*alias
 	}{alias: &decoded}
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
 	if len(raw.Audience) > 0 {
 		var values []json.RawMessage
-		if err := json.Unmarshal(raw.Audience, &values); err == nil && values != nil {
+		if err := unmarshalJSON(raw.Audience, &values); err == nil && values != nil {
 			items := []Role{}
 			for _, value := range values {
 				var item Role
-				if err := json.Unmarshal(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil {
 					switch item {
 					case "assistant", "user":
 						items = append(items, item)
@@ -42,11 +42,11 @@ func (s *AnnotationSet) UnmarshalJSON(data []byte) error {
 	}
 	if len(raw.Labels) > 0 {
 		var values []json.RawMessage
-		if err := json.Unmarshal(raw.Labels, &values); err == nil && values != nil {
+		if err := unmarshalJSON(raw.Labels, &values); err == nil && values != nil {
 			items := []string{}
 			for _, value := range values {
 				var item string
-				if err := json.Unmarshal(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil {
 					items = append(items, item)
 				}
 			}
@@ -123,16 +123,16 @@ func (a *TaggedAnnotation) UnmarshalJSON(data []byte) error {
 		Audience json.RawMessage `json:"audience"`
 		*alias
 	}{alias: &decoded}
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
 	if len(raw.Audience) > 0 {
 		var values []json.RawMessage
-		if err := json.Unmarshal(raw.Audience, &values); err == nil && values != nil {
+		if err := unmarshalJSON(raw.Audience, &values); err == nil && values != nil {
 			items := []Role{}
 			for _, value := range values {
 				var item Role
-				if err := json.Unmarshal(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil {
 					switch item {
 					case "assistant", "user":
 						items = append(items, item)
