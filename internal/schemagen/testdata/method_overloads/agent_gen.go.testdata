@@ -26,9 +26,6 @@ func (c *AgentConnection) MessageMcp(ctx context.Context, params *MessageMcpRequ
 
 func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
-	if agent == nil {
-		return nil, methodNotFound(req.Method)
-	}
 	switch req.Method {
 	case MethodMcpMessage:
 		if req.IsCall() {
@@ -56,6 +53,6 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return nil, handler.Message(ctx, params)
 	default:
-		return nil, methodNotFound(req.Method)
+		return handleExtension(ctx, agent, req)
 	}
 }

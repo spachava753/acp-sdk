@@ -22,9 +22,6 @@ func (c *AgentConnection) SendMessageAlt(ctx context.Context, params *SendMessag
 
 func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
-	if agent == nil {
-		return nil, methodNotFound(req.Method)
-	}
 	switch req.Method {
 	case MethodChatSendMessage:
 		handler, ok := agent.(interface {
@@ -51,6 +48,6 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.SendMessageAlt(ctx, params))
 	default:
-		return nil, methodNotFound(req.Method)
+		return handleExtension(ctx, agent, req)
 	}
 }

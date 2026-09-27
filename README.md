@@ -189,6 +189,111 @@ A value does not need to satisfy a whole group. If it does not implement an inco
 
 Agents call client-side methods through `AgentConnection`, including `SessionUpdate`, `RequestPermission`, `ReadTextFile`, `WriteTextFile`, and the terminal lifecycle methods. Clients call agent-side methods through `Client`, including initialization, authentication, session lifecycle, prompting, cancellation, and supported unstable extensions.
 
+## Extensions
+
+Custom ACP methods must start with `_`. Both `Client` and `AgentConnection` can
+call extension requests and send extension notifications. Use the generic helper
+for a typed response:
+
+```go
+result, err := acp.CallExtension[SearchResult](
+    ctx, client, "_example.com/search", &SearchParams{Query: "main"},
+)
+```
+
+The response type is explicit; parameters can be any JSON-marshalable value.
+`client.CallExtension` returns `json.RawMessage` when you need the raw response.
+A JSON `null` response decodes to the zero value of the response type.
+Notifications have no response and return only a sending error:
+
+```go
+err := client.NotifyExtension(ctx, "_example.com/file_opened", &FileOpenedParams{
+    Path: "/repo/main.go",
+})
+```
+
+To receive extensions, register typed handlers on an `ExtensionMux` and embed it
+in your agent or client callback handler:
+
+```go
+type SearchParams struct {
+    Query string `json:"query"`
+}
+
+type SearchResult struct {
+    Matches []string `json:"matches"`
+}
+
+type FileOpenedParams struct {
+    Path string `json:"path"`
+}
+
+type agent struct {
+    *acp.ExtensionMux
+    conn *acp.AgentConnection
+}
+
+extensions := acp.NewExtensionMux()
+err := acp.AddExtensionRequest(extensions, "_example.com/search",
+    func(ctx context.Context, params *SearchParams) (*SearchResult, error) {
+        return &SearchResult{Matches: []string{"main.go"}}, nil
+    },
+)
+if err != nil {
+    return err
+}
+
+err = acp.AddExtensionNotification(extensions, "_example.com/file_opened",
+    func(ctx context.Context, params *FileOpenedParams) error {
+        log.Printf("Opened %s", params.Path)
+        return nil
+    },
+)
+if err != nil {
+    return err
+}
+
+return acp.RunAgent(ctx, transport, func(conn *acp.AgentConnection) any {
+    return &agent{ExtensionMux: extensions, conn: conn}
+})
+```
+
+Embedding the mux adds extension handling alongside your ordinary ACP methods.
+For agent-to-client extensions, embed it in the callback handler passed to
+`Connect` and call `acp.CallExtension[Response](ctx, conn, method, params)` using
+an `AgentConnection`.
+
+Register before connecting so handlers are ready when messages arrive. Duplicate
+registrations of the same message kind are rejected; one name may have both a
+request and a notification handler. Handlers may run concurrently and may call
+back to the peer. JSON decoding failures return `-32602` for requests; handlers
+must validate required fields and other application constraints themselves.
+Missing or `null` parameters produce a zero-valued parameter struct. Return a
+`*jsonrpc.Error` to preserve an extension-specific error code and data.
+
+Unknown extension requests return `-32601`; unknown notifications are ignored.
+Notification handler errors cannot be returned to the sender. Incoming extensions
+are dispatched through the embedded `ExtensionMux`; register handlers using
+`AddExtensionRequest` and `AddExtensionNotification`.
+
+Advertise extension support explicitly in `AgentCapabilities.Meta` or
+`ClientCapabilities.Meta` during initialization, and check the peer's advertised
+capabilities before invoking an extension:
+
+```go
+capabilities := acp.AgentCapabilities{
+    Meta: acp.Meta{
+        "example.com": map[string]any{
+            "search": true,
+            "fileOpened": true,
+        },
+    },
+}
+```
+
+Registration does not automatically advertise capabilities. See the
+[ACP extensibility specification](https://agentclientprotocol.com/protocol/v1/extensibility).
+
 ## Union Types
 
 Many ACP schema types are discriminated unions. Prefer the generated variant constructors so the correct discriminator and payload fields are set:

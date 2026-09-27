@@ -32,9 +32,6 @@ func (c *AgentConnection) ClientNotify(ctx context.Context, params *ClientMethod
 
 func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
-	if agent == nil {
-		return nil, methodNotFound(req.Method)
-	}
 	switch req.Method {
 	case MethodGroupAgentMethod:
 		handler, ok := agent.(interface {
@@ -61,6 +58,6 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return nil, handler.AgentNotify(ctx, params)
 	default:
-		return nil, methodNotFound(req.Method)
+		return handleExtension(ctx, agent, req)
 	}
 }

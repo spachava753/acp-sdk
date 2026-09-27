@@ -21,9 +21,6 @@ func (c *Client) MessageMcp(ctx context.Context, params *MessageMcpRequest) (*Me
 
 func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
-	if c.handler == nil {
-		return nil, methodNotFound(req.Method)
-	}
 	switch req.Method {
 	case MethodMcpMessage:
 		if req.IsCall() {
@@ -51,6 +48,6 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return nil, handler.Message(ctx, params)
 	default:
-		return nil, methodNotFound(req.Method)
+		return handleExtension(ctx, c.handler, req)
 	}
 }

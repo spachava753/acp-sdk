@@ -199,7 +199,6 @@
 // shape in acp/agent.go and acp/client.go:
 //
 //   - Call jsonrpc2.Async(ctx) at the top of the handler.
-//   - Return methodNotFound when the concrete agent or client handler is nil.
 //   - Switch on req.Method before asserting optional handler interfaces.
 //   - In each case, assert only the handler interface needed for that method,
 //     then decode params, then invoke the method.
@@ -208,7 +207,9 @@
 //   - When one method name has both a request/response form and a notification
 //     form, emit one switch case and branch on req.IsCall() before decoding
 //     params.
-//   - Return methodNotFound in the default case.
+//   - Delegate the default case to handleExtension, which routes custom methods
+//     and rejects unknown standard methods. Nil handlers are handled there and
+//     by the optional interface assertions in each standard method case.
 //
 // Handler assertions must stay inside each switch case. Do not assert a group
 // handler before the switch, even when a fixture currently has only one group;

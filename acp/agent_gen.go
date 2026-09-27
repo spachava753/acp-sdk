@@ -752,9 +752,6 @@ func (c *AgentConnection) WaitForTerminalExit(ctx context.Context, params *WaitF
 
 func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
-	if agent == nil {
-		return nil, methodNotFound(req.Method)
-	}
 	switch req.Method {
 	case MethodAuthenticate:
 		handler, ok := agent.(interface {
@@ -1106,6 +1103,6 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.SetSessionMode(ctx, params))
 	default:
-		return nil, methodNotFound(req.Method)
+		return handleExtension(ctx, agent, req)
 	}
 }

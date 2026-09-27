@@ -32,9 +32,6 @@ func (c *AgentConnection) WriteTask(ctx context.Context, params *WriteTaskReques
 
 func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
-	if agent == nil {
-		return nil, methodNotFound(req.Method)
-	}
 	switch req.Method {
 	case MethodTaskStart:
 		handler, ok := agent.(interface {
@@ -61,6 +58,6 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.StopTask(ctx, params))
 	default:
-		return nil, methodNotFound(req.Method)
+		return handleExtension(ctx, agent, req)
 	}
 }

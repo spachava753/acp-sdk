@@ -459,9 +459,6 @@ func (c *Client) SetSessionMode(ctx context.Context, params *SetSessionModeReque
 
 func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
-	if c.handler == nil {
-		return nil, methodNotFound(req.Method)
-	}
 	switch req.Method {
 	case MethodElicitationComplete:
 		handler, ok := c.handler.(interface {
@@ -645,6 +642,6 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		}
 		return rpcResult(handler.WaitForTerminalExit(ctx, params))
 	default:
-		return nil, methodNotFound(req.Method)
+		return handleExtension(ctx, c.handler, req)
 	}
 }
