@@ -32,6 +32,8 @@ Generated ACP package files are written into `acp/` from that schema. Do not edi
 
 When changing generator behavior, add or update a focused golden fixture under `internal/schemagen/testdata/`, run `go test ./internal/schemagen/...`, then run `go test ./...`.
 
+Generate schema-dependent code only. Keep reusable runtime helpers, such as JSON decoding utilities, in handwritten files; generated code should call them.
+
 ## Development Setup
 
 The project uses the standard Go toolchain.
@@ -42,6 +44,12 @@ The project uses the standard Go toolchain.
 ## Testing
 
 - **Unit Tests**: Run `go test ./...` to run all tests.
+- Identify the observable properties worth testing before writing tests. Test SDK behavior and integration boundaries, rather than rechecking the JSON library or trivial helpers.
+- Keep coverage focused. A representative regression case is preferable to a broad matrix of number formats, nulls, and malformed inputs unless those differences exercise SDK-specific behavior.
+- Extend an existing test's data and control flow when related properties fit naturally. Registration order and agent/client construction can establish the conditions needed for later assertions. Do not default to separate tests or `t.Run` subtests for every property; use them when scenarios need independent setup or cannot fit clearly into the existing flow.
+- Follow the structure of the test being edited. Do not reintroduce tests or scaffolding the user has deliberately removed.
+- Use `package acp` when tests need internal access. Do not expose implementation details just to make them accessible to `acp_test`.
+- For asynchronous assertions, wait for dispatch to finish before checking that a handler was not invoked. Use channel buffering when the producer must finish before the test reads the value, and explain that ordering when it is not obvious.
 
 ## Development Guidelines
 
@@ -49,9 +57,17 @@ The project uses the standard Go toolchain.
 
 - Follow standard Go conventions (Effective Go).
 - Use `gofmt` to format code.
-- Do not add comments to the code unless they are really necessary:
-  - Prefer self-documenting code.
-  - Focus on the "why" not the "what" in comments.
+- Use named error-code constants, including in tests; do not use raw numeric error codes.
+- Prefer self-documenting code, but retain useful comments explaining intent, ordering, or non-obvious behavior. In tests, explain what property a phase or loop establishes and why the setup matters. Keep comments concise and plain; avoid narrating each statement or adding technical jargon.
+
+### API And Implementation Design
+
+- Keep the public API small and driven by concrete use cases. Do not expose dispatch methods or override interfaces solely for hypothetical customization. Extension handling currently uses `ExtensionMux` with private dispatch methods.
+- Prefer typed conveniences where they save callers repetitive decoding. Do not require pointers for outgoing parameters unless the implementation needs them; distinguish that from pointer parameters used in handler signatures.
+- Preserve existing nil-handler behavior when changing dispatch. An absent handler must still follow the appropriate unknown-request or ignored-notification behavior.
+- Before working around an internal layer, inspect its actual consumers. Prefer fixing behavior at the appropriate layer over adding redundant encoding or decoding solely to avoid touching shared code.
+- Consider all unstructured JSON entry points when changing number handling, not only `_meta`. Preserve schema-defined numeric types and keep envelope decoding concerns, such as request IDs, distinct from payload decoding.
+- Check schema annotations before changing error handling in generated decoders. Errors ignored for `x-deserialize-default-on-error` are intentional; do not turn them into panics on incoming data.
 
 ### Documentation
 
