@@ -237,10 +237,6 @@ func fieldName(jsonName string) string {
 	return name
 }
 
-func uniqueFieldNames(jsonNames []string) map[string]string {
-	return uniqueFieldNamesWithReserved(jsonNames, nil)
-}
-
 func uniqueFieldNamesWithReserved(jsonNames []string, reserved []string) map[string]string {
 	names := make(map[string]string, len(jsonNames))
 	used := map[string]bool{}

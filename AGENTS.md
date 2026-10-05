@@ -34,6 +34,8 @@ When changing generator behavior, add or update a focused golden fixture under `
 
 Generate schema-dependent code only. Keep reusable runtime helpers, such as JSON decoding utilities, in handwritten files; generated code should call them.
 
+Some upstream fields distinguish omitted values from explicit nulls only in their descriptions. `internal/schemagen/typegen/nulls.go` records those schema-specific overrides; generator fixtures can use `x-go-preserve-null`. Update the overrides when new schema fields need this distinction. Generated `NullFields` markers retain the existing typed field APIs and apply only to the relevant union variants.
+
 ## Development Setup
 
 The project uses the standard Go toolchain.

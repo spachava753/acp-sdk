@@ -1,0 +1,87 @@
+{
+  "$defs": {
+    "Patch": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": {
+          "type": ["string", "null"],
+          "x-go-preserve-null": true,
+          "x-deserialize-default-on-error": true
+        },
+        "content": {
+          "type": ["array", "null"],
+          "items": { "type": "string" },
+          "x-go-preserve-null": true,
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "_meta": {
+          "type": ["object", "null"],
+          "additionalProperties": true,
+          "x-go-preserve-null": true,
+          "x-deserialize-default-on-error": true
+        },
+        "nullFields": { "type": "string" }
+      },
+      "required": ["id"]
+    },
+    "Update": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": { "kind": { "type": "string", "const": "patch" } },
+          "required": ["kind"],
+          "allOf": [{ "$ref": "#/$defs/Patch" }]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "type": "string", "const": "strict" },
+            "title": { "type": "string" }
+          },
+          "required": ["kind", "title"]
+        }
+      ]
+    },
+    "Failure": {
+      "type": "object",
+      "properties": {
+        "code": { "type": "integer", "format": "int32" },
+        "message": { "type": "string" },
+        "data": { "x-go-preserve-null": true }
+      },
+      "required": ["code", "message"]
+    },
+    "Response": {
+      "anyOf": [
+        {
+          "title": "Result",
+          "type": "object",
+          "properties": {
+            "result": {},
+            "_meta": {
+              "type": ["object", "null"],
+              "additionalProperties": true,
+              "x-deserialize-default-on-error": true
+            }
+          },
+          "required": ["result"]
+        },
+        {
+          "title": "Failure",
+          "type": "object",
+          "properties": {
+            "failure": { "$ref": "#/$defs/Failure" },
+            "_meta": {
+              "type": ["object", "null"],
+              "additionalProperties": true,
+              "x-deserialize-default-on-error": true
+            }
+          },
+          "required": ["failure"]
+        }
+      ]
+    }
+  }
+}

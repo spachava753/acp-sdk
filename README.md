@@ -337,6 +337,33 @@ update := acp.AgentMessageChunkSessionUpdate(content)
 
 The constructors are discoverable on [pkg.go.dev](https://pkg.go.dev/github.com/spachava753/acp-sdk/acp) alongside the generated type documentation.
 
+For MCP message responses, use `ResultMessageMcpResponse` or
+`ErrorMessageMcpResponse`. `ResultMessageMcpResponse(nil)` sends a valid JSON
+null result. Decoding prefers the result carrier when both outcomes are present;
+encoding likewise emits only the first present carrier in schema order.
+
+## Explicit Nulls in Patches
+
+Subagent patches distinguish omitted fields (unchanged) from explicit `null`
+(clear). `SubagentUpdate`, `SessionMessage`, and their `SessionUpdate` variants
+expose `NullFields` to preserve this distinction without changing their typed
+fields:
+
+```go
+update := acp.SubagentUpdateSessionUpdate("child-session")
+update.NullFields = []string{"state", "capabilities"}
+```
+
+This sends `"state":null` and `"capabilities":null`. Null markers use JSON field
+names and override the corresponding typed values. Remove a marker before sending
+a concrete value for that field again. Only the fields with distinct null semantics
+in the selected variant support these markers.
+
+On decoding, `NullFields` records explicit nulls; omitted fields are not listed.
+Use `slices.Contains(update.NullFields, "state")` to recognize a clear operation.
+`McpError.NullFields` similarly preserves explicit `"data":null`; a nil `Data`
+without a null marker omits the key.
+
 ## Transports
 
 | Transport | Use |

@@ -1,0 +1,416 @@
+package acp
+
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"slices"
+)
+
+// Meta: Reserved metadata for protocol extensions. Decoded numbers are json.Number values.
+type Meta map[string]any
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (m *Meta) UnmarshalJSON(data []byte) error {
+	type plain Meta
+	return unmarshalJSON(data, (*plain)(m))
+}
+
+type Failure struct {
+	Code    int32  `json:"code"`
+	Data    any    `json:"data,omitempty"`
+	Message string `json:"message"`
+	// NullFields lists JSON field names to send as explicit null, regardless of their values.
+	// Decoding records explicit nulls here, separately from omitted fields.
+	NullFields []string `json:"-"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (f Failure) MarshalJSON() ([]byte, error) {
+	type alias Failure
+	a := alias(f)
+	type wire struct {
+		*alias
+		Data *any `json:"data,omitempty"`
+	}
+	w := wire{alias: &a}
+	if a.Data != nil {
+		Data := a.Data
+		w.Data = &Data
+	}
+	if slices.Contains(a.NullFields, "data") {
+		w.Data = new(any)
+	}
+	return json.Marshal(w)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (f *Failure) UnmarshalJSON(data []byte) error {
+	type alias Failure
+	decoded := alias{}
+	raw := struct {
+		Data json.RawMessage `json:"data"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Data) > 0 {
+		if isJSONNull(raw.Data) {
+			decoded.NullFields = append(decoded.NullFields, "data")
+		} else {
+			var value any
+			if err := unmarshalJSON(raw.Data, &value); err != nil {
+				return err
+			}
+			decoded.Data = value
+		}
+	}
+	*f = Failure(decoded)
+	return nil
+}
+
+type Patch struct {
+	Meta        Meta      `json:"_meta,omitzero"`
+	Content     *[]string `json:"content,omitempty"`
+	ID          string    `json:"id"`
+	NullFields2 string    `json:"nullFields,omitempty"`
+	Title       *string   `json:"title,omitempty"`
+	// NullFields lists JSON field names to send as explicit null, regardless of their values.
+	// Decoding records explicit nulls here, separately from omitted fields.
+	NullFields []string `json:"-"`
+}
+
+type Response struct {
+	Meta    Meta     `json:"_meta,omitzero"`
+	Failure *Failure `json:"failure,omitempty,omitzero"`
+	Result  *any     `json:"result,omitempty"`
+}
+
+// ResultResponse creates .
+func ResultResponse(result any) Response {
+	return Response{
+		Result: &result,
+	}
+}
+
+// FailureResponse creates .
+func FailureResponse(failure Failure) Response {
+	return Response{
+		Failure: &failure,
+	}
+}
+
+// MarshalJSON emits the first present carrier in schema order.
+func (r Response) MarshalJSON() ([]byte, error) {
+	if r.Result != nil {
+		return json.Marshal(struct {
+			Meta   Meta `json:"_meta,omitzero"`
+			Result *any `json:"result"`
+		}{r.Meta, r.Result})
+	}
+	if r.Failure != nil {
+		return json.Marshal(struct {
+			Meta    Meta     `json:"_meta,omitzero"`
+			Failure *Failure `json:"failure"`
+		}{r.Meta, r.Failure})
+	}
+	return nil, fmt.Errorf("Response requires one of: result, failure")
+}
+
+// UnmarshalJSON selects the first present carrier in schema order.
+func (r *Response) UnmarshalJSON(data []byte) error {
+	type alias Response
+	var decoded alias
+	var raw struct {
+		Meta    json.RawMessage `json:"_meta"`
+		Failure json.RawMessage `json:"failure"`
+		Result  json.RawMessage `json:"result"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	switch {
+	case len(raw.Result) > 0:
+		if len(raw.Meta) > 0 {
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err == nil {
+				decoded.Meta = value
+			}
+		}
+		var value any
+		if err := unmarshalJSON(raw.Result, &value); err != nil {
+			return err
+		}
+		decoded.Result = &value
+	case len(raw.Failure) > 0:
+		if isJSONNull(raw.Failure) {
+			return fmt.Errorf("Response.failure must not be null")
+		}
+		if err := requireJSONProperties(raw.Failure, []string{"code", "message"}, []string{"code", "message"}); err != nil {
+			return fmt.Errorf("Response.failure: %w", err)
+		}
+		if len(raw.Meta) > 0 {
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err == nil {
+				decoded.Meta = value
+			}
+		}
+		var value Failure
+		if err := unmarshalJSON(raw.Failure, &value); err != nil {
+			return err
+		}
+		decoded.Failure = &value
+	default:
+		return fmt.Errorf("Response requires one of: result, failure")
+	}
+	*r = Response(decoded)
+	return nil
+}
+
+type Update struct {
+	Kind        UpdateType `json:"kind"`
+	Meta        Meta       `json:"_meta,omitzero"`
+	Content     *[]string  `json:"content,omitempty"`
+	ID          string     `json:"id,omitempty"`
+	NullFields2 string     `json:"nullFields,omitempty"`
+	Title       *string    `json:"title,omitempty"`
+	// NullFields lists JSON field names to send as explicit null, regardless of their values.
+	// Decoding records explicit nulls here, separately from omitted fields.
+	NullFields []string `json:"-"`
+}
+
+// UpdateType is the discriminator for Update variants.
+type UpdateType string
+
+const (
+	UpdateTypePatch  UpdateType = "patch"
+	UpdateTypeStrict UpdateType = "strict"
+)
+
+// PatchUpdate creates an Update variant:
+func PatchUpdate(id string) Update {
+	return Update{
+		Kind: UpdateTypePatch,
+		ID:   id,
+	}
+}
+
+// StrictUpdate creates an Update variant:
+func StrictUpdate(title string) Update {
+	return Update{
+		Kind:  UpdateTypeStrict,
+		Title: &title,
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (u Update) MarshalJSON() ([]byte, error) {
+	type alias Update
+	type wire struct {
+		*alias
+		ID      *string    `json:"id,omitempty"`
+		Title   **string   `json:"title,omitempty"`
+		Meta    *Meta      `json:"_meta,omitempty"`
+		Content **[]string `json:"content,omitempty"`
+	}
+	w := wire{alias: (*alias)(&u)}
+	if !reflect.ValueOf(u.ID).IsZero() {
+		ID := u.ID
+		w.ID = &ID
+	}
+	if u.Title != nil {
+		Title := u.Title
+		w.Title = &Title
+	}
+	if u.Meta != nil {
+		Meta := u.Meta
+		w.Meta = &Meta
+	}
+	if u.Content != nil {
+		Content := u.Content
+		w.Content = &Content
+	}
+	switch u.Kind {
+	case UpdateTypePatch:
+		ID := u.ID
+		w.ID = &ID
+	case UpdateTypeStrict:
+		Title := u.Title
+		w.Title = &Title
+	}
+	switch u.Kind {
+	case UpdateTypePatch:
+		if slices.Contains(u.NullFields, "_meta") {
+			w.Meta = new(Meta)
+		}
+		if slices.Contains(u.NullFields, "content") {
+			w.Content = new(*[]string)
+		}
+		if slices.Contains(u.NullFields, "title") {
+			w.Title = new(*string)
+		}
+	}
+	return json.Marshal(w)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *Update) UnmarshalJSON(data []byte) error {
+	type alias Update
+	decoded := alias{}
+	raw := struct {
+		Meta    json.RawMessage `json:"_meta"`
+		Content json.RawMessage `json:"content"`
+		Title   json.RawMessage `json:"title"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		switch decoded.Kind {
+		case UpdateTypePatch:
+			if isJSONNull(raw.Meta) {
+				decoded.NullFields = append(decoded.NullFields, "_meta")
+			} else {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+		}
+	}
+	if len(raw.Content) > 0 {
+		switch decoded.Kind {
+		case UpdateTypePatch:
+			if isJSONNull(raw.Content) {
+				decoded.NullFields = append(decoded.NullFields, "content")
+			} else {
+				var values []json.RawMessage
+				if err := unmarshalJSON(raw.Content, &values); err == nil && values != nil {
+					items := []string{}
+					for _, rawItem := range values {
+						var item string
+						if err := unmarshalJSON(rawItem, &item); err == nil {
+							items = append(items, item)
+						}
+					}
+					decoded.Content = &items
+				}
+			}
+		}
+	}
+	if len(raw.Title) > 0 {
+		switch decoded.Kind {
+		case UpdateTypePatch:
+			if isJSONNull(raw.Title) {
+				decoded.NullFields = append(decoded.NullFields, "title")
+			} else {
+				var value *string
+				if err := unmarshalJSON(raw.Title, &value); err == nil {
+					decoded.Title = value
+				}
+			}
+		case UpdateTypeStrict:
+			var value string
+			if err := unmarshalJSON(raw.Title, &value); err != nil {
+				return err
+			}
+			decoded.Title = func(v string) *string {
+				converted := string(v)
+				return &converted
+			}(value)
+		}
+	}
+	*u = Update(decoded)
+	return nil
+}
+
+// MarshalJSON implements json.Marshaler.
+func (p Patch) MarshalJSON() ([]byte, error) {
+	type alias Patch
+	a := alias(p)
+	type wire struct {
+		*alias
+		Meta    *Meta      `json:"_meta,omitempty"`
+		Content **[]string `json:"content,omitempty"`
+		Title   **string   `json:"title,omitempty"`
+	}
+	w := wire{alias: &a}
+	if a.Meta != nil {
+		Meta := a.Meta
+		w.Meta = &Meta
+	}
+	if a.Content != nil {
+		Content := a.Content
+		w.Content = &Content
+	}
+	if a.Title != nil {
+		Title := a.Title
+		w.Title = &Title
+	}
+	if slices.Contains(a.NullFields, "_meta") {
+		w.Meta = new(Meta)
+	}
+	if slices.Contains(a.NullFields, "content") {
+		w.Content = new(*[]string)
+	}
+	if slices.Contains(a.NullFields, "title") {
+		w.Title = new(*string)
+	}
+	return json.Marshal(w)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *Patch) UnmarshalJSON(data []byte) error {
+	type alias Patch
+	decoded := alias{}
+	raw := struct {
+		Meta    json.RawMessage `json:"_meta"`
+		Content json.RawMessage `json:"content"`
+		Title   json.RawMessage `json:"title"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		if isJSONNull(raw.Meta) {
+			decoded.NullFields = append(decoded.NullFields, "_meta")
+		} else {
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err == nil {
+				decoded.Meta = value
+			}
+		}
+	}
+	if len(raw.Content) > 0 {
+		if isJSONNull(raw.Content) {
+			decoded.NullFields = append(decoded.NullFields, "content")
+		} else {
+			var values []json.RawMessage
+			if err := unmarshalJSON(raw.Content, &values); err == nil && values != nil {
+				items := []string{}
+				for _, rawItem := range values {
+					var item string
+					if err := unmarshalJSON(rawItem, &item); err == nil {
+						items = append(items, item)
+					}
+				}
+				decoded.Content = &items
+			}
+		}
+	}
+	if len(raw.Title) > 0 {
+		if isJSONNull(raw.Title) {
+			decoded.NullFields = append(decoded.NullFields, "title")
+		} else {
+			var value *string
+			if err := unmarshalJSON(raw.Title, &value); err == nil {
+				decoded.Title = value
+			}
+		}
+	}
+	*p = Patch(decoded)
+	return nil
+}

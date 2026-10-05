@@ -2,6 +2,7 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -225,6 +226,58 @@ func RightPlainUnion(right string) PlainUnion {
 	return PlainUnion{
 		Right: &right,
 	}
+}
+
+// MarshalJSON emits the first present carrier in schema order.
+func (u PlainUnion) MarshalJSON() ([]byte, error) {
+	if u.Left != nil {
+		return json.Marshal(struct {
+			Left *string `json:"left"`
+		}{u.Left})
+	}
+	if u.Right != nil {
+		return json.Marshal(struct {
+			Right *string `json:"right"`
+		}{u.Right})
+	}
+	return nil, fmt.Errorf("PlainUnion requires one of: left, right")
+}
+
+// UnmarshalJSON selects the first present carrier in schema order.
+func (u *PlainUnion) UnmarshalJSON(data []byte) error {
+	type alias PlainUnion
+	var decoded alias
+	var raw struct {
+		Left  json.RawMessage `json:"left"`
+		Right json.RawMessage `json:"right"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	switch {
+	case len(raw.Left) > 0:
+		if isJSONNull(raw.Left) {
+			return fmt.Errorf("PlainUnion.left must not be null")
+		}
+		var value string
+		if err := unmarshalJSON(raw.Left, &value); err != nil {
+			return err
+		}
+		decoded.Left = &value
+	case len(raw.Right) > 0:
+		if isJSONNull(raw.Right) {
+			return fmt.Errorf("PlainUnion.right must not be null")
+		}
+		var value string
+		if err := unmarshalJSON(raw.Right, &value); err != nil {
+			return err
+		}
+		decoded.Right = &value
+	default:
+		return fmt.Errorf("PlainUnion requires one of: left, right")
+	}
+	*u = PlainUnion(decoded)
+	return nil
 }
 
 // RequestId: JSON-RPC request identifier.
