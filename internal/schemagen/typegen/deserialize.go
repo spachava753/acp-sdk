@@ -24,6 +24,7 @@ type deserializeField struct {
 	enumValues       []string
 	defaultOnError   bool
 	skipInvalidItems bool
+	preserveNull     bool
 }
 
 type skipInvalidItemValidator struct {
@@ -42,6 +43,7 @@ func newDeserializeField(defs map[string]*jsonschema.Schema, jsonName string, pr
 		enumValues:       stringEnumValues(defs, prop),
 		defaultOnError:   schemaBoolExtra(prop, "x-deserialize-default-on-error"),
 		skipInvalidItems: schemaBoolExtra(prop, "x-deserialize-skip-invalid-items"),
+		preserveNull:     preservesJSONNull(defs, jsonName, prop),
 	}
 	if field.skipInvalidItems {
 		if _, ok := skipInvalidItemsTarget(field); !ok {
@@ -244,6 +246,7 @@ func mergeDeserializeRules(existing, field deserializeField) deserializeField {
 	existing.unstructured = existing.unstructured || field.unstructured
 	existing.defaultOnError = existing.defaultOnError || field.defaultOnError
 	existing.skipInvalidItems = existing.skipInvalidItems || field.skipInvalidItems
+	existing.preserveNull = existing.preserveNull || field.preserveNull
 	for _, value := range field.enumValues {
 		if !contains(existing.enumValues, value) {
 			existing.enumValues = append(existing.enumValues, value)
@@ -259,7 +262,7 @@ func mergeDeserializeRules(existing, field deserializeField) deserializeField {
 }
 
 func needsDeserializeUnmarshal(field deserializeField) bool {
-	return field.defaultOnError || field.skipInvalidItems
+	return field.defaultOnError || field.skipInvalidItems || field.preserveNull
 }
 
 func deserializeUnmarshalCode(name string, fields []deserializeField, custom map[string]jen.Code) (jen.Code, bool) {
@@ -296,7 +299,16 @@ func deserializeUnmarshalCode(name string, fields []deserializeField, custom map
 			body = append(body, code)
 			continue
 		}
-		body = append(body, deserializeFieldUnmarshalCode(field))
+		if field.preserveNull {
+			assign := func(value jen.Code) jen.Code {
+				return jen.Id("decoded").Dot(field.goName).Op("=").Add(value)
+			}
+			body = append(body, jen.If(jen.Len(jen.Id("raw").Dot(field.goName)).Op(">").Lit(0)).Block(
+				preserveNullUnmarshalCode(field, deserializeVariantFieldCode(field, assign))...,
+			))
+		} else {
+			body = append(body, deserializeFieldUnmarshalCode(field))
+		}
 	}
 	body = append(body,
 		jen.Op("*").Id(receiver).Op("=").Id(name).Call(jen.Id("decoded")),

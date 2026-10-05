@@ -1,5 +1,10 @@
 package acp
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 // Choice: Untagged union with branch-required zero-value fields.
 type Choice struct {
 	Count   *int64   `json:"count,omitempty"`
@@ -34,6 +39,91 @@ func PayloadChoice(payload Payload) Choice {
 	return Choice{
 		Payload: &payload,
 	}
+}
+
+// MarshalJSON emits the first present carrier in schema order.
+func (c Choice) MarshalJSON() ([]byte, error) {
+	if c.Text != nil {
+		return json.Marshal(struct {
+			Text *string `json:"text"`
+		}{c.Text})
+	}
+	if c.Enabled != nil {
+		return json.Marshal(struct {
+			Enabled *bool `json:"enabled"`
+		}{c.Enabled})
+	}
+	if c.Count != nil {
+		return json.Marshal(struct {
+			Count *int64 `json:"count"`
+		}{c.Count})
+	}
+	if c.Payload != nil {
+		return json.Marshal(struct {
+			Payload *Payload `json:"payload"`
+		}{c.Payload})
+	}
+	return nil, fmt.Errorf("Choice requires one of: text, enabled, count, payload")
+}
+
+// UnmarshalJSON selects the first present carrier in schema order.
+func (c *Choice) UnmarshalJSON(data []byte) error {
+	type alias Choice
+	var decoded alias
+	var raw struct {
+		Count   json.RawMessage `json:"count"`
+		Enabled json.RawMessage `json:"enabled"`
+		Payload json.RawMessage `json:"payload"`
+		Text    json.RawMessage `json:"text"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	switch {
+	case len(raw.Text) > 0:
+		if isJSONNull(raw.Text) {
+			return fmt.Errorf("Choice.text must not be null")
+		}
+		var value string
+		if err := unmarshalJSON(raw.Text, &value); err != nil {
+			return err
+		}
+		decoded.Text = &value
+	case len(raw.Enabled) > 0:
+		if isJSONNull(raw.Enabled) {
+			return fmt.Errorf("Choice.enabled must not be null")
+		}
+		var value bool
+		if err := unmarshalJSON(raw.Enabled, &value); err != nil {
+			return err
+		}
+		decoded.Enabled = &value
+	case len(raw.Count) > 0:
+		if isJSONNull(raw.Count) {
+			return fmt.Errorf("Choice.count must not be null")
+		}
+		var value int64
+		if err := unmarshalJSON(raw.Count, &value); err != nil {
+			return err
+		}
+		decoded.Count = &value
+	case len(raw.Payload) > 0:
+		if isJSONNull(raw.Payload) {
+			return fmt.Errorf("Choice.payload must not be null")
+		}
+		if err := requireJSONProperties(raw.Payload, []string{"id"}, []string{"id"}); err != nil {
+			return fmt.Errorf("Choice.payload: %w", err)
+		}
+		var value Payload
+		if err := unmarshalJSON(raw.Payload, &value); err != nil {
+			return err
+		}
+		decoded.Payload = &value
+	default:
+		return fmt.Errorf("Choice requires one of: text, enabled, count, payload")
+	}
+	*c = Choice(decoded)
+	return nil
 }
 
 // Payload: Payload object.

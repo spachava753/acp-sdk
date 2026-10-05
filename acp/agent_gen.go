@@ -83,23 +83,11 @@ const (
 	// After a successful logout, all new sessions will require authentication.
 	// There is no guarantee about the behavior of already running sessions.
 	MethodLogout = "logout"
-	// MethodMcpConnect: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Opens an MCP-over-ACP connection.
-	MethodMcpConnect = "mcp/connect"
-	// MethodMcpDisconnect: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Closes an MCP-over-ACP connection.
-	MethodMcpDisconnect = "mcp/disconnect"
 	// MethodMcpMessage: **UNSTABLE**
 	//
 	// This capability is not part of the spec yet, and may be removed or changed at any point.
 	//
-	// Receives an MCP-over-ACP notification.
+	// Sends an MCP-over-ACP notification.
 	MethodMcpMessage = "mcp/message"
 	// MethodNesAccept: **UNSTABLE**
 	//
@@ -398,15 +386,8 @@ type McpHandler interface {
 	//
 	// This capability is not part of the spec yet, and may be removed or changed at any point.
 	//
-	// Receives an MCP-over-ACP notification.
+	// Sends an MCP-over-ACP notification.
 	Message(context.Context, *MessageMcpNotification) error
-
-	// MessageMcp: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Exchanges an MCP-over-ACP message.
-	MessageMcp(context.Context, *MessageMcpRequest) (*MessageMcpResponse, error)
 }
 
 // NesHandler handles all nes related agent methods.
@@ -618,33 +599,6 @@ func (c *AgentConnection) WriteTextFile(ctx context.Context, params *WriteTextFi
 	return call[WriteTextFileResponse](ctx, c.rpc.conn, MethodFsWriteTextFile, params)
 }
 
-// ConnectMcp: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Opens an MCP-over-ACP connection.
-func (c *AgentConnection) ConnectMcp(ctx context.Context, params *ConnectMcpRequest) (*ConnectMcpResponse, error) {
-	return call[ConnectMcpResponse](ctx, c.rpc.conn, MethodMcpConnect, params)
-}
-
-// DisconnectMcp: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Closes an MCP-over-ACP connection.
-func (c *AgentConnection) DisconnectMcp(ctx context.Context, params *DisconnectMcpRequest) (*DisconnectMcpResponse, error) {
-	return call[DisconnectMcpResponse](ctx, c.rpc.conn, MethodMcpDisconnect, params)
-}
-
-// Message: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Receives an MCP-over-ACP notification.
-func (c *AgentConnection) Message(ctx context.Context, params *MessageMcpNotification) error {
-	return notify(ctx, c.rpc.conn, MethodMcpMessage, params)
-}
-
 // MessageMcp: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -850,19 +804,6 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		}
 		return rpcResult(handler.Logout(ctx, params))
 	case MethodMcpMessage:
-		if req.IsCall() {
-			handler, ok := agent.(interface {
-				MessageMcp(context.Context, *MessageMcpRequest) (*MessageMcpResponse, error)
-			})
-			if !ok {
-				return nil, methodNotFound(req.Method)
-			}
-			params, err := decodeParams[MessageMcpRequest](req)
-			if err != nil {
-				return nil, err
-			}
-			return rpcResult(handler.MessageMcp(ctx, params))
-		}
 		handler, ok := agent.(interface {
 			Message(context.Context, *MessageMcpNotification) error
 		})

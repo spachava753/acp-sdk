@@ -47,27 +47,6 @@ type FsClientHandler interface {
 
 // McpClientHandler handles all mcp related client methods.
 type McpClientHandler interface {
-	// ConnectMcp: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Opens an MCP-over-ACP connection.
-	ConnectMcp(context.Context, *ConnectMcpRequest) (*ConnectMcpResponse, error)
-
-	// DisconnectMcp: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Closes an MCP-over-ACP connection.
-	DisconnectMcp(context.Context, *DisconnectMcpRequest) (*DisconnectMcpResponse, error)
-
-	// Message: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Receives an MCP-over-ACP notification.
-	Message(context.Context, *MessageMcpNotification) error
-
 	// MessageMcp: **UNSTABLE**
 	//
 	// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -239,18 +218,9 @@ func (c *Client) Logout(ctx context.Context, params *LogoutRequest) (*LogoutResp
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
 //
-// Receives an MCP-over-ACP notification.
+// Sends an MCP-over-ACP notification.
 func (c *Client) Message(ctx context.Context, params *MessageMcpNotification) error {
 	return notify(ctx, c.rpc.conn, MethodMcpMessage, params)
-}
-
-// MessageMcp: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Exchanges an MCP-over-ACP message.
-func (c *Client) MessageMcp(ctx context.Context, params *MessageMcpRequest) (*MessageMcpResponse, error) {
-	return call[MessageMcpResponse](ctx, c.rpc.conn, MethodMcpMessage, params)
 }
 
 // Accept: **UNSTABLE**
@@ -508,55 +478,18 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 			return nil, err
 		}
 		return rpcResult(handler.WriteTextFile(ctx, params))
-	case MethodMcpConnect:
-		handler, ok := c.handler.(interface {
-			ConnectMcp(context.Context, *ConnectMcpRequest) (*ConnectMcpResponse, error)
-		})
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
-		params, err := decodeParams[ConnectMcpRequest](req)
-		if err != nil {
-			return nil, err
-		}
-		return rpcResult(handler.ConnectMcp(ctx, params))
-	case MethodMcpDisconnect:
-		handler, ok := c.handler.(interface {
-			DisconnectMcp(context.Context, *DisconnectMcpRequest) (*DisconnectMcpResponse, error)
-		})
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
-		params, err := decodeParams[DisconnectMcpRequest](req)
-		if err != nil {
-			return nil, err
-		}
-		return rpcResult(handler.DisconnectMcp(ctx, params))
 	case MethodMcpMessage:
-		if req.IsCall() {
-			handler, ok := c.handler.(interface {
-				MessageMcp(context.Context, *MessageMcpRequest) (*MessageMcpResponse, error)
-			})
-			if !ok {
-				return nil, methodNotFound(req.Method)
-			}
-			params, err := decodeParams[MessageMcpRequest](req)
-			if err != nil {
-				return nil, err
-			}
-			return rpcResult(handler.MessageMcp(ctx, params))
-		}
 		handler, ok := c.handler.(interface {
-			Message(context.Context, *MessageMcpNotification) error
+			MessageMcp(context.Context, *MessageMcpRequest) (*MessageMcpResponse, error)
 		})
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[MessageMcpNotification](req)
+		params, err := decodeParams[MessageMcpRequest](req)
 		if err != nil {
 			return nil, err
 		}
-		return nil, handler.Message(ctx, params)
+		return rpcResult(handler.MessageMcp(ctx, params))
 	case MethodSessionRequestPermission:
 		handler, ok := c.handler.(interface {
 			RequestPermission(context.Context, *RequestPermissionRequest) (*RequestPermissionResponse, error)

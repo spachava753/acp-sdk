@@ -33,12 +33,23 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 	var fields []field
 	var structFields []jen.Code
 	propertyNames := sortedPropertyNames(schema.Properties)
-	goNames := uniqueFieldNames(propertyNames)
+	var reserved []string
+	for _, jsonName := range propertyNames {
+		if preservesJSONNull(defs, jsonName, schema.Properties[jsonName]) {
+			reserved = []string{"NullFields"}
+			break
+		}
+	}
+	goNames := uniqueFieldNamesWithReserved(propertyNames, reserved)
 	for _, jsonName := range propertyNames {
 		prop := schema.Properties[jsonName]
 		if jsonName == "_meta" {
 			needsMeta = true
-			f := field{deserializeField: deserializeField{jsonName: jsonName, goName: goNames[jsonName], typeCode: jen.Id("Meta"), typeText: "Meta"}, tag: jsonTag(jsonName, false, true)}
+			deserialize := deserializeField{jsonName: jsonName, goName: goNames[jsonName], typeCode: jen.Id("Meta"), typeText: "Meta", preserveNull: preservesJSONNull(defs, jsonName, prop)}
+			if deserialize.preserveNull {
+				deserialize.defaultOnError = schemaBoolExtra(prop, "x-deserialize-default-on-error")
+			}
+			f := field{deserializeField: deserialize, tag: jsonTag(jsonName, false, true)}
 			fields = append(fields, f)
 			structFields = append(structFields, jen.Id(f.goName).Add(f.typeCode).Tag(map[string]string{"json": f.tag}))
 			continue
@@ -54,6 +65,9 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 		structFields = append(structFields, jen.Id(f.goName).Add(f.typeCode).Tag(map[string]string{"json": f.tag}))
 	}
 
+	if len(reserved) > 0 {
+		structFields = append(structFields, nullFieldsDeclaration())
+	}
 	codes := []jen.Code{commented(name, schema.Description, jen.Type().Id(name).Struct(structFields...)), jen.Line()}
 
 	// JSON encoders serialize a nil slice as null. Required array fields and
@@ -88,8 +102,9 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 	for _, f := range fields {
 		deserializeFields = append(deserializeFields, f.deserializeField)
 	}
+	nullFields := preservedNullFields(deserializeFields)
 	unmarshalMethod, hasUnmarshal := deserializeUnmarshalCode(name, deserializeFields, nil)
-	if (len(requiredSlices) == 0 && len(requiredArrayUnions) == 0) || hasRequiredMap {
+	if len(nullFields) == 0 && ((len(requiredSlices) == 0 && len(requiredArrayUnions) == 0) || hasRequiredMap) {
 		if hasUnmarshal {
 			codes = append(codes, unmarshalMethod)
 		}
@@ -102,15 +117,29 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 		jen.Type().Id("alias").Id(name),
 		jen.Id("a").Op(":=").Id("alias").Call(jen.Id(receiver)),
 	)
-	for _, f := range requiredSlices {
-		body = append(body, jen.If(jen.Id("a").Dot(f.goName).Op("==").Nil()).Block(
-			jen.Id("a").Dot(f.goName).Op("=").Add(f.typeCode).Values(),
-		))
+	if !hasRequiredMap {
+		for _, f := range requiredSlices {
+			body = append(body, jen.If(jen.Id("a").Dot(f.goName).Op("==").Nil()).Block(
+				jen.Id("a").Dot(f.goName).Op("=").Add(f.typeCode).Values(),
+			))
+		}
+		for _, f := range requiredArrayUnions {
+			body = append(body, requiredArrayUnionMarshalCode(defs, "a", f.field.goName, f.field.typeText, f.schema)...)
+		}
 	}
-	for _, f := range requiredArrayUnions {
-		body = append(body, requiredArrayUnionMarshalCode(defs, "a", f.field.goName, f.field.typeText, f.schema)...)
+	if len(nullFields) > 0 {
+		body = append(body,
+			jen.Type().Id("wire").Struct(append([]jen.Code{jen.Op("*").Id("alias")}, nullFieldWireFields(nullFields)...)...),
+			jen.Id("w").Op(":=").Id("wire").Values(jen.Id("alias").Op(":").Op("&").Id("a")),
+		)
+		for _, f := range nullFields {
+			body = append(body, optionalWireFieldAssignmentCode("a", unionField{deserializeField: f})...)
+		}
+		body = append(body, nullFieldMarshalAssignments("a", nullFields)...)
+		body = append(body, jen.Return(jen.Qual("encoding/json", "Marshal").Call(jen.Id("w"))))
+	} else {
+		body = append(body, jen.Return(jen.Qual("encoding/json", "Marshal").Call(jen.Id("a"))))
 	}
-	body = append(body, jen.Return(jen.Qual("encoding/json", "Marshal").Call(jen.Id("a"))))
 	method := jen.Comment("MarshalJSON implements json.Marshaler.").Line().Func().Params(jen.Id(receiver).Id(name)).Id("MarshalJSON").Params().Params(jen.Index().Byte(), jen.Error()).Block(body...)
 	methods := []jen.Code{method}
 	if hasUnmarshal {

@@ -68,7 +68,9 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 		field := newUnionField(defs, jsonName, prop)
 		source := field.deserializeField
 		if existing, ok := fieldsByJSON[jsonName]; ok {
-			if jsonName != "_meta" {
+			if jsonName == "_meta" {
+				existing.deserializeField = mergeDeserializeRules(existing.deserializeField, field.deserializeField)
+			} else {
 				existing = mergeUnionField(defs, existing, field)
 			}
 			field = existing
@@ -133,6 +135,12 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 	if discriminator != "" {
 		reservedFieldNames = append(reservedFieldNames, discriminatorGoName)
 	}
+	for _, field := range fieldsByJSON {
+		if field.preserveNull {
+			reservedFieldNames = append(reservedFieldNames, "NullFields")
+			break
+		}
+	}
 	goNames := uniqueFieldNamesWithReserved(fieldOrder, reservedFieldNames)
 	for _, jsonName := range fieldOrder {
 		field := fieldsByJSON[jsonName]
@@ -187,6 +195,9 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 		structFields = append(structFields, jen.Id(field.goName).Add(field.typeCode).Tag(map[string]string{"json": jsonTag(jsonName, omitempty, omitzero)}))
 	}
 
+	if contains(reservedFieldNames, "NullFields") {
+		structFields = append(structFields, nullFieldsDeclaration())
+	}
 	var codes []jen.Code
 	codes = append(codes, commented(name, schema.Description, jen.Type().Id(name).Struct(structFields...)), jen.Line())
 	if discriminator != "" {
@@ -218,10 +229,14 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 			customUnmarshal[jsonName] = discriminatorUnionFieldUnmarshalCode(defs, field, discriminator, discriminatorGoName, branches, constNames)
 		}
 	}
+	nullFields := preservedNullFields(deserializeFields)
 	unmarshalMethod, hasUnmarshal := deserializeUnmarshalCode(name, deserializeFields, customUnmarshal)
-	if len(requiredMarshalFields) > 0 {
+	if discriminator == "" && hasRequiredKeyBranches(defs, schema) {
+		codes = append(codes, requiredKeyUnionMarshalCode(defs, name, schema, fieldsByJSON), jen.Line())
+		unmarshalMethod, hasUnmarshal = requiredKeyUnionUnmarshalCode(defs, name, schema, fieldsByJSON), true
+	} else if len(requiredMarshalFields) > 0 || len(nullFields) > 0 {
 		if discriminator != "" {
-			codes = append(codes, discriminatorUnionMarshalCode(defs, name, discriminator, requiredMarshalFields, constNames), jen.Line())
+			codes = append(codes, discriminatorUnionMarshalCode(defs, name, discriminator, requiredMarshalFields, constNames, nullFields, fieldsByJSON, branches), jen.Line())
 		} else {
 			codes = append(codes, discriminatorlessUnionMarshalCode(defs, name, requiredMarshalFields, len(branches)), jen.Line())
 		}
@@ -234,7 +249,11 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 
 func newUnionField(defs map[string]*jsonschema.Schema, jsonName string, prop *jsonschema.Schema) unionField {
 	if jsonName == "_meta" {
-		return unionField{deserializeField: deserializeField{jsonName: jsonName, goName: fieldName(jsonName), typeCode: jen.Id("Meta"), typeText: "Meta"}, schema: prop}
+		field := deserializeField{jsonName: jsonName, goName: fieldName(jsonName), typeCode: jen.Id("Meta"), typeText: "Meta", preserveNull: preservesJSONNull(defs, jsonName, prop)}
+		if field.preserveNull {
+			field.defaultOnError = schemaBoolExtra(prop, "x-deserialize-default-on-error")
+		}
+		return unionField{deserializeField: field, schema: prop}
 	}
 	typ, text := schemaType(defs, prop, false)
 	deserialize := newDeserializeField(defs, jsonName, prop, typ, text)
@@ -270,6 +289,9 @@ func nullableUnionField(a, b unionField) (string, jen.Code, bool) {
 }
 
 func unionFieldNeedsVariantUnmarshal(field unionField) bool {
+	if field.preserveNull && field.common == nil {
+		return true
+	}
 	if !needsDeserializeUnmarshal(field.deserializeField) {
 		return false
 	}
@@ -292,7 +314,7 @@ func unionFieldNeedsVariantUnmarshal(field unionField) bool {
 }
 
 func sameDeserializeField(a, b deserializeField) bool {
-	if a.typeText != b.typeText || a.itemTypeText != b.itemTypeText || a.defaultOnError != b.defaultOnError || a.skipInvalidItems != b.skipInvalidItems || !slices.Equal(a.enumValues, b.enumValues) {
+	if a.typeText != b.typeText || a.itemTypeText != b.itemTypeText || a.defaultOnError != b.defaultOnError || a.skipInvalidItems != b.skipInvalidItems || a.preserveNull != b.preserveNull || !slices.Equal(a.enumValues, b.enumValues) {
 		return false
 	}
 	if (a.itemValidator == nil) != (b.itemValidator == nil) {
@@ -321,7 +343,7 @@ func discriminatorUnionFieldUnmarshalCode(defs map[string]*jsonschema.Schema, fi
 		assign := func(decodedValue jen.Code) jen.Code {
 			return jen.Id("decoded").Dot(field.goName).Op("=").Add(convertUnionFieldValue(field.typeText, source.typeText, decodedValue))
 		}
-		body := deserializeVariantFieldCode(source, assign)
+		body := preserveNullUnmarshalCode(source, deserializeVariantFieldCode(source, assign))
 		if value == "" {
 			fallback = body
 			continue
@@ -364,7 +386,7 @@ func isRequiredInAllVariants(parentRequired map[string]bool, requiredCount map[s
 	return parentRequired[jsonName] || requiredCount[jsonName] == branchCount
 }
 
-func discriminatorUnionMarshalCode(defs map[string]*jsonschema.Schema, name, discriminator string, requiredFields []unionRequiredMarshalField, constNames map[string]string) jen.Code {
+func discriminatorUnionMarshalCode(defs map[string]*jsonschema.Schema, name, discriminator string, requiredFields []unionRequiredMarshalField, constNames map[string]string, nullFields []deserializeField, fieldsByJSON map[string]unionField, branches []*jsonschema.Schema) jen.Code {
 	receiver := receiverName(name)
 	fieldSeen := map[string]bool{}
 	var orderedFields []unionRequiredMarshalField
@@ -376,6 +398,12 @@ func discriminatorUnionMarshalCode(defs map[string]*jsonschema.Schema, name, dis
 		orderedFields = append(orderedFields, required)
 	}
 
+	for _, field := range nullFields {
+		if !fieldSeen[field.goName] {
+			orderedFields = append(orderedFields, unionRequiredMarshalField{field: unionField{deserializeField: field}})
+			fieldSeen[field.goName] = true
+		}
+	}
 	var wireFields []jen.Code
 	for _, required := range orderedFields {
 		field := required.field
@@ -440,10 +468,31 @@ func discriminatorUnionMarshalCode(defs map[string]*jsonschema.Schema, name, dis
 		body = append(body, optionalWireFieldAssignmentCode(receiver, required.field)...)
 	}
 	body = append(body, commonAssignments...)
-	body = append(body,
-		jen.Switch(jen.Id(receiver).Dot(fieldName(discriminator))).Block(cases...),
-		jen.Return(jen.Qual("encoding/json", "Marshal").Call(jen.Id("w"))),
-	)
+	body = append(body, jen.Switch(jen.Id(receiver).Dot(fieldName(discriminator))).Block(cases...))
+	var nullCases []jen.Code
+	for _, branch := range branches {
+		value, _ := variantConst(defs, branch, discriminator)
+		var fields []deserializeField
+		for _, field := range nullFields {
+			// A shared field can have different null semantics in each variant.
+			if source, ok := unionFieldSource(fieldsByJSON[field.jsonName], value); ok && source.preserveNull {
+				fields = append(fields, field)
+			}
+		}
+		if len(fields) == 0 {
+			continue
+		}
+		assignments := nullFieldMarshalAssignments(receiver, fields)
+		if constName := constNames[value]; constName != "" {
+			nullCases = append(nullCases, jen.Case(jen.Id(constName)).Block(assignments...))
+		} else {
+			nullCases = append(nullCases, jen.Default().Block(assignments...))
+		}
+	}
+	if len(nullCases) > 0 {
+		body = append(body, jen.Switch(jen.Id(receiver).Dot(fieldName(discriminator))).Block(nullCases...))
+	}
+	body = append(body, jen.Return(jen.Qual("encoding/json", "Marshal").Call(jen.Id("w"))))
 	return jen.Comment("MarshalJSON implements json.Marshaler.").Line().Func().Params(jen.Id(receiver).Id(name)).Id("MarshalJSON").Params().Params(jen.Index().Byte(), jen.Error()).Block(body...)
 }
 
@@ -496,6 +545,8 @@ func discriminatorlessUnionMarshalCode(defs map[string]*jsonschema.Schema, name 
 func optionalWireFieldAssignmentCode(receiver string, field unionField) []jen.Code {
 	var condition jen.Code
 	switch {
+	case field.jsonName == "_meta":
+		condition = jen.Id(receiver).Dot(field.goName).Op("!=").Nil()
 	case strings.HasPrefix(field.typeText, "[]"), strings.HasPrefix(field.typeText, "map["):
 		condition = jen.Len(jen.Id(receiver).Dot(field.goName)).Op(">").Lit(0)
 	case strings.HasPrefix(field.typeText, "*"), field.typeText == "any":

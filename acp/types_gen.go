@@ -8,7 +8,9 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
+	"slices"
 )
 
 // Meta: Reserved metadata for protocol extensions. Decoded numbers are json.Number values.
@@ -565,6 +567,7 @@ type ClientCapabilities struct {
 	Plan              *PlanCapabilities          `json:"plan,omitempty"`
 	PositionEncodings []PositionEncodingKind     `json:"positionEncodings,omitempty"`
 	Session           *ClientSessionCapabilities `json:"session,omitempty"`
+	Subagents         *SubagentCapabilities      `json:"subagents,omitempty"`
 	Terminal          bool                       `json:"terminal,omitempty"`
 }
 
@@ -580,6 +583,7 @@ func (c *ClientCapabilities) UnmarshalJSON(data []byte) error {
 		Plan              json.RawMessage `json:"plan"`
 		PositionEncodings json.RawMessage `json:"positionEncodings"`
 		Session           json.RawMessage `json:"session"`
+		Subagents         json.RawMessage `json:"subagents"`
 		Terminal          json.RawMessage `json:"terminal"`
 		*alias
 	}{alias: &decoded}
@@ -618,6 +622,9 @@ func (c *ClientCapabilities) UnmarshalJSON(data []byte) error {
 	}
 	if len(raw.Session) > 0 {
 		_ = unmarshalJSON(raw.Session, &decoded.Session)
+	}
+	if len(raw.Subagents) > 0 {
+		_ = unmarshalJSON(raw.Subagents, &decoded.Subagents)
 	}
 	if len(raw.Terminal) > 0 {
 		_ = unmarshalJSON(raw.Terminal, &decoded.Terminal)
@@ -883,26 +890,6 @@ func (u *ConfigOptionUpdate) UnmarshalJSON(data []byte) error {
 	}
 	*u = ConfigOptionUpdate(decoded)
 	return nil
-}
-
-// ConnectMcpRequest: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Request parameters for `mcp/connect`.
-type ConnectMcpRequest struct {
-	Meta     Meta           `json:"_meta,omitzero"`
-	ServerID McpServerAcpId `json:"serverId"`
-}
-
-// ConnectMcpResponse: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Response to `mcp/connect`.
-type ConnectMcpResponse struct {
-	Meta         Meta            `json:"_meta,omitzero"`
-	ConnectionID McpConnectionId `json:"connectionId"`
 }
 
 // Content: Standard content block (text, images, resources).
@@ -1556,25 +1543,6 @@ type DisableProviderRequest struct {
 //
 // Response to `providers/disable`.
 type DisableProviderResponse struct {
-	Meta Meta `json:"_meta,omitzero"`
-}
-
-// DisconnectMcpRequest: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Request parameters for `mcp/disconnect`.
-type DisconnectMcpRequest struct {
-	Meta         Meta            `json:"_meta,omitzero"`
-	ConnectionID McpConnectionId `json:"connectionId"`
-}
-
-// DisconnectMcpResponse: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Response to `mcp/disconnect`.
-type DisconnectMcpResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
@@ -2299,6 +2267,41 @@ type HttpHeader struct {
 	Value string `json:"value"`
 }
 
+// IdleStateUpdate: The child is ready to process another prompt.
+type IdleStateUpdate struct {
+	Meta       Meta        `json:"_meta,omitzero"`
+	StopReason *StopReason `json:"stopReason,omitempty"`
+	Usage      *Usage      `json:"usage,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *IdleStateUpdate) UnmarshalJSON(data []byte) error {
+	type alias IdleStateUpdate
+	decoded := alias{}
+	raw := struct {
+		StopReason json.RawMessage `json:"stopReason"`
+		Usage      json.RawMessage `json:"usage"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.StopReason) > 0 {
+		var value StopReason
+		if err := unmarshalJSON(raw.StopReason, &value); err == nil {
+			switch string(value) {
+			case "end_turn", "max_tokens", "max_turn_requests", "refusal", "cancelled":
+				decoded.StopReason = &value
+			}
+		}
+	}
+	if len(raw.Usage) > 0 {
+		_ = unmarshalJSON(raw.Usage, &decoded.Usage)
+	}
+	*u = IdleStateUpdate(decoded)
+	return nil
+}
+
 // ImageContent: An image provided to or from an LLM.
 type ImageContent struct {
 	Meta        Meta         `json:"_meta,omitzero"`
@@ -2722,12 +2725,75 @@ func (c *McpCapabilities) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// McpConnectionId: **UNSTABLE**
+// McpError: **UNSTABLE**
+//
+// An inner MCP error, distinct from an outer ACP binding or runtime error.
+//
+// `code` and `message` are required and non-null. `data` is optional;
+// explicit `null` is preserved separately from an omitted key.
+type McpError struct {
+	Code    int32  `json:"code"`
+	Data    any    `json:"data,omitempty"`
+	Message string `json:"message"`
+	// NullFields lists JSON field names to send as explicit null, regardless of their values.
+	// Decoding records explicit nulls here, separately from omitted fields.
+	NullFields []string `json:"-"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (e McpError) MarshalJSON() ([]byte, error) {
+	type alias McpError
+	a := alias(e)
+	type wire struct {
+		*alias
+		Data *any `json:"data,omitempty"`
+	}
+	w := wire{alias: &a}
+	if a.Data != nil {
+		Data := a.Data
+		w.Data = &Data
+	}
+	if slices.Contains(a.NullFields, "data") {
+		w.Data = new(any)
+	}
+	return json.Marshal(w)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (e *McpError) UnmarshalJSON(data []byte) error {
+	type alias McpError
+	decoded := alias{}
+	raw := struct {
+		Data json.RawMessage `json:"data"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Data) > 0 {
+		if isJSONNull(raw.Data) {
+			decoded.NullFields = append(decoded.NullFields, "data")
+		} else {
+			var value any
+			if err := unmarshalJSON(raw.Data, &value); err != nil {
+				return err
+			}
+			decoded.Data = value
+		}
+	}
+	*e = McpError(decoded)
+	return nil
+}
+
+// McpRequestId: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
 //
-// A unique identifier for an active MCP-over-ACP connection.
-type McpConnectionId string
+// Identifies an inner MCP request active against a server on this ACP connection.
+//
+// Generated by the caller and preserved unchanged by proxies. This is distinct
+// from the outer ACP JSON-RPC request ID.
+type McpRequestId string
 
 // McpServer: Configuration for connecting to an MCP (Model Context Protocol) server.
 //
@@ -2889,7 +2955,7 @@ func (s McpServer) MarshalJSON() ([]byte, error) {
 // ACP transport configuration for MCP.
 //
 // The MCP server is provided by an ACP component and communicates over the ACP channel
-// using `mcp/connect`, `mcp/message`, and `mcp/disconnect`.
+// using `mcp/message`.
 type McpServerAcp struct {
 	Meta     Meta           `json:"_meta,omitzero"`
 	Name     string         `json:"name"`
@@ -2903,8 +2969,7 @@ type McpServerAcp struct {
 // Unique identifier for an MCP server using the ACP transport.
 //
 // The value is opaque and generated by the ACP component providing the MCP server. It is
-// used by `mcp/connect` to route connection requests back to the component that declared the
-// server.
+// used by `mcp/message` to route requests to the component that declared the server.
 type McpServerAcpId string
 
 // McpServerHttp: HTTP transport configuration for MCP.
@@ -2974,31 +3039,20 @@ type MessageId string
 //
 // Notification parameters for `mcp/message`.
 //
-// This is used when the wrapped MCP message is a notification and the outer JSON-RPC
-// envelope has no `id`.
+// Sent by the provider to the consumer for an active request (including
+// subscription acknowledgements and updates); the outer envelope has no `id`.
 type MessageMcpNotification struct {
-	Meta         Meta            `json:"_meta,omitzero"`
-	ConnectionID McpConnectionId `json:"connectionId"`
-	Method       string          `json:"method"`
-	Params       map[string]any  `json:"params,omitempty"`
+	Meta      Meta           `json:"_meta,omitzero"`
+	Method    string         `json:"method"`
+	Params    map[string]any `json:"params,omitempty"`
+	RequestID McpRequestId   `json:"requestId"`
+	ServerID  McpServerAcpId `json:"serverId"`
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON preserves unstructured numbers as json.Number.
 func (n *MessageMcpNotification) UnmarshalJSON(data []byte) error {
-	type alias MessageMcpNotification
-	decoded := alias{}
-	raw := struct {
-		Params json.RawMessage `json:"params"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Params) > 0 {
-		_ = unmarshalJSON(raw.Params, &decoded.Params)
-	}
-	*n = MessageMcpNotification(decoded)
-	return nil
+	type plain MessageMcpNotification
+	return unmarshalJSON(data, (*plain)(n))
 }
 
 // MessageMcpRequest: **UNSTABLE**
@@ -3007,10 +3061,11 @@ func (n *MessageMcpNotification) UnmarshalJSON(data []byte) error {
 //
 // Request parameters for `mcp/message`.
 type MessageMcpRequest struct {
-	Meta         Meta            `json:"_meta,omitzero"`
-	ConnectionID McpConnectionId `json:"connectionId"`
-	Method       string          `json:"method"`
-	Params       map[string]any  `json:"params,omitempty"`
+	Meta      Meta           `json:"_meta,omitzero"`
+	Method    string         `json:"method"`
+	Params    map[string]any `json:"params,omitempty"`
+	RequestID McpRequestId   `json:"requestId"`
+	ServerID  McpServerAcpId `json:"serverId"`
 }
 
 // UnmarshalJSON preserves unstructured numbers as json.Number.
@@ -3021,12 +3076,100 @@ func (r *MessageMcpRequest) UnmarshalJSON(data []byte) error {
 
 // MessageMcpResponse: **UNSTABLE**
 //
-// This capability is not part of the spec yet, and may be removed or changed at any point.
+// The successful outer ACP `mcp/message` response carries exactly one
+// inner MCP outcome: an opaque result (including JSON null), or an MCP error.
+// Outer ACP errors are reserved for binding and runtime failures.
 //
-// Response to `mcp/message`.
-//
-// This is the inner MCP response result payload. Any JSON value is valid.
-type MessageMcpResponse any
+// Both branches require their carrier key. An error must be a non-null object.
+// Unknown outer fields are ignored; inner result and error fields are preserved.
+// Carrier `_meta` is optional; null or invalid values are treated as absent.
+// Senders must include exactly one outcome; receivers prefer `result` if both are present.
+type MessageMcpResponse struct {
+	Meta   Meta      `json:"_meta,omitzero"`
+	Error  *McpError `json:"error,omitempty,omitzero"`
+	Result *any      `json:"result,omitempty"`
+}
+
+// ResultMessageMcpResponse creates an opaque inner MCP result.
+func ResultMessageMcpResponse(result any) MessageMcpResponse {
+	return MessageMcpResponse{
+		Result: &result,
+	}
+}
+
+// ErrorMessageMcpResponse creates a structured inner MCP error.
+func ErrorMessageMcpResponse(error McpError) MessageMcpResponse {
+	return MessageMcpResponse{
+		Error: &error,
+	}
+}
+
+// MarshalJSON emits the first present carrier in schema order.
+func (r MessageMcpResponse) MarshalJSON() ([]byte, error) {
+	if r.Result != nil {
+		return json.Marshal(struct {
+			Meta   Meta `json:"_meta,omitzero"`
+			Result *any `json:"result"`
+		}{r.Meta, r.Result})
+	}
+	if r.Error != nil {
+		return json.Marshal(struct {
+			Meta  Meta      `json:"_meta,omitzero"`
+			Error *McpError `json:"error"`
+		}{r.Meta, r.Error})
+	}
+	return nil, fmt.Errorf("MessageMcpResponse requires one of: result, error")
+}
+
+// UnmarshalJSON selects the first present carrier in schema order.
+func (r *MessageMcpResponse) UnmarshalJSON(data []byte) error {
+	type alias MessageMcpResponse
+	var decoded alias
+	var raw struct {
+		Meta   json.RawMessage `json:"_meta"`
+		Error  json.RawMessage `json:"error"`
+		Result json.RawMessage `json:"result"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	switch {
+	case len(raw.Result) > 0:
+		if len(raw.Meta) > 0 {
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err == nil {
+				decoded.Meta = value
+			}
+		}
+		var value any
+		if err := unmarshalJSON(raw.Result, &value); err != nil {
+			return err
+		}
+		decoded.Result = &value
+	case len(raw.Error) > 0:
+		if isJSONNull(raw.Error) {
+			return fmt.Errorf("MessageMcpResponse.error must not be null")
+		}
+		if err := requireJSONProperties(raw.Error, []string{"code", "message"}, []string{"code", "message"}); err != nil {
+			return fmt.Errorf("MessageMcpResponse.error: %w", err)
+		}
+		if len(raw.Meta) > 0 {
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err == nil {
+				decoded.Meta = value
+			}
+		}
+		var value McpError
+		if err := unmarshalJSON(raw.Error, &value); err != nil {
+			return err
+		}
+		decoded.Error = &value
+	default:
+		return fmt.Errorf("MessageMcpResponse requires one of: result, error")
+	}
+	*r = MessageMcpResponse(decoded)
+	return nil
+}
 
 // MultiSelectItems: Items for a multi-select (array) property schema.
 type MultiSelectItems struct {
@@ -4656,6 +4799,11 @@ type RequestPermissionResponse struct {
 	Outcome RequestPermissionOutcome `json:"outcome"`
 }
 
+// RequiresActionStateUpdate: Foreground work is blocked on user action.
+type RequiresActionStateUpdate struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
 // ResourceLink: A resource that the server is capable of reading, included in a prompt or tool call result.
 type ResourceLink struct {
 	Meta        Meta         `json:"_meta,omitzero"`
@@ -4811,6 +4959,11 @@ const (
 	RoleUser Role = "user"
 )
 
+// RunningStateUpdate: Foreground work is in progress.
+type RunningStateUpdate struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
 // SelectedPermissionOutcome: The user selected one of the provided options.
 type SelectedPermissionOutcome struct {
 	Meta     Meta               `json:"_meta,omitzero"`
@@ -4824,6 +4977,17 @@ type SelectedPermissionOutcome struct {
 // `session/list` may return `SessionInfo.additionalDirectories` to report the
 // complete ordered additional-root list associated with a listed session.
 type SessionAdditionalDirectoriesCapabilities struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
+// SessionCancelCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Capability to cancel work in a subagent session without ending that session.
+//
+// Supplying `{}` advertises support; an omitted or `null` `cancel` does not.
+type SessionCancelCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
@@ -5300,6 +5464,57 @@ type SessionListCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// SessionMessage: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// An upsert for an inter-session message.
+type SessionMessage struct {
+	Meta               Meta            `json:"_meta,omitzero"`
+	Content            *[]ContentBlock `json:"content,omitempty"`
+	MessageID          MessageId       `json:"messageId"`
+	RecipientSessionID *SessionId      `json:"recipientSessionId,omitempty"`
+	SenderSessionID    *SessionId      `json:"senderSessionId,omitempty"`
+	// NullFields lists JSON field names to send as explicit null, regardless of their values.
+	// Decoding records explicit nulls here, separately from omitted fields.
+	NullFields []string `json:"-"`
+}
+
+// SessionMessageChunk: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// A streamed content block of an inter-session message.
+type SessionMessageChunk struct {
+	Meta               Meta         `json:"_meta,omitzero"`
+	Content            ContentBlock `json:"content"`
+	MessageID          MessageId    `json:"messageId"`
+	RecipientSessionID *SessionId   `json:"recipientSessionId,omitempty"`
+	SenderSessionID    *SessionId   `json:"senderSessionId,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionMessageChunk) UnmarshalJSON(data []byte) error {
+	type alias SessionMessageChunk
+	decoded := alias{}
+	raw := struct {
+		RecipientSessionID json.RawMessage `json:"recipientSessionId"`
+		SenderSessionID    json.RawMessage `json:"senderSessionId"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.RecipientSessionID) > 0 {
+		_ = unmarshalJSON(raw.RecipientSessionID, &decoded.RecipientSessionID)
+	}
+	if len(raw.SenderSessionID) > 0 {
+		_ = unmarshalJSON(raw.SenderSessionID, &decoded.SenderSessionID)
+	}
+	*c = SessionMessageChunk(decoded)
+	return nil
+}
+
 // SessionMode: A mode the agent can operate in.
 //
 // See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
@@ -5399,33 +5614,41 @@ type SessionResumeCapabilities struct {
 //
 // See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
 type SessionUpdate struct {
-	SessionUpdate     SessionUpdateType     `json:"sessionUpdate"`
-	Meta              Meta                  `json:"_meta,omitzero"`
-	AvailableCommands []AvailableCommand    `json:"availableCommands,omitempty"`
-	CompactionID      CompactionId          `json:"compactionId,omitempty"`
-	ConfigOptions     []SessionConfigOption `json:"configOptions,omitempty"`
-	Content           any                   `json:"content,omitempty,omitzero"`
-	Cost              *Cost                 `json:"cost,omitempty"`
-	CurrentModeID     SessionModeId         `json:"currentModeId,omitempty"`
-	Description       *string               `json:"description,omitempty"`
-	Entries           []PlanEntry           `json:"entries,omitempty"`
-	Error             *string               `json:"error,omitempty"`
-	Kind              *ToolKind             `json:"kind,omitempty"`
-	Locations         *[]ToolCallLocation   `json:"locations,omitempty"`
-	MessageID         *MessageId            `json:"messageId,omitempty"`
-	Name              *string               `json:"name,omitempty"`
-	Plan              PlanUpdateContent     `json:"plan,omitempty,omitzero"`
-	PlanID            PlanId                `json:"planId,omitempty"`
-	RawInput          any                   `json:"rawInput,omitempty"`
-	RawOutput         any                   `json:"rawOutput,omitempty"`
-	Severity          NoticeSeverity        `json:"severity,omitempty"`
-	Size              uint64                `json:"size,omitempty"`
-	Status            *ToolCallStatus       `json:"status,omitempty"`
-	Summary           *[]ContentBlock       `json:"summary,omitempty"`
-	Title             *string               `json:"title,omitempty"`
-	ToolCallID        ToolCallId            `json:"toolCallId,omitempty"`
-	UpdatedAt         *string               `json:"updatedAt,omitempty"`
-	Used              uint64                `json:"used,omitempty"`
+	SessionUpdate      SessionUpdateType            `json:"sessionUpdate"`
+	Meta               Meta                         `json:"_meta,omitzero"`
+	AvailableCommands  []AvailableCommand           `json:"availableCommands,omitempty"`
+	Capabilities       *SubagentSessionCapabilities `json:"capabilities,omitempty"`
+	CompactionID       CompactionId                 `json:"compactionId,omitempty"`
+	ConfigOptions      []SessionConfigOption        `json:"configOptions,omitempty"`
+	Content            any                          `json:"content,omitempty,omitzero"`
+	Cost               *Cost                        `json:"cost,omitempty"`
+	CurrentModeID      SessionModeId                `json:"currentModeId,omitempty"`
+	Description        *string                      `json:"description,omitempty"`
+	Entries            []PlanEntry                  `json:"entries,omitempty"`
+	Error              *string                      `json:"error,omitempty"`
+	Kind               *ToolKind                    `json:"kind,omitempty"`
+	Locations          *[]ToolCallLocation          `json:"locations,omitempty"`
+	MessageID          *MessageId                   `json:"messageId,omitempty"`
+	Name               *string                      `json:"name,omitempty"`
+	Plan               PlanUpdateContent            `json:"plan,omitempty,omitzero"`
+	PlanID             PlanId                       `json:"planId,omitempty"`
+	RawInput           any                          `json:"rawInput,omitempty"`
+	RawOutput          any                          `json:"rawOutput,omitempty"`
+	RecipientSessionID *SessionId                   `json:"recipientSessionId,omitempty"`
+	SenderSessionID    *SessionId                   `json:"senderSessionId,omitempty"`
+	SessionID          SessionId                    `json:"sessionId,omitempty"`
+	Severity           NoticeSeverity               `json:"severity,omitempty"`
+	Size               uint64                       `json:"size,omitempty"`
+	State              *StateUpdate                 `json:"state,omitempty"`
+	Status             *ToolCallStatus              `json:"status,omitempty"`
+	Summary            *[]ContentBlock              `json:"summary,omitempty"`
+	Title              *string                      `json:"title,omitempty"`
+	ToolCallID         ToolCallId                   `json:"toolCallId,omitempty"`
+	UpdatedAt          *string                      `json:"updatedAt,omitempty"`
+	Used               uint64                       `json:"used,omitempty"`
+	// NullFields lists JSON field names to send as explicit null, regardless of their values.
+	// Decoding records explicit nulls here, separately from omitted fields.
+	NullFields []string `json:"-"`
 }
 
 // SessionUpdateType is the discriminator for SessionUpdate variants.
@@ -5448,6 +5671,9 @@ const (
 	SessionUpdateTypeNotice                  SessionUpdateType = "notice"
 	SessionUpdateTypeCompactionUpdate        SessionUpdateType = "compaction_update"
 	SessionUpdateTypeCompactionSummaryChunk  SessionUpdateType = "compaction_summary_chunk"
+	SessionUpdateTypeSubagentUpdate          SessionUpdateType = "subagent_update"
+	SessionUpdateTypeSessionMessage          SessionUpdateType = "session_message"
+	SessionUpdateTypeSessionMessageChunk     SessionUpdateType = "session_message_chunk"
 )
 
 // UserMessageChunkSessionUpdate creates an SessionUpdate variant: A chunk of the user's message being streamed.
@@ -5617,25 +5843,70 @@ func CompactionSummaryChunkSessionUpdate(compactionID CompactionId, content Cont
 	}
 }
 
+// SubagentUpdateSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Announces a child session created and owned by this session, or updates
+// that ownership association's metadata.
+func SubagentUpdateSessionUpdate(sessionID SessionId) SessionUpdate {
+	return SessionUpdate{
+		SessionUpdate: SessionUpdateTypeSubagentUpdate,
+		SessionID:     sessionID,
+	}
+}
+
+// SessionMessageSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// A message upsert observed in this session's transcript, sent to or
+// received from another session.
+func SessionMessageSessionUpdate(messageID MessageId) SessionUpdate {
+	return SessionUpdate{
+		SessionUpdate: SessionUpdateTypeSessionMessage,
+		MessageID:     &messageID,
+	}
+}
+
+// SessionMessageChunkSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// One content block appended to a sent or received session message.
+func SessionMessageChunkSessionUpdate(messageID MessageId, content ContentBlock) SessionUpdate {
+	return SessionUpdate{
+		SessionUpdate: SessionUpdateTypeSessionMessageChunk,
+		Content:       content,
+		MessageID:     &messageID,
+	}
+}
+
 // MarshalJSON implements json.Marshaler.
 func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 	type alias SessionUpdate
 	type wire struct {
 		*alias
-		Content           *any                   `json:"content,omitempty"`
-		Title             **string               `json:"title,omitempty"`
-		ToolCallID        *ToolCallId            `json:"toolCallId,omitempty"`
-		Entries           *[]PlanEntry           `json:"entries,omitempty"`
-		Plan              *PlanUpdateContent     `json:"plan,omitempty"`
-		PlanID            *PlanId                `json:"planId,omitempty"`
-		AvailableCommands *[]AvailableCommand    `json:"availableCommands,omitempty"`
-		CurrentModeID     *SessionModeId         `json:"currentModeId,omitempty"`
-		ConfigOptions     *[]SessionConfigOption `json:"configOptions,omitempty"`
-		Size              *uint64                `json:"size,omitempty"`
-		Used              *uint64                `json:"used,omitempty"`
-		Severity          *NoticeSeverity        `json:"severity,omitempty"`
-		CompactionID      *CompactionId          `json:"compactionId,omitempty"`
-		Status            **ToolCallStatus       `json:"status,omitempty"`
+		Content           *any                          `json:"content,omitempty"`
+		Title             **string                      `json:"title,omitempty"`
+		ToolCallID        *ToolCallId                   `json:"toolCallId,omitempty"`
+		Entries           *[]PlanEntry                  `json:"entries,omitempty"`
+		Plan              *PlanUpdateContent            `json:"plan,omitempty"`
+		PlanID            *PlanId                       `json:"planId,omitempty"`
+		AvailableCommands *[]AvailableCommand           `json:"availableCommands,omitempty"`
+		CurrentModeID     *SessionModeId                `json:"currentModeId,omitempty"`
+		ConfigOptions     *[]SessionConfigOption        `json:"configOptions,omitempty"`
+		Size              *uint64                       `json:"size,omitempty"`
+		Used              *uint64                       `json:"used,omitempty"`
+		Severity          *NoticeSeverity               `json:"severity,omitempty"`
+		CompactionID      *CompactionId                 `json:"compactionId,omitempty"`
+		Status            **ToolCallStatus              `json:"status,omitempty"`
+		SessionID         *SessionId                    `json:"sessionId,omitempty"`
+		MessageID         **MessageId                   `json:"messageId,omitempty"`
+		Meta              *Meta                         `json:"_meta,omitempty"`
+		Capabilities      **SubagentSessionCapabilities `json:"capabilities,omitempty"`
+		Description       **string                      `json:"description,omitempty"`
+		State             **StateUpdate                 `json:"state,omitempty"`
 	}
 	w := wire{alias: (*alias)(&u)}
 	if u.Content != nil {
@@ -5693,6 +5964,30 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 	if u.Status != nil {
 		Status := u.Status
 		w.Status = &Status
+	}
+	if !reflect.ValueOf(u.SessionID).IsZero() {
+		SessionID := u.SessionID
+		w.SessionID = &SessionID
+	}
+	if u.MessageID != nil {
+		MessageID := u.MessageID
+		w.MessageID = &MessageID
+	}
+	if u.Meta != nil {
+		Meta := u.Meta
+		w.Meta = &Meta
+	}
+	if u.Capabilities != nil {
+		Capabilities := u.Capabilities
+		w.Capabilities = &Capabilities
+	}
+	if u.Description != nil {
+		Description := u.Description
+		w.Description = &Description
+	}
+	if u.State != nil {
+		State := u.State
+		w.State = &State
 	}
 	switch u.SessionUpdate {
 	case SessionUpdateTypeUserMessageChunk:
@@ -5759,6 +6054,42 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 		w.CompactionID = &CompactionID
 		Content := u.Content
 		w.Content = &Content
+	case SessionUpdateTypeSubagentUpdate:
+		SessionID := u.SessionID
+		w.SessionID = &SessionID
+	case SessionUpdateTypeSessionMessage:
+		MessageID := u.MessageID
+		w.MessageID = &MessageID
+	case SessionUpdateTypeSessionMessageChunk:
+		Content := u.Content
+		w.Content = &Content
+		MessageID := u.MessageID
+		w.MessageID = &MessageID
+	}
+	switch u.SessionUpdate {
+	case SessionUpdateTypeSubagentUpdate:
+		if slices.Contains(u.NullFields, "_meta") {
+			w.Meta = new(Meta)
+		}
+		if slices.Contains(u.NullFields, "capabilities") {
+			w.Capabilities = new(*SubagentSessionCapabilities)
+		}
+		if slices.Contains(u.NullFields, "description") {
+			w.Description = new(*string)
+		}
+		if slices.Contains(u.NullFields, "state") {
+			w.State = new(*StateUpdate)
+		}
+		if slices.Contains(u.NullFields, "title") {
+			w.Title = new(*string)
+		}
+	case SessionUpdateTypeSessionMessage:
+		if slices.Contains(u.NullFields, "_meta") {
+			w.Meta = new(Meta)
+		}
+		if slices.Contains(u.NullFields, "content") {
+			w.Content = new(any)
+		}
 	}
 	return json.Marshal(w)
 }
@@ -5768,27 +6099,156 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 	type alias SessionUpdate
 	decoded := alias{}
 	raw := struct {
-		AvailableCommands json.RawMessage `json:"availableCommands"`
-		ConfigOptions     json.RawMessage `json:"configOptions"`
-		Content           json.RawMessage `json:"content"`
-		Cost              json.RawMessage `json:"cost"`
-		Description       json.RawMessage `json:"description"`
-		Entries           json.RawMessage `json:"entries"`
-		Error             json.RawMessage `json:"error"`
-		Kind              json.RawMessage `json:"kind"`
-		Locations         json.RawMessage `json:"locations"`
-		MessageID         json.RawMessage `json:"messageId"`
-		Name              json.RawMessage `json:"name"`
-		RawInput          json.RawMessage `json:"rawInput"`
-		RawOutput         json.RawMessage `json:"rawOutput"`
-		Status            json.RawMessage `json:"status"`
-		Summary           json.RawMessage `json:"summary"`
-		Title             json.RawMessage `json:"title"`
-		UpdatedAt         json.RawMessage `json:"updatedAt"`
+		Meta               json.RawMessage `json:"_meta"`
+		AvailableCommands  json.RawMessage `json:"availableCommands"`
+		Capabilities       json.RawMessage `json:"capabilities"`
+		ConfigOptions      json.RawMessage `json:"configOptions"`
+		Content            json.RawMessage `json:"content"`
+		Cost               json.RawMessage `json:"cost"`
+		Description        json.RawMessage `json:"description"`
+		Entries            json.RawMessage `json:"entries"`
+		Error              json.RawMessage `json:"error"`
+		Kind               json.RawMessage `json:"kind"`
+		Locations          json.RawMessage `json:"locations"`
+		MessageID          json.RawMessage `json:"messageId"`
+		Name               json.RawMessage `json:"name"`
+		RawInput           json.RawMessage `json:"rawInput"`
+		RawOutput          json.RawMessage `json:"rawOutput"`
+		RecipientSessionID json.RawMessage `json:"recipientSessionId"`
+		SenderSessionID    json.RawMessage `json:"senderSessionId"`
+		State              json.RawMessage `json:"state"`
+		Status             json.RawMessage `json:"status"`
+		Summary            json.RawMessage `json:"summary"`
+		Title              json.RawMessage `json:"title"`
+		UpdatedAt          json.RawMessage `json:"updatedAt"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
+	}
+	if len(raw.Meta) > 0 {
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeUserMessageChunk:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypeAgentMessageChunk:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypeAgentThoughtChunk:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypeToolCall:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypeToolCallUpdate:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypePlan:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypePlanUpdate:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypePlanRemoved:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypeAvailableCommandsUpdate:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypeCurrentModeUpdate:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypeConfigOptionUpdate:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypeSessionInfoUpdate:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypeUsageUpdate:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypeNotice:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypeCompactionUpdate:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypeCompactionSummaryChunk:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		case SessionUpdateTypeSubagentUpdate:
+			if isJSONNull(raw.Meta) {
+				decoded.NullFields = append(decoded.NullFields, "_meta")
+			} else {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+		case SessionUpdateTypeSessionMessage:
+			if isJSONNull(raw.Meta) {
+				decoded.NullFields = append(decoded.NullFields, "_meta")
+			} else {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+		case SessionUpdateTypeSessionMessageChunk:
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err != nil {
+				return err
+			}
+			decoded.Meta = value
+		}
 	}
 	if len(raw.AvailableCommands) > 0 {
 		var values []json.RawMessage
@@ -5798,6 +6258,19 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 				var item AvailableCommand
 				if err := unmarshalJSON(value, &item); err == nil {
 					decoded.AvailableCommands = append(decoded.AvailableCommands, item)
+				}
+			}
+		}
+	}
+	if len(raw.Capabilities) > 0 {
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeSubagentUpdate:
+			if isJSONNull(raw.Capabilities) {
+				decoded.NullFields = append(decoded.NullFields, "capabilities")
+			} else {
+				var value *SubagentSessionCapabilities
+				if err := unmarshalJSON(raw.Capabilities, &value); err == nil {
+					decoded.Capabilities = value
 				}
 			}
 		}
@@ -5873,13 +6346,53 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 				return err
 			}
 			decoded.Content = value
+		case SessionUpdateTypeSessionMessage:
+			if isJSONNull(raw.Content) {
+				decoded.NullFields = append(decoded.NullFields, "content")
+			} else {
+				var values []json.RawMessage
+				if err := unmarshalJSON(raw.Content, &values); err == nil && values != nil {
+					items := []ContentBlock{}
+					for _, rawItem := range values {
+						var item ContentBlock
+						if err := unmarshalJSON(rawItem, &item); err == nil {
+							switch item.Type {
+							case ContentBlockTypeText, ContentBlockTypeImage, ContentBlockTypeAudio, ContentBlockTypeResourceLink, ContentBlockTypeResource:
+								items = append(items, item)
+							}
+						}
+					}
+					decoded.Content = &items
+				}
+			}
+		case SessionUpdateTypeSessionMessageChunk:
+			var value ContentBlock
+			if err := unmarshalJSON(raw.Content, &value); err != nil {
+				return err
+			}
+			decoded.Content = value
 		}
 	}
 	if len(raw.Cost) > 0 {
 		_ = unmarshalJSON(raw.Cost, &decoded.Cost)
 	}
 	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeNotice:
+			var value *string
+			if err := unmarshalJSON(raw.Description, &value); err == nil {
+				decoded.Description = value
+			}
+		case SessionUpdateTypeSubagentUpdate:
+			if isJSONNull(raw.Description) {
+				decoded.NullFields = append(decoded.NullFields, "description")
+			} else {
+				var value *string
+				if err := unmarshalJSON(raw.Description, &value); err == nil {
+					decoded.Description = value
+				}
+			}
+		}
 	}
 	if len(raw.Entries) > 0 {
 		var values []json.RawMessage
@@ -5951,7 +6464,41 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.MessageID) > 0 {
-		_ = unmarshalJSON(raw.MessageID, &decoded.MessageID)
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeUserMessageChunk:
+			var value *MessageId
+			if err := unmarshalJSON(raw.MessageID, &value); err == nil {
+				decoded.MessageID = value
+			}
+		case SessionUpdateTypeAgentMessageChunk:
+			var value *MessageId
+			if err := unmarshalJSON(raw.MessageID, &value); err == nil {
+				decoded.MessageID = value
+			}
+		case SessionUpdateTypeAgentThoughtChunk:
+			var value *MessageId
+			if err := unmarshalJSON(raw.MessageID, &value); err == nil {
+				decoded.MessageID = value
+			}
+		case SessionUpdateTypeSessionMessage:
+			var value MessageId
+			if err := unmarshalJSON(raw.MessageID, &value); err != nil {
+				return err
+			}
+			decoded.MessageID = func(v MessageId) *MessageId {
+				converted := MessageId(v)
+				return &converted
+			}(value)
+		case SessionUpdateTypeSessionMessageChunk:
+			var value MessageId
+			if err := unmarshalJSON(raw.MessageID, &value); err != nil {
+				return err
+			}
+			decoded.MessageID = func(v MessageId) *MessageId {
+				converted := MessageId(v)
+				return &converted
+			}(value)
+		}
 	}
 	if len(raw.Name) > 0 {
 		_ = unmarshalJSON(raw.Name, &decoded.Name)
@@ -5961,6 +6508,25 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 	}
 	if len(raw.RawOutput) > 0 {
 		_ = unmarshalJSON(raw.RawOutput, &decoded.RawOutput)
+	}
+	if len(raw.RecipientSessionID) > 0 {
+		_ = unmarshalJSON(raw.RecipientSessionID, &decoded.RecipientSessionID)
+	}
+	if len(raw.SenderSessionID) > 0 {
+		_ = unmarshalJSON(raw.SenderSessionID, &decoded.SenderSessionID)
+	}
+	if len(raw.State) > 0 {
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeSubagentUpdate:
+			if isJSONNull(raw.State) {
+				decoded.NullFields = append(decoded.NullFields, "state")
+			} else {
+				var value *StateUpdate
+				if err := unmarshalJSON(raw.State, &value); err == nil {
+					decoded.State = value
+				}
+			}
+		}
 	}
 	if len(raw.Status) > 0 {
 		switch decoded.SessionUpdate {
@@ -6040,6 +6606,15 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 				converted := string(v)
 				return &converted
 			}(value)
+		case SessionUpdateTypeSubagentUpdate:
+			if isJSONNull(raw.Title) {
+				decoded.NullFields = append(decoded.NullFields, "title")
+			} else {
+				var value *string
+				if err := unmarshalJSON(raw.Title, &value); err == nil {
+					decoded.Title = value
+				}
+			}
 		}
 	}
 	if len(raw.UpdatedAt) > 0 {
@@ -6212,6 +6787,100 @@ type StartNesResponse struct {
 	SessionID SessionId `json:"sessionId"`
 }
 
+// StateUpdate: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Current foreground-work state of a reusable child session.
+//
+// Each update is a whole-object snapshot. Idle does not terminate the child;
+// the parent can message it again, transitioning it back to running.
+// Background activity may still emit other session updates while idle.
+type StateUpdate struct {
+	State      StateUpdateType `json:"state"`
+	Meta       Meta            `json:"_meta,omitzero"`
+	StopReason *StopReason     `json:"stopReason,omitempty"`
+	Usage      *Usage          `json:"usage,omitempty"`
+}
+
+// StateUpdateType is the discriminator for StateUpdate variants.
+type StateUpdateType string
+
+const (
+	StateUpdateTypeRunning        StateUpdateType = "running"
+	StateUpdateTypeIdle           StateUpdateType = "idle"
+	StateUpdateTypeRequiresAction StateUpdateType = "requires_action"
+	StateUpdateTypeUnknown        StateUpdateType = "unknown"
+)
+
+// NewRunningStateUpdate creates an StateUpdate variant: Foreground work is in progress.
+func NewRunningStateUpdate() StateUpdate {
+	return StateUpdate{
+		State: StateUpdateTypeRunning,
+	}
+}
+
+// NewIdleStateUpdate creates an StateUpdate variant: The child is ready to process another prompt.
+func NewIdleStateUpdate() StateUpdate {
+	return StateUpdate{
+		State: StateUpdateTypeIdle,
+	}
+}
+
+// NewRequiresActionStateUpdate creates an StateUpdate variant: Foreground work is blocked on user action.
+func NewRequiresActionStateUpdate() StateUpdate {
+	return StateUpdate{
+		State: StateUpdateTypeRequiresAction,
+	}
+}
+
+// NewUnknownStateUpdate creates an StateUpdate variant: The Agent cannot currently determine foreground activity.
+//
+// This replaces previously confirmed activity without ending the work or session.
+func NewUnknownStateUpdate() StateUpdate {
+	return StateUpdate{
+		State: StateUpdateTypeUnknown,
+	}
+}
+
+// OtherStateUpdate creates an StateUpdate variant: Custom or future state.
+//
+// Values beginning with `_` are reserved for implementation-specific
+// extensions. Other unknown values are reserved for future ACP variants.
+func OtherStateUpdate(state string) StateUpdate {
+	return StateUpdate{
+		State: StateUpdateType(state),
+	}
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *StateUpdate) UnmarshalJSON(data []byte) error {
+	type alias StateUpdate
+	decoded := alias{}
+	raw := struct {
+		StopReason json.RawMessage `json:"stopReason"`
+		Usage      json.RawMessage `json:"usage"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.StopReason) > 0 {
+		var value StopReason
+		if err := unmarshalJSON(raw.StopReason, &value); err == nil {
+			switch string(value) {
+			case "end_turn", "max_tokens", "max_turn_requests", "refusal", "cancelled":
+				decoded.StopReason = &value
+			}
+		}
+	}
+	if len(raw.Usage) > 0 {
+		_ = unmarshalJSON(raw.Usage, &decoded.Usage)
+	}
+	*u = StateUpdate(decoded)
+	return nil
+}
+
 // StopReason: Reasons why an agent stops processing a prompt turn.
 //
 // See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-turn#stop-reasons)
@@ -6309,6 +6978,86 @@ func (s *StringPropertySchema) UnmarshalJSON(data []byte) error {
 	}
 	*s = StringPropertySchema(decoded)
 	return nil
+}
+
+// SubagentCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Capability marker for exposing reusable child sessions as restricted ACP sessions.
+//
+// Supplying `{}` advertises support for child association and state updates,
+// session-directed messages, and restricted-session semantics. The client
+// must advertise this capability before the agent sends subagent updates or
+// session-directed messages.
+type SubagentCapabilities struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
+// SubagentSessionCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Client-initiated session mutations permitted for a specific subagent session.
+//
+// A mutation requires an explicit per-child capability; support for the method
+// on ordinary sessions does not grant support on a child.
+type SubagentSessionCapabilities struct {
+	Meta   Meta                       `json:"_meta,omitzero"`
+	Cancel *SessionCancelCapabilities `json:"cancel,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SubagentSessionCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SubagentSessionCapabilities
+	decoded := alias{}
+	raw := struct {
+		Cancel json.RawMessage `json:"cancel"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Cancel) > 0 {
+		_ = unmarshalJSON(raw.Cancel, &decoded.Cancel)
+	}
+	*c = SubagentSessionCapabilities(decoded)
+	return nil
+}
+
+// SubagentUpdate: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Notification that the enclosing parent session created and owns a child session.
+//
+// Later updates modify the existing association's metadata, not its ownership.
+//
+// Sent on the immediate parent session. The first update for an unknown
+// [`SubagentUpdate::session_id`] announces the child and MUST be sent
+// before any live child traffic or live message naming the child as sender
+// or recipient. Parents may message and reuse an announced child across
+// multiple operations.
+// Child events are delivered automatically on the same connection; no child
+// load, resume, or subscription is needed.
+//
+// Only the subagent session ID is required. Omitted patch fields keep their
+// previous values; `null` clears them. Clearing capabilities disables child
+// mutations. Clearing state leaves current activity unset/unconfirmed: it does
+// not imply idle, stop work, or create an `unknown` state snapshot. A concrete
+// state replaces the entire previous state object, not the session.
+// The title and description provide the parent's display metadata for the
+// child. They do not replace the content of individual messages or operations.
+type SubagentUpdate struct {
+	Meta         Meta                         `json:"_meta,omitzero"`
+	Capabilities *SubagentSessionCapabilities `json:"capabilities,omitempty"`
+	Description  *string                      `json:"description,omitempty"`
+	SessionID    SessionId                    `json:"sessionId"`
+	State        *StateUpdate                 `json:"state,omitempty"`
+	Title        *string                      `json:"title,omitempty"`
+	// NullFields lists JSON field names to send as explicit null, regardless of their values.
+	// Decoding records explicit nulls here, separately from omitted fields.
+	NullFields []string `json:"-"`
 }
 
 // SuggestNesRequest: Request for a code suggestion.
@@ -6893,6 +7642,23 @@ const (
 	ToolKindOther ToolKind = "other"
 )
 
+// UnknownStateUpdate: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// The Agent cannot currently determine foreground activity.
+//
+// Report this when activity becomes unobservable, not merely because the child
+// has been quiet. The Client MUST stop presenting the previous state as confirmed
+// current activity, but may retain it as last known. A later state replaces this
+// snapshot normally.
+//
+// This is not a task outcome or session closure. It does not cancel work, resolve
+// pending requests, or revoke capabilities; capabilities are updated separately.
+type UnknownStateUpdate struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
 // UnstructuredCommandInput: All text that was typed after the command name is provided as input.
 type UnstructuredCommandInput struct {
 	Meta Meta   `json:"_meta,omitzero"`
@@ -7127,5 +7893,206 @@ func (i *ProviderInfo) UnmarshalJSON(data []byte) error {
 		}
 	}
 	*i = ProviderInfo(decoded)
+	return nil
+}
+
+// MarshalJSON implements json.Marshaler.
+func (m SessionMessage) MarshalJSON() ([]byte, error) {
+	type alias SessionMessage
+	a := alias(m)
+	type wire struct {
+		*alias
+		Meta    *Meta            `json:"_meta,omitempty"`
+		Content **[]ContentBlock `json:"content,omitempty"`
+	}
+	w := wire{alias: &a}
+	if a.Meta != nil {
+		Meta := a.Meta
+		w.Meta = &Meta
+	}
+	if a.Content != nil {
+		Content := a.Content
+		w.Content = &Content
+	}
+	if slices.Contains(a.NullFields, "_meta") {
+		w.Meta = new(Meta)
+	}
+	if slices.Contains(a.NullFields, "content") {
+		w.Content = new(*[]ContentBlock)
+	}
+	return json.Marshal(w)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (m *SessionMessage) UnmarshalJSON(data []byte) error {
+	type alias SessionMessage
+	decoded := alias{}
+	raw := struct {
+		Meta               json.RawMessage `json:"_meta"`
+		Content            json.RawMessage `json:"content"`
+		RecipientSessionID json.RawMessage `json:"recipientSessionId"`
+		SenderSessionID    json.RawMessage `json:"senderSessionId"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		if isJSONNull(raw.Meta) {
+			decoded.NullFields = append(decoded.NullFields, "_meta")
+		} else {
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err == nil {
+				decoded.Meta = value
+			}
+		}
+	}
+	if len(raw.Content) > 0 {
+		if isJSONNull(raw.Content) {
+			decoded.NullFields = append(decoded.NullFields, "content")
+		} else {
+			var values []json.RawMessage
+			if err := unmarshalJSON(raw.Content, &values); err == nil && values != nil {
+				items := []ContentBlock{}
+				for _, rawItem := range values {
+					var item ContentBlock
+					if err := unmarshalJSON(rawItem, &item); err == nil {
+						switch item.Type {
+						case ContentBlockTypeText, ContentBlockTypeImage, ContentBlockTypeAudio, ContentBlockTypeResourceLink, ContentBlockTypeResource:
+							items = append(items, item)
+						}
+					}
+				}
+				decoded.Content = &items
+			}
+		}
+	}
+	if len(raw.RecipientSessionID) > 0 {
+		_ = unmarshalJSON(raw.RecipientSessionID, &decoded.RecipientSessionID)
+	}
+	if len(raw.SenderSessionID) > 0 {
+		_ = unmarshalJSON(raw.SenderSessionID, &decoded.SenderSessionID)
+	}
+	*m = SessionMessage(decoded)
+	return nil
+}
+
+// MarshalJSON implements json.Marshaler.
+func (u SubagentUpdate) MarshalJSON() ([]byte, error) {
+	type alias SubagentUpdate
+	a := alias(u)
+	type wire struct {
+		*alias
+		Meta         *Meta                         `json:"_meta,omitempty"`
+		Capabilities **SubagentSessionCapabilities `json:"capabilities,omitempty"`
+		Description  **string                      `json:"description,omitempty"`
+		State        **StateUpdate                 `json:"state,omitempty"`
+		Title        **string                      `json:"title,omitempty"`
+	}
+	w := wire{alias: &a}
+	if a.Meta != nil {
+		Meta := a.Meta
+		w.Meta = &Meta
+	}
+	if a.Capabilities != nil {
+		Capabilities := a.Capabilities
+		w.Capabilities = &Capabilities
+	}
+	if a.Description != nil {
+		Description := a.Description
+		w.Description = &Description
+	}
+	if a.State != nil {
+		State := a.State
+		w.State = &State
+	}
+	if a.Title != nil {
+		Title := a.Title
+		w.Title = &Title
+	}
+	if slices.Contains(a.NullFields, "_meta") {
+		w.Meta = new(Meta)
+	}
+	if slices.Contains(a.NullFields, "capabilities") {
+		w.Capabilities = new(*SubagentSessionCapabilities)
+	}
+	if slices.Contains(a.NullFields, "description") {
+		w.Description = new(*string)
+	}
+	if slices.Contains(a.NullFields, "state") {
+		w.State = new(*StateUpdate)
+	}
+	if slices.Contains(a.NullFields, "title") {
+		w.Title = new(*string)
+	}
+	return json.Marshal(w)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *SubagentUpdate) UnmarshalJSON(data []byte) error {
+	type alias SubagentUpdate
+	decoded := alias{}
+	raw := struct {
+		Meta         json.RawMessage `json:"_meta"`
+		Capabilities json.RawMessage `json:"capabilities"`
+		Description  json.RawMessage `json:"description"`
+		State        json.RawMessage `json:"state"`
+		Title        json.RawMessage `json:"title"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		if isJSONNull(raw.Meta) {
+			decoded.NullFields = append(decoded.NullFields, "_meta")
+		} else {
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err == nil {
+				decoded.Meta = value
+			}
+		}
+	}
+	if len(raw.Capabilities) > 0 {
+		if isJSONNull(raw.Capabilities) {
+			decoded.NullFields = append(decoded.NullFields, "capabilities")
+		} else {
+			var value *SubagentSessionCapabilities
+			if err := unmarshalJSON(raw.Capabilities, &value); err == nil {
+				decoded.Capabilities = value
+			}
+		}
+	}
+	if len(raw.Description) > 0 {
+		if isJSONNull(raw.Description) {
+			decoded.NullFields = append(decoded.NullFields, "description")
+		} else {
+			var value *string
+			if err := unmarshalJSON(raw.Description, &value); err == nil {
+				decoded.Description = value
+			}
+		}
+	}
+	if len(raw.State) > 0 {
+		if isJSONNull(raw.State) {
+			decoded.NullFields = append(decoded.NullFields, "state")
+		} else {
+			var value *StateUpdate
+			if err := unmarshalJSON(raw.State, &value); err == nil {
+				decoded.State = value
+			}
+		}
+	}
+	if len(raw.Title) > 0 {
+		if isJSONNull(raw.Title) {
+			decoded.NullFields = append(decoded.NullFields, "title")
+		} else {
+			var value *string
+			if err := unmarshalJSON(raw.Title, &value); err == nil {
+				decoded.Title = value
+			}
+		}
+	}
+	*u = SubagentUpdate(decoded)
 	return nil
 }
