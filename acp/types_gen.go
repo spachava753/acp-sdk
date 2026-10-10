@@ -270,31 +270,14 @@ func (m *AuthMethod) UnmarshalJSON(data []byte) error {
 	type alias AuthMethod
 	decoded := alias{}
 	raw := struct {
-		Args        json.RawMessage `json:"args"`
 		Description json.RawMessage `json:"description"`
-		Env         json.RawMessage `json:"env"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Args) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.Args, &values); err == nil {
-			decoded.Args = []string{}
-			for _, value := range values {
-				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.Args = append(decoded.Args, item)
-				}
-			}
-		}
-	}
 	if len(raw.Description) > 0 {
 		_ = unmarshalJSON(raw.Description, &decoded.Description)
-	}
-	if len(raw.Env) > 0 {
-		_ = unmarshalJSON(raw.Env, &decoded.Env)
 	}
 	*m = AuthMethod(decoded)
 	return nil
@@ -352,31 +335,14 @@ func (t *AuthMethodTerminal) UnmarshalJSON(data []byte) error {
 	type alias AuthMethodTerminal
 	decoded := alias{}
 	raw := struct {
-		Args        json.RawMessage `json:"args"`
 		Description json.RawMessage `json:"description"`
-		Env         json.RawMessage `json:"env"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Args) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.Args, &values); err == nil {
-			decoded.Args = []string{}
-			for _, value := range values {
-				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.Args = append(decoded.Args, item)
-				}
-			}
-		}
-	}
 	if len(raw.Description) > 0 {
 		_ = unmarshalJSON(raw.Description, &decoded.Description)
-	}
-	if len(raw.Env) > 0 {
-		_ = unmarshalJSON(raw.Env, &decoded.Env)
 	}
 	*t = AuthMethodTerminal(decoded)
 	return nil
@@ -732,11 +698,7 @@ type CloseSessionResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
-// CompactionCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Client support for ID-addressed context compaction updates.
+// CompactionCapabilities: Client support for ID-addressed context compaction updates.
 type CompactionCapabilities map[string]any
 
 // UnmarshalJSON preserves unstructured numbers as json.Number.
@@ -745,18 +707,10 @@ func (c *CompactionCapabilities) UnmarshalJSON(data []byte) error {
 	return unmarshalJSON(data, (*plain)(c))
 }
 
-// CompactionId: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Unique identifier for a context compaction within a session.
+// CompactionId: Unique identifier for a context compaction within a session.
 type CompactionId string
 
-// CompactionStatus: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Lifecycle state of a context compaction.
+// CompactionStatus: Lifecycle state of a context compaction.
 type CompactionStatus string
 
 const (
@@ -770,33 +724,24 @@ const (
 	CompactionStatusCancelled CompactionStatus = "cancelled"
 )
 
-// CompactionSummaryChunk: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A content block appended to the retained summary of an in-progress
-// compaction. Agents send chunks only after an `in_progress` update and before
-// the terminal update for the same ID. Agents MUST only send this update when
-// the Client advertised [`ClientSessionCapabilities::compaction`].
+// CompactionSummaryChunk: A content block appended to a compaction's summary. A first-seen ID creates
+// an in-progress compaction. Chunks append in receive order.
+// Agents MUST only send this update when the Client advertised
+// [`ClientSessionCapabilities::compaction`].
 type CompactionSummaryChunk struct {
 	Meta         Meta         `json:"_meta,omitzero"`
 	CompactionID CompactionId `json:"compactionId"`
 	Content      ContentBlock `json:"content"`
 }
 
-// CompactionUpdate: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A context compaction upsert. The first update fixes the compaction's
+// CompactionUpdate: A context compaction upsert. The first notification fixes the compaction's
 // timeline position. Later updates with the same ID patch that entity in place.
 // Agents MUST only send this update when the Client advertised
 // [`ClientSessionCapabilities::compaction`].
 //
 // `summary`, `error`, and `_meta` have patch semantics: omission leaves the
 // stored value unchanged, `null` clears it, and a concrete value replaces it.
-// `summary: []` also clears the retained summary. A non-empty summary is only
-// valid with `completed`; `error` is only valid with `failed`.
+// `summary: []` also clears the summary.
 type CompactionUpdate struct {
 	Meta         Meta             `json:"_meta,omitzero"`
 	CompactionID CompactionId     `json:"compactionId"`
@@ -1342,54 +1287,6 @@ type CreateTerminalRequest struct {
 	SessionID       SessionId     `json:"sessionId"`
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (r *CreateTerminalRequest) UnmarshalJSON(data []byte) error {
-	type alias CreateTerminalRequest
-	decoded := alias{}
-	raw := struct {
-		Args            json.RawMessage `json:"args"`
-		Cwd             json.RawMessage `json:"cwd"`
-		Env             json.RawMessage `json:"env"`
-		OutputByteLimit json.RawMessage `json:"outputByteLimit"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Args) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.Args, &values); err == nil {
-			decoded.Args = []string{}
-			for _, value := range values {
-				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.Args = append(decoded.Args, item)
-				}
-			}
-		}
-	}
-	if len(raw.Cwd) > 0 {
-		_ = unmarshalJSON(raw.Cwd, &decoded.Cwd)
-	}
-	if len(raw.Env) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.Env, &values); err == nil {
-			decoded.Env = []EnvVariable{}
-			for _, value := range values {
-				var item EnvVariable
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.Env = append(decoded.Env, item)
-				}
-			}
-		}
-	}
-	if len(raw.OutputByteLimit) > 0 {
-		_ = unmarshalJSON(raw.OutputByteLimit, &decoded.OutputByteLimit)
-	}
-	*r = CreateTerminalRequest(decoded)
-	return nil
-}
-
 // CreateTerminalResponse: Response containing the ID of the created terminal.
 type CreateTerminalResponse struct {
 	Meta       Meta       `json:"_meta,omitzero"`
@@ -1434,33 +1331,6 @@ func (n DidChangeDocumentNotification) MarshalJSON() ([]byte, error) {
 		a.ContentChanges = []TextDocumentContentChangeEvent{}
 	}
 	return json.Marshal(a)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (n *DidChangeDocumentNotification) UnmarshalJSON(data []byte) error {
-	type alias DidChangeDocumentNotification
-	decoded := alias{}
-	raw := struct {
-		ContentChanges json.RawMessage `json:"contentChanges"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.ContentChanges) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.ContentChanges, &values); err == nil {
-			decoded.ContentChanges = []TextDocumentContentChangeEvent{}
-			for _, value := range values {
-				var item TextDocumentContentChangeEvent
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.ContentChanges = append(decoded.ContentChanges, item)
-				}
-			}
-		}
-	}
-	*n = DidChangeDocumentNotification(decoded)
-	return nil
 }
 
 // DidCloseDocumentNotification: Notification sent when a file is closed.
@@ -2100,6 +1970,33 @@ const (
 	ErrorCodeResourceNotFound ErrorCode = -32002
 )
 
+// ErrorStopReason: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Details of a failure that ended a child's foreground work.
+type ErrorStopReason struct {
+	Error *Error `json:"error,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ErrorStopReason) UnmarshalJSON(data []byte) error {
+	type alias ErrorStopReason
+	decoded := alias{}
+	raw := struct {
+		Error json.RawMessage `json:"error"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Error) > 0 {
+		_ = unmarshalJSON(raw.Error, &decoded.Error)
+	}
+	*r = ErrorStopReason(decoded)
+	return nil
+}
+
 // ExtNotification: Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
 // Extension notifications provide a way to send one-way messages for custom functionality
 // while maintaining protocol compatibility.
@@ -2170,49 +2067,6 @@ type ForkSessionRequest struct {
 	SessionID             SessionId   `json:"sessionId"`
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (r *ForkSessionRequest) UnmarshalJSON(data []byte) error {
-	type alias ForkSessionRequest
-	decoded := alias{}
-	raw := struct {
-		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
-		McpServers            json.RawMessage `json:"mcpServers"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.AdditionalDirectories) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.AdditionalDirectories, &values); err == nil {
-			decoded.AdditionalDirectories = []string{}
-			for _, value := range values {
-				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.AdditionalDirectories = append(decoded.AdditionalDirectories, item)
-				}
-			}
-		}
-	}
-	if len(raw.McpServers) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.McpServers, &values); err == nil {
-			decoded.McpServers = []McpServer{}
-			for _, value := range values {
-				var item McpServer
-				if err := unmarshalJSON(value, &item); err == nil {
-					switch item.Type {
-					case McpServerTypeHttp, McpServerTypeSse, McpServerTypeAcp, "":
-						decoded.McpServers = append(decoded.McpServers, item)
-					}
-				}
-			}
-		}
-	}
-	*r = ForkSessionRequest(decoded)
-	return nil
-}
-
 // ForkSessionResponse: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -2268,10 +2122,83 @@ type HttpHeader struct {
 }
 
 // IdleStateUpdate: The child is ready to process another prompt.
+//
+// An omitted, `null`, or malformed `stopReason` means not reported.
 type IdleStateUpdate struct {
-	Meta       Meta        `json:"_meta,omitzero"`
-	StopReason *StopReason `json:"stopReason,omitempty"`
-	Usage      *Usage      `json:"usage,omitempty"`
+	StopReason IdleStateUpdateType `json:"stopReason,omitempty"`
+	Meta       Meta                `json:"_meta,omitzero"`
+	Error      *Error              `json:"error,omitempty"`
+	Usage      *Usage              `json:"usage,omitempty"`
+}
+
+// IdleStateUpdateType is the discriminator for IdleStateUpdate variants.
+type IdleStateUpdateType string
+
+const (
+	IdleStateUpdateTypeEndTurn         IdleStateUpdateType = "end_turn"
+	IdleStateUpdateTypeMaxTokens       IdleStateUpdateType = "max_tokens"
+	IdleStateUpdateTypeMaxTurnRequests IdleStateUpdateType = "max_turn_requests"
+	IdleStateUpdateTypeRefusal         IdleStateUpdateType = "refusal"
+	IdleStateUpdateTypeCancelled       IdleStateUpdateType = "cancelled"
+	IdleStateUpdateTypeError           IdleStateUpdateType = "error"
+)
+
+// EndTurnIdleStateUpdate creates an IdleStateUpdate variant: The work ended successfully.
+func EndTurnIdleStateUpdate() IdleStateUpdate {
+	return IdleStateUpdate{
+		StopReason: IdleStateUpdateTypeEndTurn,
+	}
+}
+
+// MaxTokensIdleStateUpdate creates an IdleStateUpdate variant: The work ended because the agent reached the maximum number of tokens.
+func MaxTokensIdleStateUpdate() IdleStateUpdate {
+	return IdleStateUpdate{
+		StopReason: IdleStateUpdateTypeMaxTokens,
+	}
+}
+
+// MaxTurnRequestsIdleStateUpdate creates an IdleStateUpdate variant: The work ended because the agent reached the maximum number of allowed
+// agent requests.
+func MaxTurnRequestsIdleStateUpdate() IdleStateUpdate {
+	return IdleStateUpdate{
+		StopReason: IdleStateUpdateTypeMaxTurnRequests,
+	}
+}
+
+// RefusalIdleStateUpdate creates an IdleStateUpdate variant: The work ended because the agent refused to continue.
+func RefusalIdleStateUpdate() IdleStateUpdate {
+	return IdleStateUpdate{
+		StopReason: IdleStateUpdateTypeRefusal,
+	}
+}
+
+// CancelledIdleStateUpdate creates an IdleStateUpdate variant: The work was cancelled.
+func CancelledIdleStateUpdate() IdleStateUpdate {
+	return IdleStateUpdate{
+		StopReason: IdleStateUpdateTypeCancelled,
+	}
+}
+
+// ErrorIdleStateUpdate creates an IdleStateUpdate variant: The work ended because something failed.
+func ErrorIdleStateUpdate() IdleStateUpdate {
+	return IdleStateUpdate{
+		StopReason: IdleStateUpdateTypeError,
+	}
+}
+
+// OtherIdleStateUpdate creates an IdleStateUpdate variant: Custom or future stop reason.
+//
+// Values beginning with `_` are reserved for implementation-specific
+// extensions. Other unknown values are reserved for future ACP variants.
+func OtherIdleStateUpdate(stopReason string) IdleStateUpdate {
+	return IdleStateUpdate{
+		StopReason: IdleStateUpdateType(stopReason),
+	}
+}
+
+// NoneIdleStateUpdate creates an IdleStateUpdate variant: No stop reason: `stopReason` is omitted or `null`.
+func NoneIdleStateUpdate() IdleStateUpdate {
+	return IdleStateUpdate{}
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -2279,21 +2206,15 @@ func (u *IdleStateUpdate) UnmarshalJSON(data []byte) error {
 	type alias IdleStateUpdate
 	decoded := alias{}
 	raw := struct {
-		StopReason json.RawMessage `json:"stopReason"`
-		Usage      json.RawMessage `json:"usage"`
+		Error json.RawMessage `json:"error"`
+		Usage json.RawMessage `json:"usage"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.StopReason) > 0 {
-		var value StopReason
-		if err := unmarshalJSON(raw.StopReason, &value); err == nil {
-			switch string(value) {
-			case "end_turn", "max_tokens", "max_turn_requests", "refusal", "cancelled":
-				decoded.StopReason = &value
-			}
-		}
+	if len(raw.Error) > 0 {
+		_ = unmarshalJSON(raw.Error, &decoded.Error)
 	}
 	if len(raw.Usage) > 0 {
 		_ = unmarshalJSON(raw.Usage, &decoded.Usage)
@@ -2585,49 +2506,6 @@ func (r LoadSessionRequest) MarshalJSON() ([]byte, error) {
 		a.McpServers = []McpServer{}
 	}
 	return json.Marshal(a)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (r *LoadSessionRequest) UnmarshalJSON(data []byte) error {
-	type alias LoadSessionRequest
-	decoded := alias{}
-	raw := struct {
-		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
-		McpServers            json.RawMessage `json:"mcpServers"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.AdditionalDirectories) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.AdditionalDirectories, &values); err == nil {
-			decoded.AdditionalDirectories = []string{}
-			for _, value := range values {
-				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.AdditionalDirectories = append(decoded.AdditionalDirectories, item)
-				}
-			}
-		}
-	}
-	if len(raw.McpServers) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.McpServers, &values); err == nil {
-			decoded.McpServers = []McpServer{}
-			for _, value := range values {
-				var item McpServer
-				if err := unmarshalJSON(value, &item); err == nil {
-					switch item.Type {
-					case McpServerTypeHttp, McpServerTypeSse, McpServerTypeAcp, "":
-						decoded.McpServers = append(decoded.McpServers, item)
-					}
-				}
-			}
-		}
-	}
-	*r = LoadSessionRequest(decoded)
-	return nil
 }
 
 // LoadSessionResponse: Response from loading an existing session.
@@ -3918,49 +3796,6 @@ func (r NewSessionRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (r *NewSessionRequest) UnmarshalJSON(data []byte) error {
-	type alias NewSessionRequest
-	decoded := alias{}
-	raw := struct {
-		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
-		McpServers            json.RawMessage `json:"mcpServers"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.AdditionalDirectories) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.AdditionalDirectories, &values); err == nil {
-			decoded.AdditionalDirectories = []string{}
-			for _, value := range values {
-				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.AdditionalDirectories = append(decoded.AdditionalDirectories, item)
-				}
-			}
-		}
-	}
-	if len(raw.McpServers) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.McpServers, &values); err == nil {
-			decoded.McpServers = []McpServer{}
-			for _, value := range values {
-				var item McpServer
-				if err := unmarshalJSON(value, &item); err == nil {
-					switch item.Type {
-					case McpServerTypeHttp, McpServerTypeSse, McpServerTypeAcp, "":
-						decoded.McpServers = append(decoded.McpServers, item)
-					}
-				}
-			}
-		}
-	}
-	*r = NewSessionRequest(decoded)
-	return nil
-}
-
 // NewSessionResponse: Response from creating a new session.
 //
 // See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
@@ -4006,11 +3841,7 @@ func (r *NewSessionResponse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Notice: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Fire-and-forget advisory information for the user.
+// Notice: Fire-and-forget information for the user.
 //
 // Notices are live events rather than session history. Agents must not rely on
 // a notice being received, displayed, or seen by the user.
@@ -4044,11 +3875,7 @@ func (n *Notice) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// NoticeCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Client support for presenting live advisory notices to the user.
+// NoticeCapabilities: Client support for presenting live notices to the user.
 type NoticeCapabilities map[string]any
 
 // UnmarshalJSON preserves unstructured numbers as json.Number.
@@ -4057,11 +3884,7 @@ func (c *NoticeCapabilities) UnmarshalJSON(data []byte) error {
 	return unmarshalJSON(data, (*plain)(c))
 }
 
-// NoticeSeverity: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Severity hint for a session notice.
+// NoticeSeverity: Severity hint for a session notice.
 type NoticeSeverity string
 
 const (
@@ -4632,28 +4455,6 @@ type ReadTextFileRequest struct {
 	SessionID SessionId `json:"sessionId"`
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (r *ReadTextFileRequest) UnmarshalJSON(data []byte) error {
-	type alias ReadTextFileRequest
-	decoded := alias{}
-	raw := struct {
-		Limit json.RawMessage `json:"limit"`
-		Line  json.RawMessage `json:"line"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Limit) > 0 {
-		_ = unmarshalJSON(raw.Limit, &decoded.Limit)
-	}
-	if len(raw.Line) > 0 {
-		_ = unmarshalJSON(raw.Line, &decoded.Line)
-	}
-	*r = ReadTextFileRequest(decoded)
-	return nil
-}
-
 // ReadTextFileResponse: Response containing the contents of a text file.
 type ReadTextFileResponse struct {
 	Meta    Meta   `json:"_meta,omitzero"`
@@ -4862,49 +4663,6 @@ type ResumeSessionRequest struct {
 	Cwd                   string      `json:"cwd"`
 	McpServers            []McpServer `json:"mcpServers,omitempty"`
 	SessionID             SessionId   `json:"sessionId"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (r *ResumeSessionRequest) UnmarshalJSON(data []byte) error {
-	type alias ResumeSessionRequest
-	decoded := alias{}
-	raw := struct {
-		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
-		McpServers            json.RawMessage `json:"mcpServers"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.AdditionalDirectories) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.AdditionalDirectories, &values); err == nil {
-			decoded.AdditionalDirectories = []string{}
-			for _, value := range values {
-				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.AdditionalDirectories = append(decoded.AdditionalDirectories, item)
-				}
-			}
-		}
-	}
-	if len(raw.McpServers) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.McpServers, &values); err == nil {
-			decoded.McpServers = []McpServer{}
-			for _, value := range values {
-				var item McpServer
-				if err := unmarshalJSON(value, &item); err == nil {
-					switch item.Type {
-					case McpServerTypeHttp, McpServerTypeSse, McpServerTypeAcp, "":
-						decoded.McpServers = append(decoded.McpServers, item)
-					}
-				}
-			}
-		}
-	}
-	*r = ResumeSessionRequest(decoded)
-	return nil
 }
 
 // ResumeSessionResponse: Response from resuming an existing session.
@@ -5792,11 +5550,7 @@ func UsageUpdateSessionUpdate(used uint64, size uint64) SessionUpdate {
 	}
 }
 
-// NoticeSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Advisory information for the user that is not part of session history.
+// NoticeSessionUpdate creates an SessionUpdate variant: Information for the user that is not part of session history.
 //
 // Agents MUST only send this update when the Client advertised
 // [`ClientSessionCapabilities::notices`].
@@ -5808,11 +5562,7 @@ func NoticeSessionUpdate(severity NoticeSeverity, title string) SessionUpdate {
 	}
 }
 
-// CompactionUpdateSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A context compaction has been created or updated.
+// CompactionUpdateSessionUpdate creates an SessionUpdate variant: A context compaction has been created or updated.
 //
 // Agents MUST only send this update when the Client advertised
 // [`ClientSessionCapabilities::compaction`].
@@ -5827,11 +5577,7 @@ func CompactionUpdateSessionUpdate(compactionID CompactionId, status CompactionS
 	}
 }
 
-// CompactionSummaryChunkSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A content block appended to a context compaction's retained summary.
+// CompactionSummaryChunkSessionUpdate creates an SessionUpdate variant: A content block appended to a context compaction's retained summary.
 //
 // Agents MUST only send this update when the Client advertised
 // [`ClientSessionCapabilities::compaction`].
@@ -6799,7 +6545,8 @@ type StartNesResponse struct {
 type StateUpdate struct {
 	State      StateUpdateType `json:"state"`
 	Meta       Meta            `json:"_meta,omitzero"`
-	StopReason *StopReason     `json:"stopReason,omitempty"`
+	Error      *Error          `json:"error,omitempty"`
+	StopReason any             `json:"stopReason,omitempty"`
 	Usage      *Usage          `json:"usage,omitempty"`
 }
 
@@ -6858,21 +6605,15 @@ func (u *StateUpdate) UnmarshalJSON(data []byte) error {
 	type alias StateUpdate
 	decoded := alias{}
 	raw := struct {
-		StopReason json.RawMessage `json:"stopReason"`
-		Usage      json.RawMessage `json:"usage"`
+		Error json.RawMessage `json:"error"`
+		Usage json.RawMessage `json:"usage"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.StopReason) > 0 {
-		var value StopReason
-		if err := unmarshalJSON(raw.StopReason, &value); err == nil {
-			switch string(value) {
-			case "end_turn", "max_tokens", "max_turn_requests", "refusal", "cancelled":
-				decoded.StopReason = &value
-			}
-		}
+	if len(raw.Error) > 0 {
+		_ = unmarshalJSON(raw.Error, &decoded.Error)
 	}
 	if len(raw.Usage) > 0 {
 		_ = unmarshalJSON(raw.Usage, &decoded.Usage)
