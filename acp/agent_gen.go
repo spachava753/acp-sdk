@@ -25,26 +25,6 @@ const (
 	//
 	// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
 	MethodAuthenticate = "authenticate"
-	// MethodDocumentDidChange: **UNSTABLE**
-	//
-	// Notification sent when a file is edited.
-	MethodDocumentDidChange = "document/didChange"
-	// MethodDocumentDidClose: **UNSTABLE**
-	//
-	// Notification sent when a file is closed.
-	MethodDocumentDidClose = "document/didClose"
-	// MethodDocumentDidFocus: **UNSTABLE**
-	//
-	// Notification sent when a file becomes the active editor tab.
-	MethodDocumentDidFocus = "document/didFocus"
-	// MethodDocumentDidOpen: **UNSTABLE**
-	//
-	// Notification sent when a file is opened in the editor.
-	MethodDocumentDidOpen = "document/didOpen"
-	// MethodDocumentDidSave: **UNSTABLE**
-	//
-	// Notification sent when a file is saved.
-	MethodDocumentDidSave = "document/didSave"
 	// MethodElicitationComplete: Notification that a URL-based elicitation has completed.
 	//
 	// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation#url-completion)
@@ -89,35 +69,6 @@ const (
 	//
 	// Sends an MCP-over-ACP notification.
 	MethodMcpMessage = "mcp/message"
-	// MethodNesAccept: **UNSTABLE**
-	//
-	// Notification sent when a suggestion is accepted.
-	MethodNesAccept = "nes/accept"
-	// MethodNesClose: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Closes an active NES session and frees up any resources associated with it.
-	//
-	// The agent must cancel any ongoing work and then free up any resources
-	// associated with the NES session.
-	MethodNesClose = "nes/close"
-	// MethodNesReject: **UNSTABLE**
-	//
-	// Notification sent when a suggestion is rejected.
-	MethodNesReject = "nes/reject"
-	// MethodNesStart: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Starts an NES session.
-	MethodNesStart = "nes/start"
-	// MethodNesSuggest: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Requests a code suggestion.
-	MethodNesSuggest = "nes/suggest"
 	// MethodProvidersDisable: **UNSTABLE**
 	//
 	// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -170,6 +121,10 @@ const (
 	// The agent should create a new session with the same conversation context as the
 	// original, allowing operations like generating summaries without affecting the
 	// original session's history.
+	//
+	// As with `session/new`, the forked session is active once the agent responds,
+	// set up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.
+	// The client can prompt it without calling `session/load` or `session/resume` first.
 	MethodSessionFork = "session/fork"
 	// MethodSessionList: Lists existing sessions known to the agent.
 	//
@@ -328,34 +283,6 @@ type AuthenticateHandler interface {
 	Authenticate(context.Context, *AuthenticateRequest) (*AuthenticateResponse, error)
 }
 
-// DocumentHandler handles all document related agent methods.
-type DocumentHandler interface {
-	// DidChange: **UNSTABLE**
-	//
-	// Notification sent when a file is edited.
-	DidChange(context.Context, *DidChangeDocumentNotification) error
-
-	// DidClose: **UNSTABLE**
-	//
-	// Notification sent when a file is closed.
-	DidClose(context.Context, *DidCloseDocumentNotification) error
-
-	// DidFocus: **UNSTABLE**
-	//
-	// Notification sent when a file becomes the active editor tab.
-	DidFocus(context.Context, *DidFocusDocumentNotification) error
-
-	// DidOpen: **UNSTABLE**
-	//
-	// Notification sent when a file is opened in the editor.
-	DidOpen(context.Context, *DidOpenDocumentNotification) error
-
-	// DidSave: **UNSTABLE**
-	//
-	// Notification sent when a file is saved.
-	DidSave(context.Context, *DidSaveDocumentNotification) error
-}
-
 // InitializeHandler handles all initialize related agent methods.
 type InitializeHandler interface {
 	// Initialize: Establishes the connection with a client and negotiates protocol capabilities.
@@ -388,43 +315,6 @@ type McpHandler interface {
 	//
 	// Sends an MCP-over-ACP notification.
 	Message(context.Context, *MessageMcpNotification) error
-}
-
-// NesHandler handles all nes related agent methods.
-type NesHandler interface {
-	// Accept: **UNSTABLE**
-	//
-	// Notification sent when a suggestion is accepted.
-	Accept(context.Context, *AcceptNesNotification) error
-
-	// CloseNes: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Closes an active NES session and frees up any resources associated with it.
-	//
-	// The agent must cancel any ongoing work and then free up any resources
-	// associated with the NES session.
-	CloseNes(context.Context, *CloseNesRequest) (*CloseNesResponse, error)
-
-	// Reject: **UNSTABLE**
-	//
-	// Notification sent when a suggestion is rejected.
-	Reject(context.Context, *RejectNesNotification) error
-
-	// StartNes: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Starts an NES session.
-	StartNes(context.Context, *StartNesRequest) (*StartNesResponse, error)
-
-	// SuggestNes: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Requests a code suggestion.
-	SuggestNes(context.Context, *SuggestNesRequest) (*SuggestNesResponse, error)
 }
 
 // ProvidersHandler handles all providers related agent methods.
@@ -490,6 +380,10 @@ type SessionHandler interface {
 	// The agent should create a new session with the same conversation context as the
 	// original, allowing operations like generating summaries without affecting the
 	// original session's history.
+	//
+	// As with `session/new`, the forked session is active once the agent responds,
+	// set up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.
+	// The client can prompt it without calling `session/load` or `session/resume` first.
 	ForkSession(context.Context, *ForkSessionRequest) (*ForkSessionResponse, error)
 
 	// ListSessions: Lists existing sessions known to the agent.
@@ -719,66 +613,6 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 			return nil, err
 		}
 		return rpcResult(handler.Authenticate(ctx, params))
-	case MethodDocumentDidChange:
-		handler, ok := agent.(interface {
-			DidChange(context.Context, *DidChangeDocumentNotification) error
-		})
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
-		params, err := decodeParams[DidChangeDocumentNotification](req)
-		if err != nil {
-			return nil, err
-		}
-		return nil, handler.DidChange(ctx, params)
-	case MethodDocumentDidClose:
-		handler, ok := agent.(interface {
-			DidClose(context.Context, *DidCloseDocumentNotification) error
-		})
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
-		params, err := decodeParams[DidCloseDocumentNotification](req)
-		if err != nil {
-			return nil, err
-		}
-		return nil, handler.DidClose(ctx, params)
-	case MethodDocumentDidFocus:
-		handler, ok := agent.(interface {
-			DidFocus(context.Context, *DidFocusDocumentNotification) error
-		})
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
-		params, err := decodeParams[DidFocusDocumentNotification](req)
-		if err != nil {
-			return nil, err
-		}
-		return nil, handler.DidFocus(ctx, params)
-	case MethodDocumentDidOpen:
-		handler, ok := agent.(interface {
-			DidOpen(context.Context, *DidOpenDocumentNotification) error
-		})
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
-		params, err := decodeParams[DidOpenDocumentNotification](req)
-		if err != nil {
-			return nil, err
-		}
-		return nil, handler.DidOpen(ctx, params)
-	case MethodDocumentDidSave:
-		handler, ok := agent.(interface {
-			DidSave(context.Context, *DidSaveDocumentNotification) error
-		})
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
-		params, err := decodeParams[DidSaveDocumentNotification](req)
-		if err != nil {
-			return nil, err
-		}
-		return nil, handler.DidSave(ctx, params)
 	case MethodInitialize:
 		handler, ok := agent.(interface {
 			Initialize(context.Context, *InitializeRequest) (*InitializeResponse, error)
@@ -815,66 +649,6 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 			return nil, err
 		}
 		return nil, handler.Message(ctx, params)
-	case MethodNesAccept:
-		handler, ok := agent.(interface {
-			Accept(context.Context, *AcceptNesNotification) error
-		})
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
-		params, err := decodeParams[AcceptNesNotification](req)
-		if err != nil {
-			return nil, err
-		}
-		return nil, handler.Accept(ctx, params)
-	case MethodNesClose:
-		handler, ok := agent.(interface {
-			CloseNes(context.Context, *CloseNesRequest) (*CloseNesResponse, error)
-		})
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
-		params, err := decodeParams[CloseNesRequest](req)
-		if err != nil {
-			return nil, err
-		}
-		return rpcResult(handler.CloseNes(ctx, params))
-	case MethodNesReject:
-		handler, ok := agent.(interface {
-			Reject(context.Context, *RejectNesNotification) error
-		})
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
-		params, err := decodeParams[RejectNesNotification](req)
-		if err != nil {
-			return nil, err
-		}
-		return nil, handler.Reject(ctx, params)
-	case MethodNesStart:
-		handler, ok := agent.(interface {
-			StartNes(context.Context, *StartNesRequest) (*StartNesResponse, error)
-		})
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
-		params, err := decodeParams[StartNesRequest](req)
-		if err != nil {
-			return nil, err
-		}
-		return rpcResult(handler.StartNes(ctx, params))
-	case MethodNesSuggest:
-		handler, ok := agent.(interface {
-			SuggestNes(context.Context, *SuggestNesRequest) (*SuggestNesResponse, error)
-		})
-		if !ok {
-			return nil, methodNotFound(req.Method)
-		}
-		params, err := decodeParams[SuggestNesRequest](req)
-		if err != nil {
-			return nil, err
-		}
-		return rpcResult(handler.SuggestNes(ctx, params))
 	case MethodProvidersDisable:
 		handler, ok := agent.(interface {
 			DisableProvider(context.Context, *DisableProviderRequest) (*DisableProviderResponse, error)

@@ -157,41 +157,6 @@ func (c *Client) Authenticate(ctx context.Context, params *AuthenticateRequest) 
 	return call[AuthenticateResponse](ctx, c.rpc.conn, MethodAuthenticate, params)
 }
 
-// DidChange: **UNSTABLE**
-//
-// Notification sent when a file is edited.
-func (c *Client) DidChange(ctx context.Context, params *DidChangeDocumentNotification) error {
-	return notify(ctx, c.rpc.conn, MethodDocumentDidChange, params)
-}
-
-// DidClose: **UNSTABLE**
-//
-// Notification sent when a file is closed.
-func (c *Client) DidClose(ctx context.Context, params *DidCloseDocumentNotification) error {
-	return notify(ctx, c.rpc.conn, MethodDocumentDidClose, params)
-}
-
-// DidFocus: **UNSTABLE**
-//
-// Notification sent when a file becomes the active editor tab.
-func (c *Client) DidFocus(ctx context.Context, params *DidFocusDocumentNotification) error {
-	return notify(ctx, c.rpc.conn, MethodDocumentDidFocus, params)
-}
-
-// DidOpen: **UNSTABLE**
-//
-// Notification sent when a file is opened in the editor.
-func (c *Client) DidOpen(ctx context.Context, params *DidOpenDocumentNotification) error {
-	return notify(ctx, c.rpc.conn, MethodDocumentDidOpen, params)
-}
-
-// DidSave: **UNSTABLE**
-//
-// Notification sent when a file is saved.
-func (c *Client) DidSave(ctx context.Context, params *DidSaveDocumentNotification) error {
-	return notify(ctx, c.rpc.conn, MethodDocumentDidSave, params)
-}
-
 // Initialize: Establishes the connection with a client and negotiates protocol capabilities.
 //
 // This method is called once at the beginning of the connection to:
@@ -221,50 +186,6 @@ func (c *Client) Logout(ctx context.Context, params *LogoutRequest) (*LogoutResp
 // Sends an MCP-over-ACP notification.
 func (c *Client) Message(ctx context.Context, params *MessageMcpNotification) error {
 	return notify(ctx, c.rpc.conn, MethodMcpMessage, params)
-}
-
-// Accept: **UNSTABLE**
-//
-// Notification sent when a suggestion is accepted.
-func (c *Client) Accept(ctx context.Context, params *AcceptNesNotification) error {
-	return notify(ctx, c.rpc.conn, MethodNesAccept, params)
-}
-
-// CloseNes: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Closes an active NES session and frees up any resources associated with it.
-//
-// The agent must cancel any ongoing work and then free up any resources
-// associated with the NES session.
-func (c *Client) CloseNes(ctx context.Context, params *CloseNesRequest) (*CloseNesResponse, error) {
-	return call[CloseNesResponse](ctx, c.rpc.conn, MethodNesClose, params)
-}
-
-// Reject: **UNSTABLE**
-//
-// Notification sent when a suggestion is rejected.
-func (c *Client) Reject(ctx context.Context, params *RejectNesNotification) error {
-	return notify(ctx, c.rpc.conn, MethodNesReject, params)
-}
-
-// StartNes: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Starts an NES session.
-func (c *Client) StartNes(ctx context.Context, params *StartNesRequest) (*StartNesResponse, error) {
-	return call[StartNesResponse](ctx, c.rpc.conn, MethodNesStart, params)
-}
-
-// SuggestNes: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Requests a code suggestion.
-func (c *Client) SuggestNes(ctx context.Context, params *SuggestNesRequest) (*SuggestNesResponse, error) {
-	return call[SuggestNesResponse](ctx, c.rpc.conn, MethodNesSuggest, params)
 }
 
 // DisableProvider: **UNSTABLE**
@@ -337,6 +258,10 @@ func (c *Client) DeleteSession(ctx context.Context, params *DeleteSessionRequest
 // The agent should create a new session with the same conversation context as the
 // original, allowing operations like generating summaries without affecting the
 // original session's history.
+//
+// As with `session/new`, the forked session is active once the agent responds,
+// set up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.
+// The client can prompt it without calling `session/load` or `session/resume` first.
 func (c *Client) ForkSession(ctx context.Context, params *ForkSessionRequest) (*ForkSessionResponse, error) {
 	return call[ForkSessionResponse](ctx, c.rpc.conn, MethodSessionFork, params)
 }

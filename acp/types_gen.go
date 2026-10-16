@@ -22,13 +22,6 @@ func (m *Meta) UnmarshalJSON(data []byte) error {
 	return unmarshalJSON(data, (*plain)(m))
 }
 
-// AcceptNesNotification: Notification sent when a suggestion is accepted.
-type AcceptNesNotification struct {
-	Meta      Meta            `json:"_meta,omitzero"`
-	ID        NesSuggestionId `json:"id"`
-	SessionID SessionId       `json:"sessionId"`
-}
-
 // AgentAuthCapabilities: Authentication-related capabilities supported by the agent.
 type AgentAuthCapabilities struct {
 	Meta   Meta                `json:"_meta,omitzero"`
@@ -64,8 +57,6 @@ type AgentCapabilities struct {
 	Auth                *AgentAuthCapabilities `json:"auth,omitempty"`
 	LoadSession         bool                   `json:"loadSession,omitempty"`
 	McpCapabilities     *McpCapabilities       `json:"mcpCapabilities,omitempty"`
-	Nes                 *NesCapabilities       `json:"nes,omitempty"`
-	PositionEncoding    *PositionEncodingKind  `json:"positionEncoding,omitempty"`
 	PromptCapabilities  *PromptCapabilities    `json:"promptCapabilities,omitempty"`
 	Providers           *ProvidersCapabilities `json:"providers,omitempty"`
 	SessionCapabilities *SessionCapabilities   `json:"sessionCapabilities,omitempty"`
@@ -79,8 +70,6 @@ func (c *AgentCapabilities) UnmarshalJSON(data []byte) error {
 		Auth                json.RawMessage `json:"auth"`
 		LoadSession         json.RawMessage `json:"loadSession"`
 		McpCapabilities     json.RawMessage `json:"mcpCapabilities"`
-		Nes                 json.RawMessage `json:"nes"`
-		PositionEncoding    json.RawMessage `json:"positionEncoding"`
 		PromptCapabilities  json.RawMessage `json:"promptCapabilities"`
 		Providers           json.RawMessage `json:"providers"`
 		SessionCapabilities json.RawMessage `json:"sessionCapabilities"`
@@ -97,18 +86,6 @@ func (c *AgentCapabilities) UnmarshalJSON(data []byte) error {
 	}
 	if len(raw.McpCapabilities) > 0 {
 		_ = unmarshalJSON(raw.McpCapabilities, &decoded.McpCapabilities)
-	}
-	if len(raw.Nes) > 0 {
-		_ = unmarshalJSON(raw.Nes, &decoded.Nes)
-	}
-	if len(raw.PositionEncoding) > 0 {
-		var value PositionEncodingKind
-		if err := unmarshalJSON(raw.PositionEncoding, &value); err == nil {
-			switch string(value) {
-			case "utf-16", "utf-32", "utf-8":
-				decoded.PositionEncoding = &value
-			}
-		}
 	}
 	if len(raw.PromptCapabilities) > 0 {
 		_ = unmarshalJSON(raw.PromptCapabilities, &decoded.PromptCapabilities)
@@ -270,31 +247,14 @@ func (m *AuthMethod) UnmarshalJSON(data []byte) error {
 	type alias AuthMethod
 	decoded := alias{}
 	raw := struct {
-		Args        json.RawMessage `json:"args"`
 		Description json.RawMessage `json:"description"`
-		Env         json.RawMessage `json:"env"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Args) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.Args, &values); err == nil {
-			decoded.Args = []string{}
-			for _, value := range values {
-				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.Args = append(decoded.Args, item)
-				}
-			}
-		}
-	}
 	if len(raw.Description) > 0 {
 		_ = unmarshalJSON(raw.Description, &decoded.Description)
-	}
-	if len(raw.Env) > 0 {
-		_ = unmarshalJSON(raw.Env, &decoded.Env)
 	}
 	*m = AuthMethod(decoded)
 	return nil
@@ -352,31 +312,14 @@ func (t *AuthMethodTerminal) UnmarshalJSON(data []byte) error {
 	type alias AuthMethodTerminal
 	decoded := alias{}
 	raw := struct {
-		Args        json.RawMessage `json:"args"`
 		Description json.RawMessage `json:"description"`
-		Env         json.RawMessage `json:"env"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Args) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.Args, &values); err == nil {
-			decoded.Args = []string{}
-			for _, value := range values {
-				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.Args = append(decoded.Args, item)
-				}
-			}
-		}
-	}
 	if len(raw.Description) > 0 {
 		_ = unmarshalJSON(raw.Description, &decoded.Description)
-	}
-	if len(raw.Env) > 0 {
-		_ = unmarshalJSON(raw.Env, &decoded.Env)
 	}
 	*t = AuthMethodTerminal(decoded)
 	return nil
@@ -559,16 +502,14 @@ type CancelNotification struct {
 //
 // See protocol docs: [Client Capabilities](https://agentclientprotocol.com/protocol/initialization#client-capabilities)
 type ClientCapabilities struct {
-	Meta              Meta                       `json:"_meta,omitzero"`
-	Auth              *AuthCapabilities          `json:"auth,omitempty"`
-	Elicitation       *ElicitationCapabilities   `json:"elicitation,omitempty"`
-	Fs                *FileSystemCapabilities    `json:"fs,omitempty"`
-	Nes               *ClientNesCapabilities     `json:"nes,omitempty"`
-	Plan              *PlanCapabilities          `json:"plan,omitempty"`
-	PositionEncodings []PositionEncodingKind     `json:"positionEncodings,omitempty"`
-	Session           *ClientSessionCapabilities `json:"session,omitempty"`
-	Subagents         *SubagentCapabilities      `json:"subagents,omitempty"`
-	Terminal          bool                       `json:"terminal,omitempty"`
+	Meta        Meta                       `json:"_meta,omitzero"`
+	Auth        *AuthCapabilities          `json:"auth,omitempty"`
+	Elicitation *ElicitationCapabilities   `json:"elicitation,omitempty"`
+	Fs          *FileSystemCapabilities    `json:"fs,omitempty"`
+	Plan        *PlanCapabilities          `json:"plan,omitempty"`
+	Session     *ClientSessionCapabilities `json:"session,omitempty"`
+	Subagents   *SubagentCapabilities      `json:"subagents,omitempty"`
+	Terminal    bool                       `json:"terminal,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -576,15 +517,13 @@ func (c *ClientCapabilities) UnmarshalJSON(data []byte) error {
 	type alias ClientCapabilities
 	decoded := alias{}
 	raw := struct {
-		Auth              json.RawMessage `json:"auth"`
-		Elicitation       json.RawMessage `json:"elicitation"`
-		Fs                json.RawMessage `json:"fs"`
-		Nes               json.RawMessage `json:"nes"`
-		Plan              json.RawMessage `json:"plan"`
-		PositionEncodings json.RawMessage `json:"positionEncodings"`
-		Session           json.RawMessage `json:"session"`
-		Subagents         json.RawMessage `json:"subagents"`
-		Terminal          json.RawMessage `json:"terminal"`
+		Auth        json.RawMessage `json:"auth"`
+		Elicitation json.RawMessage `json:"elicitation"`
+		Fs          json.RawMessage `json:"fs"`
+		Plan        json.RawMessage `json:"plan"`
+		Session     json.RawMessage `json:"session"`
+		Subagents   json.RawMessage `json:"subagents"`
+		Terminal    json.RawMessage `json:"terminal"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
@@ -599,26 +538,8 @@ func (c *ClientCapabilities) UnmarshalJSON(data []byte) error {
 	if len(raw.Fs) > 0 {
 		_ = unmarshalJSON(raw.Fs, &decoded.Fs)
 	}
-	if len(raw.Nes) > 0 {
-		_ = unmarshalJSON(raw.Nes, &decoded.Nes)
-	}
 	if len(raw.Plan) > 0 {
 		_ = unmarshalJSON(raw.Plan, &decoded.Plan)
-	}
-	if len(raw.PositionEncodings) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.PositionEncodings, &values); err == nil {
-			decoded.PositionEncodings = []PositionEncodingKind{}
-			for _, value := range values {
-				var item PositionEncodingKind
-				if err := unmarshalJSON(value, &item); err == nil {
-					switch item {
-					case PositionEncodingKindUtf16, PositionEncodingKindUtf32, PositionEncodingKindUtf8:
-						decoded.PositionEncodings = append(decoded.PositionEncodings, item)
-					}
-				}
-			}
-		}
 	}
 	if len(raw.Session) > 0 {
 		_ = unmarshalJSON(raw.Session, &decoded.Session)
@@ -630,40 +551,6 @@ func (c *ClientCapabilities) UnmarshalJSON(data []byte) error {
 		_ = unmarshalJSON(raw.Terminal, &decoded.Terminal)
 	}
 	*c = ClientCapabilities(decoded)
-	return nil
-}
-
-// ClientNesCapabilities: NES capabilities advertised by the client during initialization.
-type ClientNesCapabilities struct {
-	Meta             Meta                             `json:"_meta,omitzero"`
-	Jump             *NesJumpCapabilities             `json:"jump,omitempty"`
-	Rename           *NesRenameCapabilities           `json:"rename,omitempty"`
-	SearchAndReplace *NesSearchAndReplaceCapabilities `json:"searchAndReplace,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (c *ClientNesCapabilities) UnmarshalJSON(data []byte) error {
-	type alias ClientNesCapabilities
-	decoded := alias{}
-	raw := struct {
-		Jump             json.RawMessage `json:"jump"`
-		Rename           json.RawMessage `json:"rename"`
-		SearchAndReplace json.RawMessage `json:"searchAndReplace"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Jump) > 0 {
-		_ = unmarshalJSON(raw.Jump, &decoded.Jump)
-	}
-	if len(raw.Rename) > 0 {
-		_ = unmarshalJSON(raw.Rename, &decoded.Rename)
-	}
-	if len(raw.SearchAndReplace) > 0 {
-		_ = unmarshalJSON(raw.SearchAndReplace, &decoded.SearchAndReplace)
-	}
-	*c = ClientNesCapabilities(decoded)
 	return nil
 }
 
@@ -701,20 +588,6 @@ func (c *ClientSessionCapabilities) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// CloseNesRequest: Request to close an NES session.
-//
-// The agent **must** cancel any ongoing work related to the NES session
-// and then free up any resources associated with the session.
-type CloseNesRequest struct {
-	Meta      Meta      `json:"_meta,omitzero"`
-	SessionID SessionId `json:"sessionId"`
-}
-
-// CloseNesResponse: Response from closing an NES session.
-type CloseNesResponse struct {
-	Meta Meta `json:"_meta,omitzero"`
-}
-
 // CloseSessionRequest: Request parameters for closing an active session.
 //
 // If supported, the agent **must** cancel any ongoing work related to the session
@@ -732,11 +605,7 @@ type CloseSessionResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
-// CompactionCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Client support for ID-addressed context compaction updates.
+// CompactionCapabilities: Client support for ID-addressed context compaction updates.
 type CompactionCapabilities map[string]any
 
 // UnmarshalJSON preserves unstructured numbers as json.Number.
@@ -745,18 +614,10 @@ func (c *CompactionCapabilities) UnmarshalJSON(data []byte) error {
 	return unmarshalJSON(data, (*plain)(c))
 }
 
-// CompactionId: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Unique identifier for a context compaction within a session.
+// CompactionId: Unique identifier for a context compaction within a session.
 type CompactionId string
 
-// CompactionStatus: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Lifecycle state of a context compaction.
+// CompactionStatus: Lifecycle state of a context compaction.
 type CompactionStatus string
 
 const (
@@ -770,33 +631,24 @@ const (
 	CompactionStatusCancelled CompactionStatus = "cancelled"
 )
 
-// CompactionSummaryChunk: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A content block appended to the retained summary of an in-progress
-// compaction. Agents send chunks only after an `in_progress` update and before
-// the terminal update for the same ID. Agents MUST only send this update when
-// the Client advertised [`ClientSessionCapabilities::compaction`].
+// CompactionSummaryChunk: A content block appended to a compaction's summary. A first-seen ID creates
+// an in-progress compaction. Chunks append in receive order.
+// Agents MUST only send this update when the Client advertised
+// [`ClientSessionCapabilities::compaction`].
 type CompactionSummaryChunk struct {
 	Meta         Meta         `json:"_meta,omitzero"`
 	CompactionID CompactionId `json:"compactionId"`
 	Content      ContentBlock `json:"content"`
 }
 
-// CompactionUpdate: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A context compaction upsert. The first update fixes the compaction's
+// CompactionUpdate: A context compaction upsert. The first notification fixes the compaction's
 // timeline position. Later updates with the same ID patch that entity in place.
 // Agents MUST only send this update when the Client advertised
 // [`ClientSessionCapabilities::compaction`].
 //
 // `summary`, `error`, and `_meta` have patch semantics: omission leaves the
 // stored value unchanged, `null` clears it, and a concrete value replaces it.
-// `summary: []` also clears the retained summary. A non-empty summary is only
-// valid with `completed`; `error` is only valid with `failed`.
+// `summary: []` also clears the summary.
 type CompactionUpdate struct {
 	Meta         Meta             `json:"_meta,omitzero"`
 	CompactionID CompactionId     `json:"compactionId"`
@@ -1342,54 +1194,6 @@ type CreateTerminalRequest struct {
 	SessionID       SessionId     `json:"sessionId"`
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (r *CreateTerminalRequest) UnmarshalJSON(data []byte) error {
-	type alias CreateTerminalRequest
-	decoded := alias{}
-	raw := struct {
-		Args            json.RawMessage `json:"args"`
-		Cwd             json.RawMessage `json:"cwd"`
-		Env             json.RawMessage `json:"env"`
-		OutputByteLimit json.RawMessage `json:"outputByteLimit"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Args) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.Args, &values); err == nil {
-			decoded.Args = []string{}
-			for _, value := range values {
-				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.Args = append(decoded.Args, item)
-				}
-			}
-		}
-	}
-	if len(raw.Cwd) > 0 {
-		_ = unmarshalJSON(raw.Cwd, &decoded.Cwd)
-	}
-	if len(raw.Env) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.Env, &values); err == nil {
-			decoded.Env = []EnvVariable{}
-			for _, value := range values {
-				var item EnvVariable
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.Env = append(decoded.Env, item)
-				}
-			}
-		}
-	}
-	if len(raw.OutputByteLimit) > 0 {
-		_ = unmarshalJSON(raw.OutputByteLimit, &decoded.OutputByteLimit)
-	}
-	*r = CreateTerminalRequest(decoded)
-	return nil
-}
-
 // CreateTerminalResponse: Response containing the ID of the created terminal.
 type CreateTerminalResponse struct {
 	Meta       Meta       `json:"_meta,omitzero"`
@@ -1415,86 +1219,6 @@ type DeleteSessionRequest struct {
 // DeleteSessionResponse: Response from deleting a session.
 type DeleteSessionResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
-}
-
-// DidChangeDocumentNotification: Notification sent when a file is edited.
-type DidChangeDocumentNotification struct {
-	Meta           Meta                             `json:"_meta,omitzero"`
-	ContentChanges []TextDocumentContentChangeEvent `json:"contentChanges"`
-	SessionID      SessionId                        `json:"sessionId"`
-	URI            string                           `json:"uri"`
-	Version        int64                            `json:"version"`
-}
-
-// MarshalJSON implements json.Marshaler.
-func (n DidChangeDocumentNotification) MarshalJSON() ([]byte, error) {
-	type alias DidChangeDocumentNotification
-	a := alias(n)
-	if a.ContentChanges == nil {
-		a.ContentChanges = []TextDocumentContentChangeEvent{}
-	}
-	return json.Marshal(a)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (n *DidChangeDocumentNotification) UnmarshalJSON(data []byte) error {
-	type alias DidChangeDocumentNotification
-	decoded := alias{}
-	raw := struct {
-		ContentChanges json.RawMessage `json:"contentChanges"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.ContentChanges) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.ContentChanges, &values); err == nil {
-			decoded.ContentChanges = []TextDocumentContentChangeEvent{}
-			for _, value := range values {
-				var item TextDocumentContentChangeEvent
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.ContentChanges = append(decoded.ContentChanges, item)
-				}
-			}
-		}
-	}
-	*n = DidChangeDocumentNotification(decoded)
-	return nil
-}
-
-// DidCloseDocumentNotification: Notification sent when a file is closed.
-type DidCloseDocumentNotification struct {
-	Meta      Meta      `json:"_meta,omitzero"`
-	SessionID SessionId `json:"sessionId"`
-	URI       string    `json:"uri"`
-}
-
-// DidFocusDocumentNotification: Notification sent when a file becomes the active editor tab.
-type DidFocusDocumentNotification struct {
-	Meta         Meta      `json:"_meta,omitzero"`
-	Position     Position  `json:"position"`
-	SessionID    SessionId `json:"sessionId"`
-	URI          string    `json:"uri"`
-	Version      int64     `json:"version"`
-	VisibleRange Range     `json:"visibleRange"`
-}
-
-// DidOpenDocumentNotification: Notification sent when a file is opened in the editor.
-type DidOpenDocumentNotification struct {
-	Meta       Meta      `json:"_meta,omitzero"`
-	LanguageID string    `json:"languageId"`
-	SessionID  SessionId `json:"sessionId"`
-	Text       string    `json:"text"`
-	URI        string    `json:"uri"`
-	Version    int64     `json:"version"`
-}
-
-// DidSaveDocumentNotification: Notification sent when a file is saved.
-type DidSaveDocumentNotification struct {
-	Meta      Meta      `json:"_meta,omitzero"`
-	SessionID SessionId `json:"sessionId"`
-	URI       string    `json:"uri"`
 }
 
 // Diff: A diff representing file modifications.
@@ -2100,6 +1824,33 @@ const (
 	ErrorCodeResourceNotFound ErrorCode = -32002
 )
 
+// ErrorStopReason: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Details of a failure that ended a child's foreground work.
+type ErrorStopReason struct {
+	Error *Error `json:"error,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ErrorStopReason) UnmarshalJSON(data []byte) error {
+	type alias ErrorStopReason
+	decoded := alias{}
+	raw := struct {
+		Error json.RawMessage `json:"error"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Error) > 0 {
+		_ = unmarshalJSON(raw.Error, &decoded.Error)
+	}
+	*r = ErrorStopReason(decoded)
+	return nil
+}
+
 // ExtNotification: Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
 // Extension notifications provide a way to send one-way messages for custom functionality
 // while maintaining protocol compatibility.
@@ -2163,54 +1914,12 @@ func (c *FileSystemCapabilities) UnmarshalJSON(data []byte) error {
 //
 // Only available if the Agent supports the `session.fork` capability.
 type ForkSessionRequest struct {
-	Meta                  Meta        `json:"_meta,omitzero"`
-	AdditionalDirectories []string    `json:"additionalDirectories,omitempty"`
-	Cwd                   string      `json:"cwd"`
-	McpServers            []McpServer `json:"mcpServers,omitempty"`
-	SessionID             SessionId   `json:"sessionId"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (r *ForkSessionRequest) UnmarshalJSON(data []byte) error {
-	type alias ForkSessionRequest
-	decoded := alias{}
-	raw := struct {
-		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
-		McpServers            json.RawMessage `json:"mcpServers"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.AdditionalDirectories) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.AdditionalDirectories, &values); err == nil {
-			decoded.AdditionalDirectories = []string{}
-			for _, value := range values {
-				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.AdditionalDirectories = append(decoded.AdditionalDirectories, item)
-				}
-			}
-		}
-	}
-	if len(raw.McpServers) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.McpServers, &values); err == nil {
-			decoded.McpServers = []McpServer{}
-			for _, value := range values {
-				var item McpServer
-				if err := unmarshalJSON(value, &item); err == nil {
-					switch item.Type {
-					case McpServerTypeHttp, McpServerTypeSse, McpServerTypeAcp, "":
-						decoded.McpServers = append(decoded.McpServers, item)
-					}
-				}
-			}
-		}
-	}
-	*r = ForkSessionRequest(decoded)
-	return nil
+	Meta                  Meta          `json:"_meta,omitzero"`
+	AdditionalDirectories []string      `json:"additionalDirectories,omitempty"`
+	Cwd                   string        `json:"cwd"`
+	McpServers            []McpServer   `json:"mcpServers,omitempty"`
+	SessionID             SessionId     `json:"sessionId"`
+	SystemPrompt          *SystemPrompt `json:"systemPrompt,omitempty"`
 }
 
 // ForkSessionResponse: **UNSTABLE**
@@ -2268,10 +1977,83 @@ type HttpHeader struct {
 }
 
 // IdleStateUpdate: The child is ready to process another prompt.
+//
+// An omitted, `null`, or malformed `stopReason` means not reported.
 type IdleStateUpdate struct {
-	Meta       Meta        `json:"_meta,omitzero"`
-	StopReason *StopReason `json:"stopReason,omitempty"`
-	Usage      *Usage      `json:"usage,omitempty"`
+	StopReason IdleStateUpdateType `json:"stopReason,omitempty"`
+	Meta       Meta                `json:"_meta,omitzero"`
+	Error      *Error              `json:"error,omitempty"`
+	Usage      *Usage              `json:"usage,omitempty"`
+}
+
+// IdleStateUpdateType is the discriminator for IdleStateUpdate variants.
+type IdleStateUpdateType string
+
+const (
+	IdleStateUpdateTypeEndTurn         IdleStateUpdateType = "end_turn"
+	IdleStateUpdateTypeMaxTokens       IdleStateUpdateType = "max_tokens"
+	IdleStateUpdateTypeMaxTurnRequests IdleStateUpdateType = "max_turn_requests"
+	IdleStateUpdateTypeRefusal         IdleStateUpdateType = "refusal"
+	IdleStateUpdateTypeCancelled       IdleStateUpdateType = "cancelled"
+	IdleStateUpdateTypeError           IdleStateUpdateType = "error"
+)
+
+// EndTurnIdleStateUpdate creates an IdleStateUpdate variant: The work ended successfully.
+func EndTurnIdleStateUpdate() IdleStateUpdate {
+	return IdleStateUpdate{
+		StopReason: IdleStateUpdateTypeEndTurn,
+	}
+}
+
+// MaxTokensIdleStateUpdate creates an IdleStateUpdate variant: The work ended because the agent reached the maximum number of tokens.
+func MaxTokensIdleStateUpdate() IdleStateUpdate {
+	return IdleStateUpdate{
+		StopReason: IdleStateUpdateTypeMaxTokens,
+	}
+}
+
+// MaxTurnRequestsIdleStateUpdate creates an IdleStateUpdate variant: The work ended because the agent reached the maximum number of allowed
+// agent requests.
+func MaxTurnRequestsIdleStateUpdate() IdleStateUpdate {
+	return IdleStateUpdate{
+		StopReason: IdleStateUpdateTypeMaxTurnRequests,
+	}
+}
+
+// RefusalIdleStateUpdate creates an IdleStateUpdate variant: The work ended because the agent refused to continue.
+func RefusalIdleStateUpdate() IdleStateUpdate {
+	return IdleStateUpdate{
+		StopReason: IdleStateUpdateTypeRefusal,
+	}
+}
+
+// CancelledIdleStateUpdate creates an IdleStateUpdate variant: The work was cancelled.
+func CancelledIdleStateUpdate() IdleStateUpdate {
+	return IdleStateUpdate{
+		StopReason: IdleStateUpdateTypeCancelled,
+	}
+}
+
+// ErrorIdleStateUpdate creates an IdleStateUpdate variant: The work ended because something failed.
+func ErrorIdleStateUpdate() IdleStateUpdate {
+	return IdleStateUpdate{
+		StopReason: IdleStateUpdateTypeError,
+	}
+}
+
+// OtherIdleStateUpdate creates an IdleStateUpdate variant: Custom or future stop reason.
+//
+// Values beginning with `_` are reserved for implementation-specific
+// extensions. Other unknown values are reserved for future ACP variants.
+func OtherIdleStateUpdate(stopReason string) IdleStateUpdate {
+	return IdleStateUpdate{
+		StopReason: IdleStateUpdateType(stopReason),
+	}
+}
+
+// NoneIdleStateUpdate creates an IdleStateUpdate variant: No stop reason: `stopReason` is omitted or `null`.
+func NoneIdleStateUpdate() IdleStateUpdate {
+	return IdleStateUpdate{}
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -2279,21 +2061,15 @@ func (u *IdleStateUpdate) UnmarshalJSON(data []byte) error {
 	type alias IdleStateUpdate
 	decoded := alias{}
 	raw := struct {
-		StopReason json.RawMessage `json:"stopReason"`
-		Usage      json.RawMessage `json:"usage"`
+		Error json.RawMessage `json:"error"`
+		Usage json.RawMessage `json:"usage"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.StopReason) > 0 {
-		var value StopReason
-		if err := unmarshalJSON(raw.StopReason, &value); err == nil {
-			switch string(value) {
-			case "end_turn", "max_tokens", "max_turn_requests", "refusal", "cancelled":
-				decoded.StopReason = &value
-			}
-		}
+	if len(raw.Error) > 0 {
+		_ = unmarshalJSON(raw.Error, &decoded.Error)
 	}
 	if len(raw.Usage) > 0 {
 		_ = unmarshalJSON(raw.Usage, &decoded.Usage)
@@ -2570,64 +2346,12 @@ const (
 //
 // See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
 type LoadSessionRequest struct {
-	Meta                  Meta        `json:"_meta,omitzero"`
-	AdditionalDirectories []string    `json:"additionalDirectories,omitempty"`
-	Cwd                   string      `json:"cwd"`
-	McpServers            []McpServer `json:"mcpServers"`
-	SessionID             SessionId   `json:"sessionId"`
-}
-
-// MarshalJSON implements json.Marshaler.
-func (r LoadSessionRequest) MarshalJSON() ([]byte, error) {
-	type alias LoadSessionRequest
-	a := alias(r)
-	if a.McpServers == nil {
-		a.McpServers = []McpServer{}
-	}
-	return json.Marshal(a)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (r *LoadSessionRequest) UnmarshalJSON(data []byte) error {
-	type alias LoadSessionRequest
-	decoded := alias{}
-	raw := struct {
-		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
-		McpServers            json.RawMessage `json:"mcpServers"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.AdditionalDirectories) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.AdditionalDirectories, &values); err == nil {
-			decoded.AdditionalDirectories = []string{}
-			for _, value := range values {
-				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.AdditionalDirectories = append(decoded.AdditionalDirectories, item)
-				}
-			}
-		}
-	}
-	if len(raw.McpServers) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.McpServers, &values); err == nil {
-			decoded.McpServers = []McpServer{}
-			for _, value := range values {
-				var item McpServer
-				if err := unmarshalJSON(value, &item); err == nil {
-					switch item.Type {
-					case McpServerTypeHttp, McpServerTypeSse, McpServerTypeAcp, "":
-						decoded.McpServers = append(decoded.McpServers, item)
-					}
-				}
-			}
-		}
-	}
-	*r = LoadSessionRequest(decoded)
-	return nil
+	Meta                  Meta          `json:"_meta,omitzero"`
+	AdditionalDirectories []string      `json:"additionalDirectories,omitempty"`
+	Cwd                   string        `json:"cwd"`
+	McpServers            []McpServer   `json:"mcpServers"`
+	SessionID             SessionId     `json:"sessionId"`
+	SystemPrompt          *SystemPrompt `json:"systemPrompt,omitempty"`
 }
 
 // LoadSessionResponse: Response from loading an existing session.
@@ -3289,676 +3013,15 @@ func (s *MultiSelectPropertySchema) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// NesCapabilities: NES capabilities advertised by the agent during initialization.
-type NesCapabilities struct {
-	Meta    Meta                    `json:"_meta,omitzero"`
-	Context *NesContextCapabilities `json:"context,omitempty"`
-	Events  *NesEventCapabilities   `json:"events,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (c *NesCapabilities) UnmarshalJSON(data []byte) error {
-	type alias NesCapabilities
-	decoded := alias{}
-	raw := struct {
-		Context json.RawMessage `json:"context"`
-		Events  json.RawMessage `json:"events"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Context) > 0 {
-		_ = unmarshalJSON(raw.Context, &decoded.Context)
-	}
-	if len(raw.Events) > 0 {
-		_ = unmarshalJSON(raw.Events, &decoded.Events)
-	}
-	*c = NesCapabilities(decoded)
-	return nil
-}
-
-// NesContextCapabilities: Context capabilities the agent wants attached to each suggestion request.
-type NesContextCapabilities struct {
-	Meta            Meta                            `json:"_meta,omitzero"`
-	Diagnostics     *NesDiagnosticsCapabilities     `json:"diagnostics,omitempty"`
-	EditHistory     *NesEditHistoryCapabilities     `json:"editHistory,omitempty"`
-	OpenFiles       *NesOpenFilesCapabilities       `json:"openFiles,omitempty"`
-	RecentFiles     *NesRecentFilesCapabilities     `json:"recentFiles,omitempty"`
-	RelatedSnippets *NesRelatedSnippetsCapabilities `json:"relatedSnippets,omitempty"`
-	UserActions     *NesUserActionsCapabilities     `json:"userActions,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (c *NesContextCapabilities) UnmarshalJSON(data []byte) error {
-	type alias NesContextCapabilities
-	decoded := alias{}
-	raw := struct {
-		Diagnostics     json.RawMessage `json:"diagnostics"`
-		EditHistory     json.RawMessage `json:"editHistory"`
-		OpenFiles       json.RawMessage `json:"openFiles"`
-		RecentFiles     json.RawMessage `json:"recentFiles"`
-		RelatedSnippets json.RawMessage `json:"relatedSnippets"`
-		UserActions     json.RawMessage `json:"userActions"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Diagnostics) > 0 {
-		_ = unmarshalJSON(raw.Diagnostics, &decoded.Diagnostics)
-	}
-	if len(raw.EditHistory) > 0 {
-		_ = unmarshalJSON(raw.EditHistory, &decoded.EditHistory)
-	}
-	if len(raw.OpenFiles) > 0 {
-		_ = unmarshalJSON(raw.OpenFiles, &decoded.OpenFiles)
-	}
-	if len(raw.RecentFiles) > 0 {
-		_ = unmarshalJSON(raw.RecentFiles, &decoded.RecentFiles)
-	}
-	if len(raw.RelatedSnippets) > 0 {
-		_ = unmarshalJSON(raw.RelatedSnippets, &decoded.RelatedSnippets)
-	}
-	if len(raw.UserActions) > 0 {
-		_ = unmarshalJSON(raw.UserActions, &decoded.UserActions)
-	}
-	*c = NesContextCapabilities(decoded)
-	return nil
-}
-
-// NesDiagnostic: A diagnostic (error, warning, etc.).
-type NesDiagnostic struct {
-	Meta     Meta                  `json:"_meta,omitzero"`
-	Message  string                `json:"message"`
-	Range    Range                 `json:"range"`
-	Severity NesDiagnosticSeverity `json:"severity"`
-	URI      string                `json:"uri"`
-}
-
-// NesDiagnosticSeverity: Severity of a diagnostic.
-type NesDiagnosticSeverity string
-
-const (
-	// NesDiagnosticSeverityError: An error.
-	NesDiagnosticSeverityError NesDiagnosticSeverity = "error"
-	// NesDiagnosticSeverityWarning: A warning.
-	NesDiagnosticSeverityWarning NesDiagnosticSeverity = "warning"
-	// NesDiagnosticSeverityInformation: An informational message.
-	NesDiagnosticSeverityInformation NesDiagnosticSeverity = "information"
-	// NesDiagnosticSeverityHint: A hint.
-	NesDiagnosticSeverityHint NesDiagnosticSeverity = "hint"
-)
-
-// NesDiagnosticsCapabilities: Capabilities for diagnostics context.
-type NesDiagnosticsCapabilities struct {
-	Meta Meta `json:"_meta,omitzero"`
-}
-
-// NesDocumentDidChangeCapabilities: Capabilities for `document/didChange` events.
-type NesDocumentDidChangeCapabilities struct {
-	Meta     Meta                 `json:"_meta,omitzero"`
-	SyncKind TextDocumentSyncKind `json:"syncKind"`
-}
-
-// NesDocumentDidCloseCapabilities: Marker for `document/didClose` capability support.
-type NesDocumentDidCloseCapabilities struct {
-	Meta Meta `json:"_meta,omitzero"`
-}
-
-// NesDocumentDidFocusCapabilities: Marker for `document/didFocus` capability support.
-type NesDocumentDidFocusCapabilities struct {
-	Meta Meta `json:"_meta,omitzero"`
-}
-
-// NesDocumentDidOpenCapabilities: Marker for `document/didOpen` capability support.
-type NesDocumentDidOpenCapabilities struct {
-	Meta Meta `json:"_meta,omitzero"`
-}
-
-// NesDocumentDidSaveCapabilities: Marker for `document/didSave` capability support.
-type NesDocumentDidSaveCapabilities struct {
-	Meta Meta `json:"_meta,omitzero"`
-}
-
-// NesDocumentEventCapabilities: Document event capabilities the agent wants to receive.
-type NesDocumentEventCapabilities struct {
-	Meta      Meta                              `json:"_meta,omitzero"`
-	DidChange *NesDocumentDidChangeCapabilities `json:"didChange,omitempty"`
-	DidClose  *NesDocumentDidCloseCapabilities  `json:"didClose,omitempty"`
-	DidFocus  *NesDocumentDidFocusCapabilities  `json:"didFocus,omitempty"`
-	DidOpen   *NesDocumentDidOpenCapabilities   `json:"didOpen,omitempty"`
-	DidSave   *NesDocumentDidSaveCapabilities   `json:"didSave,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (c *NesDocumentEventCapabilities) UnmarshalJSON(data []byte) error {
-	type alias NesDocumentEventCapabilities
-	decoded := alias{}
-	raw := struct {
-		DidChange json.RawMessage `json:"didChange"`
-		DidClose  json.RawMessage `json:"didClose"`
-		DidFocus  json.RawMessage `json:"didFocus"`
-		DidOpen   json.RawMessage `json:"didOpen"`
-		DidSave   json.RawMessage `json:"didSave"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.DidChange) > 0 {
-		_ = unmarshalJSON(raw.DidChange, &decoded.DidChange)
-	}
-	if len(raw.DidClose) > 0 {
-		_ = unmarshalJSON(raw.DidClose, &decoded.DidClose)
-	}
-	if len(raw.DidFocus) > 0 {
-		_ = unmarshalJSON(raw.DidFocus, &decoded.DidFocus)
-	}
-	if len(raw.DidOpen) > 0 {
-		_ = unmarshalJSON(raw.DidOpen, &decoded.DidOpen)
-	}
-	if len(raw.DidSave) > 0 {
-		_ = unmarshalJSON(raw.DidSave, &decoded.DidSave)
-	}
-	*c = NesDocumentEventCapabilities(decoded)
-	return nil
-}
-
-// NesEditHistoryCapabilities: Capabilities for edit history context.
-type NesEditHistoryCapabilities struct {
-	Meta     Meta    `json:"_meta,omitzero"`
-	MaxCount *uint32 `json:"maxCount,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (c *NesEditHistoryCapabilities) UnmarshalJSON(data []byte) error {
-	type alias NesEditHistoryCapabilities
-	decoded := alias{}
-	raw := struct {
-		MaxCount json.RawMessage `json:"maxCount"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.MaxCount) > 0 {
-		_ = unmarshalJSON(raw.MaxCount, &decoded.MaxCount)
-	}
-	*c = NesEditHistoryCapabilities(decoded)
-	return nil
-}
-
-// NesEditHistoryEntry: An entry in the edit history.
-type NesEditHistoryEntry struct {
-	Meta Meta   `json:"_meta,omitzero"`
-	Diff string `json:"diff"`
-	URI  string `json:"uri"`
-}
-
-// NesEditSuggestion: A text edit suggestion.
-type NesEditSuggestion struct {
-	Meta           Meta            `json:"_meta,omitzero"`
-	CursorPosition *Position       `json:"cursorPosition,omitempty"`
-	Edits          []NesTextEdit   `json:"edits"`
-	ID             NesSuggestionId `json:"id"`
-	URI            string          `json:"uri"`
-}
-
-// NesEventCapabilities: Event capabilities the agent can consume.
-type NesEventCapabilities struct {
-	Meta     Meta                          `json:"_meta,omitzero"`
-	Document *NesDocumentEventCapabilities `json:"document,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (c *NesEventCapabilities) UnmarshalJSON(data []byte) error {
-	type alias NesEventCapabilities
-	decoded := alias{}
-	raw := struct {
-		Document json.RawMessage `json:"document"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Document) > 0 {
-		_ = unmarshalJSON(raw.Document, &decoded.Document)
-	}
-	*c = NesEventCapabilities(decoded)
-	return nil
-}
-
-// NesExcerpt: A code excerpt from a file.
-type NesExcerpt struct {
-	Meta      Meta   `json:"_meta,omitzero"`
-	EndLine   uint32 `json:"endLine"`
-	StartLine uint32 `json:"startLine"`
-	Text      string `json:"text"`
-}
-
-// NesJumpCapabilities: Marker for jump suggestion support.
-type NesJumpCapabilities struct {
-	Meta Meta `json:"_meta,omitzero"`
-}
-
-// NesJumpSuggestion: A jump-to-location suggestion.
-type NesJumpSuggestion struct {
-	Meta     Meta            `json:"_meta,omitzero"`
-	ID       NesSuggestionId `json:"id"`
-	Position Position        `json:"position"`
-	URI      string          `json:"uri"`
-}
-
-// NesOpenFile: An open file in the editor.
-type NesOpenFile struct {
-	Meta          Meta    `json:"_meta,omitzero"`
-	LanguageID    string  `json:"languageId"`
-	LastFocusedMs *uint64 `json:"lastFocusedMs,omitempty"`
-	URI           string  `json:"uri"`
-	VisibleRange  *Range  `json:"visibleRange,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (f *NesOpenFile) UnmarshalJSON(data []byte) error {
-	type alias NesOpenFile
-	decoded := alias{}
-	raw := struct {
-		LastFocusedMs json.RawMessage `json:"lastFocusedMs"`
-		VisibleRange  json.RawMessage `json:"visibleRange"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.LastFocusedMs) > 0 {
-		_ = unmarshalJSON(raw.LastFocusedMs, &decoded.LastFocusedMs)
-	}
-	if len(raw.VisibleRange) > 0 {
-		_ = unmarshalJSON(raw.VisibleRange, &decoded.VisibleRange)
-	}
-	*f = NesOpenFile(decoded)
-	return nil
-}
-
-// NesOpenFilesCapabilities: Capabilities for open files context.
-type NesOpenFilesCapabilities struct {
-	Meta Meta `json:"_meta,omitzero"`
-}
-
-// NesRecentFile: A recently accessed file.
-type NesRecentFile struct {
-	Meta       Meta   `json:"_meta,omitzero"`
-	LanguageID string `json:"languageId"`
-	Text       string `json:"text"`
-	URI        string `json:"uri"`
-}
-
-// NesRecentFilesCapabilities: Capabilities for recent files context.
-type NesRecentFilesCapabilities struct {
-	Meta     Meta    `json:"_meta,omitzero"`
-	MaxCount *uint32 `json:"maxCount,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (c *NesRecentFilesCapabilities) UnmarshalJSON(data []byte) error {
-	type alias NesRecentFilesCapabilities
-	decoded := alias{}
-	raw := struct {
-		MaxCount json.RawMessage `json:"maxCount"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.MaxCount) > 0 {
-		_ = unmarshalJSON(raw.MaxCount, &decoded.MaxCount)
-	}
-	*c = NesRecentFilesCapabilities(decoded)
-	return nil
-}
-
-// NesRejectReason: The reason a suggestion was rejected.
-type NesRejectReason string
-
-const (
-	// NesRejectReasonRejected: The user explicitly dismissed the suggestion.
-	NesRejectReasonRejected NesRejectReason = "rejected"
-	// NesRejectReasonIgnored: The suggestion was shown but the user continued editing without interacting.
-	NesRejectReasonIgnored NesRejectReason = "ignored"
-	// NesRejectReasonReplaced: The suggestion was superseded by a newer suggestion.
-	NesRejectReasonReplaced NesRejectReason = "replaced"
-	// NesRejectReasonCancelled: The request was cancelled before the agent returned a response.
-	NesRejectReasonCancelled NesRejectReason = "cancelled"
-)
-
-// NesRelatedSnippet: A related code snippet from a file.
-type NesRelatedSnippet struct {
-	Meta     Meta         `json:"_meta,omitzero"`
-	Excerpts []NesExcerpt `json:"excerpts"`
-	URI      string       `json:"uri"`
-}
-
-// MarshalJSON implements json.Marshaler.
-func (s NesRelatedSnippet) MarshalJSON() ([]byte, error) {
-	type alias NesRelatedSnippet
-	a := alias(s)
-	if a.Excerpts == nil {
-		a.Excerpts = []NesExcerpt{}
-	}
-	return json.Marshal(a)
-}
-
-// NesRelatedSnippetsCapabilities: Capabilities for related snippets context.
-type NesRelatedSnippetsCapabilities struct {
-	Meta Meta `json:"_meta,omitzero"`
-}
-
-// NesRenameCapabilities: Marker for rename suggestion support.
-type NesRenameCapabilities struct {
-	Meta Meta `json:"_meta,omitzero"`
-}
-
-// NesRenameSuggestion: A rename symbol suggestion.
-type NesRenameSuggestion struct {
-	Meta     Meta            `json:"_meta,omitzero"`
-	ID       NesSuggestionId `json:"id"`
-	NewName  string          `json:"newName"`
-	Position Position        `json:"position"`
-	URI      string          `json:"uri"`
-}
-
-// NesRepository: Repository metadata for an NES session.
-type NesRepository struct {
-	Meta      Meta   `json:"_meta,omitzero"`
-	Name      string `json:"name"`
-	Owner     string `json:"owner"`
-	RemoteUrl string `json:"remoteUrl"`
-}
-
-// NesSearchAndReplaceCapabilities: Marker for search and replace suggestion support.
-type NesSearchAndReplaceCapabilities struct {
-	Meta Meta `json:"_meta,omitzero"`
-}
-
-// NesSearchAndReplaceSuggestion: A search-and-replace suggestion.
-type NesSearchAndReplaceSuggestion struct {
-	Meta    Meta            `json:"_meta,omitzero"`
-	ID      NesSuggestionId `json:"id"`
-	IsRegex *bool           `json:"isRegex,omitempty"`
-	Replace string          `json:"replace"`
-	Search  string          `json:"search"`
-	URI     string          `json:"uri"`
-}
-
-// NesSuggestContext: Context attached to a suggestion request.
-type NesSuggestContext struct {
-	Meta            Meta                   `json:"_meta,omitzero"`
-	Diagnostics     *[]NesDiagnostic       `json:"diagnostics,omitempty"`
-	EditHistory     *[]NesEditHistoryEntry `json:"editHistory,omitempty"`
-	OpenFiles       *[]NesOpenFile         `json:"openFiles,omitempty"`
-	RecentFiles     *[]NesRecentFile       `json:"recentFiles,omitempty"`
-	RelatedSnippets *[]NesRelatedSnippet   `json:"relatedSnippets,omitempty"`
-	UserActions     *[]NesUserAction       `json:"userActions,omitempty"`
-}
-
-// NesSuggestion: A suggestion returned by the agent.
-type NesSuggestion struct {
-	Kind           NesSuggestionType `json:"kind"`
-	Meta           Meta              `json:"_meta,omitzero"`
-	CursorPosition *Position         `json:"cursorPosition,omitempty"`
-	Edits          []NesTextEdit     `json:"edits,omitempty"`
-	ID             NesSuggestionId   `json:"id"`
-	IsRegex        *bool             `json:"isRegex,omitempty"`
-	NewName        string            `json:"newName,omitempty"`
-	Position       Position          `json:"position,omitempty,omitzero"`
-	Replace        string            `json:"replace,omitempty"`
-	Search         string            `json:"search,omitempty"`
-	URI            string            `json:"uri"`
-}
-
-// NesSuggestionType is the discriminator for NesSuggestion variants.
-type NesSuggestionType string
-
-const (
-	NesSuggestionTypeEdit             NesSuggestionType = "edit"
-	NesSuggestionTypeJump             NesSuggestionType = "jump"
-	NesSuggestionTypeRename           NesSuggestionType = "rename"
-	NesSuggestionTypeSearchAndReplace NesSuggestionType = "searchAndReplace"
-)
-
-// EditNesSuggestion creates an NesSuggestion variant: A text edit suggestion.
-func EditNesSuggestion(id NesSuggestionId, uri string, edits []NesTextEdit) NesSuggestion {
-	return NesSuggestion{
-		Kind:  NesSuggestionTypeEdit,
-		Edits: edits,
-		ID:    id,
-		URI:   uri,
-	}
-}
-
-// JumpNesSuggestion creates an NesSuggestion variant: A jump-to-location suggestion.
-func JumpNesSuggestion(id NesSuggestionId, uri string, position Position) NesSuggestion {
-	return NesSuggestion{
-		Kind:     NesSuggestionTypeJump,
-		ID:       id,
-		Position: position,
-		URI:      uri,
-	}
-}
-
-// RenameNesSuggestion creates an NesSuggestion variant: A rename symbol suggestion.
-func RenameNesSuggestion(id NesSuggestionId, uri string, position Position, newName string) NesSuggestion {
-	return NesSuggestion{
-		Kind:     NesSuggestionTypeRename,
-		ID:       id,
-		NewName:  newName,
-		Position: position,
-		URI:      uri,
-	}
-}
-
-// SearchAndReplaceNesSuggestion creates an NesSuggestion variant: A search-and-replace suggestion.
-func SearchAndReplaceNesSuggestion(id NesSuggestionId, uri string, search string, replace string) NesSuggestion {
-	return NesSuggestion{
-		Kind:    NesSuggestionTypeSearchAndReplace,
-		ID:      id,
-		Replace: replace,
-		Search:  search,
-		URI:     uri,
-	}
-}
-
-// MarshalJSON implements json.Marshaler.
-func (s NesSuggestion) MarshalJSON() ([]byte, error) {
-	type alias NesSuggestion
-	type wire struct {
-		*alias
-		Edits    *[]NesTextEdit `json:"edits,omitempty"`
-		Position *Position      `json:"position,omitempty"`
-		NewName  *string        `json:"newName,omitempty"`
-		Replace  *string        `json:"replace,omitempty"`
-		Search   *string        `json:"search,omitempty"`
-	}
-	w := wire{alias: (*alias)(&s)}
-	if len(s.Edits) > 0 {
-		Edits := s.Edits
-		w.Edits = &Edits
-	}
-	if !reflect.ValueOf(s.Position).IsZero() {
-		Position := s.Position
-		w.Position = &Position
-	}
-	if !reflect.ValueOf(s.NewName).IsZero() {
-		NewName := s.NewName
-		w.NewName = &NewName
-	}
-	if !reflect.ValueOf(s.Replace).IsZero() {
-		Replace := s.Replace
-		w.Replace = &Replace
-	}
-	if !reflect.ValueOf(s.Search).IsZero() {
-		Search := s.Search
-		w.Search = &Search
-	}
-	switch s.Kind {
-	case NesSuggestionTypeEdit:
-		Edits := s.Edits
-		if Edits == nil {
-			Edits = []NesTextEdit{}
-		}
-		w.Edits = &Edits
-	case NesSuggestionTypeJump:
-		Position := s.Position
-		w.Position = &Position
-	case NesSuggestionTypeRename:
-		NewName := s.NewName
-		w.NewName = &NewName
-		Position := s.Position
-		w.Position = &Position
-	case NesSuggestionTypeSearchAndReplace:
-		Replace := s.Replace
-		w.Replace = &Replace
-		Search := s.Search
-		w.Search = &Search
-	}
-	return json.Marshal(w)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *NesSuggestion) UnmarshalJSON(data []byte) error {
-	type alias NesSuggestion
-	decoded := alias{}
-	raw := struct {
-		CursorPosition json.RawMessage `json:"cursorPosition"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.CursorPosition) > 0 {
-		_ = unmarshalJSON(raw.CursorPosition, &decoded.CursorPosition)
-	}
-	*s = NesSuggestion(decoded)
-	return nil
-}
-
-// NesSuggestionId: Unique identifier for a next edit suggestion.
-type NesSuggestionId string
-
-// NesTextEdit: A text edit within a suggestion.
-type NesTextEdit struct {
-	Meta    Meta   `json:"_meta,omitzero"`
-	NewText string `json:"newText"`
-	Range   Range  `json:"range"`
-}
-
-// NesTriggerKind: What triggered the suggestion request.
-type NesTriggerKind string
-
-const (
-	// NesTriggerKindAutomatic: Triggered by user typing or cursor movement.
-	NesTriggerKindAutomatic NesTriggerKind = "automatic"
-	// NesTriggerKindDiagnostic: Triggered by a diagnostic appearing at or near the cursor.
-	NesTriggerKindDiagnostic NesTriggerKind = "diagnostic"
-	// NesTriggerKindManual: Triggered by an explicit user action (keyboard shortcut).
-	NesTriggerKindManual NesTriggerKind = "manual"
-)
-
-// NesUserAction: A user action (typing, cursor movement, etc.).
-type NesUserAction struct {
-	Meta        Meta     `json:"_meta,omitzero"`
-	Action      string   `json:"action"`
-	Position    Position `json:"position"`
-	TimestampMs uint64   `json:"timestampMs"`
-	URI         string   `json:"uri"`
-}
-
-// NesUserActionsCapabilities: Capabilities for user actions context.
-type NesUserActionsCapabilities struct {
-	Meta     Meta    `json:"_meta,omitzero"`
-	MaxCount *uint32 `json:"maxCount,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (c *NesUserActionsCapabilities) UnmarshalJSON(data []byte) error {
-	type alias NesUserActionsCapabilities
-	decoded := alias{}
-	raw := struct {
-		MaxCount json.RawMessage `json:"maxCount"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.MaxCount) > 0 {
-		_ = unmarshalJSON(raw.MaxCount, &decoded.MaxCount)
-	}
-	*c = NesUserActionsCapabilities(decoded)
-	return nil
-}
-
 // NewSessionRequest: Request parameters for creating a new session.
 //
 // See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
 type NewSessionRequest struct {
-	Meta                  Meta        `json:"_meta,omitzero"`
-	AdditionalDirectories []string    `json:"additionalDirectories,omitempty"`
-	Cwd                   string      `json:"cwd"`
-	McpServers            []McpServer `json:"mcpServers"`
-}
-
-// MarshalJSON implements json.Marshaler.
-func (r NewSessionRequest) MarshalJSON() ([]byte, error) {
-	type alias NewSessionRequest
-	a := alias(r)
-	if a.McpServers == nil {
-		a.McpServers = []McpServer{}
-	}
-	return json.Marshal(a)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (r *NewSessionRequest) UnmarshalJSON(data []byte) error {
-	type alias NewSessionRequest
-	decoded := alias{}
-	raw := struct {
-		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
-		McpServers            json.RawMessage `json:"mcpServers"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.AdditionalDirectories) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.AdditionalDirectories, &values); err == nil {
-			decoded.AdditionalDirectories = []string{}
-			for _, value := range values {
-				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.AdditionalDirectories = append(decoded.AdditionalDirectories, item)
-				}
-			}
-		}
-	}
-	if len(raw.McpServers) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.McpServers, &values); err == nil {
-			decoded.McpServers = []McpServer{}
-			for _, value := range values {
-				var item McpServer
-				if err := unmarshalJSON(value, &item); err == nil {
-					switch item.Type {
-					case McpServerTypeHttp, McpServerTypeSse, McpServerTypeAcp, "":
-						decoded.McpServers = append(decoded.McpServers, item)
-					}
-				}
-			}
-		}
-	}
-	*r = NewSessionRequest(decoded)
-	return nil
+	Meta                  Meta          `json:"_meta,omitzero"`
+	AdditionalDirectories []string      `json:"additionalDirectories,omitempty"`
+	Cwd                   string        `json:"cwd"`
+	McpServers            []McpServer   `json:"mcpServers"`
+	SystemPrompt          *SystemPrompt `json:"systemPrompt,omitempty"`
 }
 
 // NewSessionResponse: Response from creating a new session.
@@ -4006,11 +3069,7 @@ func (r *NewSessionResponse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Notice: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Fire-and-forget advisory information for the user.
+// Notice: Fire-and-forget information for the user.
 //
 // Notices are live events rather than session history. Agents must not rely on
 // a notice being received, displayed, or seen by the user.
@@ -4044,11 +3103,7 @@ func (n *Notice) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// NoticeCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Client support for presenting live advisory notices to the user.
+// NoticeCapabilities: Client support for presenting live notices to the user.
 type NoticeCapabilities map[string]any
 
 // UnmarshalJSON preserves unstructured numbers as json.Number.
@@ -4057,11 +3112,7 @@ func (c *NoticeCapabilities) UnmarshalJSON(data []byte) error {
 	return unmarshalJSON(data, (*plain)(c))
 }
 
-// NoticeSeverity: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Severity hint for a session notice.
+// NoticeSeverity: Severity hint for a session notice.
 type NoticeSeverity string
 
 const (
@@ -4450,29 +3501,6 @@ func (c *PlanUpdateContent) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Position: A zero-based position in a text document.
-//
-// The meaning of `character` depends on the negotiated position encoding.
-type Position struct {
-	Meta      Meta   `json:"_meta,omitzero"`
-	Character uint32 `json:"character"`
-	Line      uint32 `json:"line"`
-}
-
-// PositionEncodingKind: The encoding used for character offsets in positions.
-//
-// Follows the same conventions as LSP 3.17. The default is UTF-16.
-type PositionEncodingKind string
-
-const (
-	// PositionEncodingKindUtf16: Character offsets count UTF-16 code units. This is the default.
-	PositionEncodingKindUtf16 PositionEncodingKind = "utf-16"
-	// PositionEncodingKindUtf32: Character offsets count Unicode code points.
-	PositionEncodingKindUtf32 PositionEncodingKind = "utf-32"
-	// PositionEncodingKindUtf8: Character offsets count UTF-8 code units (bytes).
-	PositionEncodingKindUtf8 PositionEncodingKind = "utf-8"
-)
-
 // PromptCapabilities: Prompt capabilities supported by the agent in `session/prompt` requests.
 //
 // Baseline agent functionality requires support for [`ContentBlock::Text`]
@@ -4614,13 +3642,6 @@ type ProvidersCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
-// Range: A range in a text document, expressed as start and end positions.
-type Range struct {
-	Meta  Meta     `json:"_meta,omitzero"`
-	End   Position `json:"end"`
-	Start Position `json:"start"`
-}
-
 // ReadTextFileRequest: Request to read content from a text file.
 //
 // Only available if the client supports the `fs.readTextFile` capability.
@@ -4632,64 +3653,10 @@ type ReadTextFileRequest struct {
 	SessionID SessionId `json:"sessionId"`
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (r *ReadTextFileRequest) UnmarshalJSON(data []byte) error {
-	type alias ReadTextFileRequest
-	decoded := alias{}
-	raw := struct {
-		Limit json.RawMessage `json:"limit"`
-		Line  json.RawMessage `json:"line"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Limit) > 0 {
-		_ = unmarshalJSON(raw.Limit, &decoded.Limit)
-	}
-	if len(raw.Line) > 0 {
-		_ = unmarshalJSON(raw.Line, &decoded.Line)
-	}
-	*r = ReadTextFileRequest(decoded)
-	return nil
-}
-
 // ReadTextFileResponse: Response containing the contents of a text file.
 type ReadTextFileResponse struct {
 	Meta    Meta   `json:"_meta,omitzero"`
 	Content string `json:"content"`
-}
-
-// RejectNesNotification: Notification sent when a suggestion is rejected.
-type RejectNesNotification struct {
-	Meta      Meta             `json:"_meta,omitzero"`
-	ID        NesSuggestionId  `json:"id"`
-	Reason    *NesRejectReason `json:"reason,omitempty"`
-	SessionID SessionId        `json:"sessionId"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (n *RejectNesNotification) UnmarshalJSON(data []byte) error {
-	type alias RejectNesNotification
-	decoded := alias{}
-	raw := struct {
-		Reason json.RawMessage `json:"reason"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Reason) > 0 {
-		var value NesRejectReason
-		if err := unmarshalJSON(raw.Reason, &value); err == nil {
-			switch string(value) {
-			case "rejected", "ignored", "replaced", "cancelled":
-				decoded.Reason = &value
-			}
-		}
-	}
-	*n = RejectNesNotification(decoded)
-	return nil
 }
 
 // ReleaseTerminalRequest: Request to release a terminal and free its resources.
@@ -4857,54 +3824,12 @@ func (l *ResourceLink) UnmarshalJSON(data []byte) error {
 //
 // Only available if the Agent supports the `sessionCapabilities.resume` capability.
 type ResumeSessionRequest struct {
-	Meta                  Meta        `json:"_meta,omitzero"`
-	AdditionalDirectories []string    `json:"additionalDirectories,omitempty"`
-	Cwd                   string      `json:"cwd"`
-	McpServers            []McpServer `json:"mcpServers,omitempty"`
-	SessionID             SessionId   `json:"sessionId"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (r *ResumeSessionRequest) UnmarshalJSON(data []byte) error {
-	type alias ResumeSessionRequest
-	decoded := alias{}
-	raw := struct {
-		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
-		McpServers            json.RawMessage `json:"mcpServers"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.AdditionalDirectories) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.AdditionalDirectories, &values); err == nil {
-			decoded.AdditionalDirectories = []string{}
-			for _, value := range values {
-				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.AdditionalDirectories = append(decoded.AdditionalDirectories, item)
-				}
-			}
-		}
-	}
-	if len(raw.McpServers) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.McpServers, &values); err == nil {
-			decoded.McpServers = []McpServer{}
-			for _, value := range values {
-				var item McpServer
-				if err := unmarshalJSON(value, &item); err == nil {
-					switch item.Type {
-					case McpServerTypeHttp, McpServerTypeSse, McpServerTypeAcp, "":
-						decoded.McpServers = append(decoded.McpServers, item)
-					}
-				}
-			}
-		}
-	}
-	*r = ResumeSessionRequest(decoded)
-	return nil
+	Meta                  Meta          `json:"_meta,omitzero"`
+	AdditionalDirectories []string      `json:"additionalDirectories,omitempty"`
+	Cwd                   string        `json:"cwd"`
+	McpServers            []McpServer   `json:"mcpServers,omitempty"`
+	SessionID             SessionId     `json:"sessionId"`
+	SystemPrompt          *SystemPrompt `json:"systemPrompt,omitempty"`
 }
 
 // ResumeSessionResponse: Response from resuming an existing session.
@@ -5008,6 +3933,7 @@ type SessionCapabilities struct {
 	Fork                  *SessionForkCapabilities                  `json:"fork,omitempty"`
 	List                  *SessionListCapabilities                  `json:"list,omitempty"`
 	Resume                *SessionResumeCapabilities                `json:"resume,omitempty"`
+	SystemPrompt          *SessionSystemPromptCapabilities          `json:"systemPrompt,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -5021,6 +3947,7 @@ func (c *SessionCapabilities) UnmarshalJSON(data []byte) error {
 		Fork                  json.RawMessage `json:"fork"`
 		List                  json.RawMessage `json:"list"`
 		Resume                json.RawMessage `json:"resume"`
+		SystemPrompt          json.RawMessage `json:"systemPrompt"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
@@ -5043,6 +3970,9 @@ func (c *SessionCapabilities) UnmarshalJSON(data []byte) error {
 	}
 	if len(raw.Resume) > 0 {
 		_ = unmarshalJSON(raw.Resume, &decoded.Resume)
+	}
+	if len(raw.SystemPrompt) > 0 {
+		_ = unmarshalJSON(raw.SystemPrompt, &decoded.SystemPrompt)
 	}
 	*c = SessionCapabilities(decoded)
 	return nil
@@ -5608,6 +4538,80 @@ type SessionResumeCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// SessionSystemPromptCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Capabilities for client-provided system prompts.
+//
+// Supplying `{}` means the agent supports `systemPrompt` on session lifecycle
+// requests in `append` mode.
+type SessionSystemPromptCapabilities struct {
+	Meta Meta                                 `json:"_meta,omitzero"`
+	Mode *SessionSystemPromptModeCapabilities `json:"mode,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionSystemPromptCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SessionSystemPromptCapabilities
+	decoded := alias{}
+	raw := struct {
+		Mode json.RawMessage `json:"mode"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Mode) > 0 {
+		_ = unmarshalJSON(raw.Mode, &decoded.Mode)
+	}
+	*c = SessionSystemPromptCapabilities(decoded)
+	return nil
+}
+
+// SessionSystemPromptModeCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// System prompt delivery modes the agent supports in addition to `append`.
+//
+// `append` has no entry because every agent advertising
+// `sessionCapabilities.systemPrompt` supports it.
+type SessionSystemPromptModeCapabilities struct {
+	Meta     Meta                                     `json:"_meta,omitzero"`
+	Override *SessionSystemPromptOverrideCapabilities `json:"override,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionSystemPromptModeCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SessionSystemPromptModeCapabilities
+	decoded := alias{}
+	raw := struct {
+		Override json.RawMessage `json:"override"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Override) > 0 {
+		_ = unmarshalJSON(raw.Override, &decoded.Override)
+	}
+	*c = SessionSystemPromptModeCapabilities(decoded)
+	return nil
+}
+
+// SessionSystemPromptOverrideCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Capabilities for the `override` system prompt mode.
+//
+// Supplying `{}` means the agent supports replacing its built-in default
+// instructions with the client-provided system prompt.
+type SessionSystemPromptOverrideCapabilities struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
 // SessionUpdate: Different types of updates that can be sent during session processing.
 //
 // These updates provide real-time feedback about the agent's progress.
@@ -5792,11 +4796,7 @@ func UsageUpdateSessionUpdate(used uint64, size uint64) SessionUpdate {
 	}
 }
 
-// NoticeSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Advisory information for the user that is not part of session history.
+// NoticeSessionUpdate creates an SessionUpdate variant: Information for the user that is not part of session history.
 //
 // Agents MUST only send this update when the Client advertised
 // [`ClientSessionCapabilities::notices`].
@@ -5808,11 +4808,7 @@ func NoticeSessionUpdate(severity NoticeSeverity, title string) SessionUpdate {
 	}
 }
 
-// CompactionUpdateSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A context compaction has been created or updated.
+// CompactionUpdateSessionUpdate creates an SessionUpdate variant: A context compaction has been created or updated.
 //
 // Agents MUST only send this update when the Client advertised
 // [`ClientSessionCapabilities::compaction`].
@@ -5827,11 +4823,7 @@ func CompactionUpdateSessionUpdate(compactionID CompactionId, status CompactionS
 	}
 }
 
-// CompactionSummaryChunkSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A content block appended to a context compaction's retained summary.
+// CompactionSummaryChunkSessionUpdate creates an SessionUpdate variant: A content block appended to a context compaction's retained summary.
 //
 // Agents MUST only send this update when the Client advertised
 // [`ClientSessionCapabilities::compaction`].
@@ -6751,42 +5743,6 @@ type SetSessionModeResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
-// StartNesRequest: Request to start an NES session.
-type StartNesRequest struct {
-	Meta             Meta               `json:"_meta,omitzero"`
-	Repository       *NesRepository     `json:"repository,omitempty"`
-	WorkspaceFolders *[]WorkspaceFolder `json:"workspaceFolders,omitempty"`
-	WorkspaceUri     *string            `json:"workspaceUri,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (r *StartNesRequest) UnmarshalJSON(data []byte) error {
-	type alias StartNesRequest
-	decoded := alias{}
-	raw := struct {
-		Repository   json.RawMessage `json:"repository"`
-		WorkspaceUri json.RawMessage `json:"workspaceUri"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Repository) > 0 {
-		_ = unmarshalJSON(raw.Repository, &decoded.Repository)
-	}
-	if len(raw.WorkspaceUri) > 0 {
-		_ = unmarshalJSON(raw.WorkspaceUri, &decoded.WorkspaceUri)
-	}
-	*r = StartNesRequest(decoded)
-	return nil
-}
-
-// StartNesResponse: Response to `nes/start`.
-type StartNesResponse struct {
-	Meta      Meta      `json:"_meta,omitzero"`
-	SessionID SessionId `json:"sessionId"`
-}
-
 // StateUpdate: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -6799,7 +5755,8 @@ type StartNesResponse struct {
 type StateUpdate struct {
 	State      StateUpdateType `json:"state"`
 	Meta       Meta            `json:"_meta,omitzero"`
-	StopReason *StopReason     `json:"stopReason,omitempty"`
+	Error      *Error          `json:"error,omitempty"`
+	StopReason any             `json:"stopReason,omitempty"`
 	Usage      *Usage          `json:"usage,omitempty"`
 }
 
@@ -6858,21 +5815,15 @@ func (u *StateUpdate) UnmarshalJSON(data []byte) error {
 	type alias StateUpdate
 	decoded := alias{}
 	raw := struct {
-		StopReason json.RawMessage `json:"stopReason"`
-		Usage      json.RawMessage `json:"usage"`
+		Error json.RawMessage `json:"error"`
+		Usage json.RawMessage `json:"usage"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.StopReason) > 0 {
-		var value StopReason
-		if err := unmarshalJSON(raw.StopReason, &value); err == nil {
-			switch string(value) {
-			case "end_turn", "max_tokens", "max_turn_requests", "refusal", "cancelled":
-				decoded.StopReason = &value
-			}
-		}
+	if len(raw.Error) > 0 {
+		_ = unmarshalJSON(raw.Error, &decoded.Error)
 	}
 	if len(raw.Usage) > 0 {
 		_ = unmarshalJSON(raw.Usage, &decoded.Usage)
@@ -7060,33 +6011,62 @@ type SubagentUpdate struct {
 	NullFields []string `json:"-"`
 }
 
-// SuggestNesRequest: Request for a code suggestion.
-type SuggestNesRequest struct {
-	Meta        Meta               `json:"_meta,omitzero"`
-	Context     *NesSuggestContext `json:"context,omitempty"`
-	Position    Position           `json:"position"`
-	Selection   *Range             `json:"selection,omitempty"`
-	SessionID   SessionId          `json:"sessionId"`
-	TriggerKind NesTriggerKind     `json:"triggerKind"`
-	URI         string             `json:"uri"`
-	Version     int64              `json:"version"`
-}
-
-// SuggestNesResponse: Response to `nes/suggest`.
-type SuggestNesResponse struct {
-	Meta        Meta            `json:"_meta,omitzero"`
-	Suggestions []NesSuggestion `json:"suggestions"`
+// SystemPrompt: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Client-provided system-level instructions for a session.
+//
+// Clients MUST only send this when the Agent advertises
+// `sessionCapabilities.systemPrompt`. Agents that cannot apply it, for example
+// because of an unadvertised mode or an unsupported content block type, MUST
+// return an error instead of creating, loading, resuming, or forking the
+// session.
+type SystemPrompt struct {
+	Meta    Meta             `json:"_meta,omitzero"`
+	Content []ContentBlock   `json:"content"`
+	Mode    SystemPromptMode `json:"mode"`
 }
 
 // MarshalJSON implements json.Marshaler.
-func (r SuggestNesResponse) MarshalJSON() ([]byte, error) {
-	type alias SuggestNesResponse
-	a := alias(r)
-	if a.Suggestions == nil {
-		a.Suggestions = []NesSuggestion{}
+func (p SystemPrompt) MarshalJSON() ([]byte, error) {
+	type alias SystemPrompt
+	a := alias(p)
+	if a.Content == nil {
+		a.Content = []ContentBlock{}
 	}
 	return json.Marshal(a)
 }
+
+// SystemPromptMode: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// How the Agent combines a client-provided system prompt with its own instructions.
+//
+// Unknown modes parse as [`SystemPromptMode::Other`] so they can be stored,
+// proxied, or forwarded. An Agent MUST return an error for a mode it does not
+// support rather than treating it as `append` or `override`.
+type SystemPromptMode string
+
+const (
+	// SystemPromptModeAppend: Add the content to the Agent's own instructions rather than replacing them.
+	//
+	// Every Agent that advertises `sessionCapabilities.systemPrompt` supports this mode.
+	// Agents SHOULD give the content system-level precedence, for example in the
+	// model's system prompt or developer instructions rather than in user-turn
+	// content. Where it is placed and how it is formatted is implementation-defined.
+	SystemPromptModeAppend SystemPromptMode = "append"
+	// SystemPromptModeOverride: Replace the Agent's built-in default instructions with the content.
+	//
+	// This does not change tool availability, MCP servers, permissions, or session
+	// configuration. Context the Agent supplies from the workspace or environment
+	// MAY still be included. Clients that use this mode take responsibility for any
+	// tool guidance or safety instructions the Agent's default instructions
+	// provided, and MUST only use it when the Agent advertises
+	// `sessionCapabilities.systemPrompt.mode.override`.
+	SystemPromptModeOverride SystemPromptMode = "override"
+)
 
 // Terminal: Embed a terminal created with `terminal/create` by its id.
 //
@@ -7187,26 +6167,6 @@ func (c *TextContent) UnmarshalJSON(data []byte) error {
 	*c = TextContent(decoded)
 	return nil
 }
-
-// TextDocumentContentChangeEvent: A content change event for a document.
-//
-// When `range` is `None`, `text` is the full content of the document.
-// When `range` is `Some`, `text` replaces the given range.
-type TextDocumentContentChangeEvent struct {
-	Meta  Meta   `json:"_meta,omitzero"`
-	Range *Range `json:"range,omitempty"`
-	Text  string `json:"text"`
-}
-
-// TextDocumentSyncKind: How the agent wants document changes delivered.
-type TextDocumentSyncKind string
-
-const (
-	// TextDocumentSyncKindFull: Client sends the entire file content on each change.
-	TextDocumentSyncKindFull TextDocumentSyncKind = "full"
-	// TextDocumentSyncKindIncremental: Client sends only the changed ranges.
-	TextDocumentSyncKindIncremental TextDocumentSyncKind = "incremental"
-)
 
 // TextResourceContents: Text-based resource contents.
 type TextResourceContents struct {
@@ -7768,13 +6728,6 @@ func (r *WaitForTerminalExitResponse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// WorkspaceFolder: A workspace folder.
-type WorkspaceFolder struct {
-	Meta Meta   `json:"_meta,omitzero"`
-	Name string `json:"name"`
-	URI  string `json:"uri"`
-}
-
 // WriteTextFileRequest: Request to write content to a text file.
 //
 // Only available if the client supports the `fs.writeTextFile` capability.
@@ -7832,31 +6785,23 @@ func (r *ListSessionsResponse) UnmarshalJSON(data []byte) error {
 }
 
 // MarshalJSON implements json.Marshaler.
-func (s NesEditSuggestion) MarshalJSON() ([]byte, error) {
-	type alias NesEditSuggestion
-	a := alias(s)
-	if a.Edits == nil {
-		a.Edits = []NesTextEdit{}
+func (r LoadSessionRequest) MarshalJSON() ([]byte, error) {
+	type alias LoadSessionRequest
+	a := alias(r)
+	if a.McpServers == nil {
+		a.McpServers = []McpServer{}
 	}
 	return json.Marshal(a)
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *NesEditSuggestion) UnmarshalJSON(data []byte) error {
-	type alias NesEditSuggestion
-	decoded := alias{}
-	raw := struct {
-		CursorPosition json.RawMessage `json:"cursorPosition"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
+// MarshalJSON implements json.Marshaler.
+func (r NewSessionRequest) MarshalJSON() ([]byte, error) {
+	type alias NewSessionRequest
+	a := alias(r)
+	if a.McpServers == nil {
+		a.McpServers = []McpServer{}
 	}
-	if len(raw.CursorPosition) > 0 {
-		_ = unmarshalJSON(raw.CursorPosition, &decoded.CursorPosition)
-	}
-	*s = NesEditSuggestion(decoded)
-	return nil
+	return json.Marshal(a)
 }
 
 // MarshalJSON implements json.Marshaler.
