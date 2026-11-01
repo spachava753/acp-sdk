@@ -17,12 +17,12 @@ import (
 type ElicitationClientHandler interface {
 	// Complete: Notification that a URL-based elicitation has completed.
 	//
-	// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation#url-completion)
+	// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v1/draft/elicitation#url-completion)
 	Complete(context.Context, *CompleteElicitationNotification) error
 
 	// CreateElicitation: Requests structured user input via a form or URL.
 	//
-	// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation)
+	// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v1/draft/elicitation)
 	CreateElicitation(context.Context, *CreateElicitationRequest) (*CreateElicitationResponse, error)
 }
 
@@ -33,7 +33,7 @@ type FsClientHandler interface {
 	// Only available if the client advertises the `fs.readTextFile` capability.
 	// Allows the agent to access file contents within the client's environment.
 	//
-	// See protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)
+	// See protocol docs: [Client](https://agentclientprotocol.com/protocol/v1/draft/overview#client)
 	ReadTextFile(context.Context, *ReadTextFileRequest) (*ReadTextFileResponse, error)
 
 	// WriteTextFile: Writes content to a text file in the client's file system.
@@ -41,7 +41,7 @@ type FsClientHandler interface {
 	// Only available if the client advertises the `fs.writeTextFile` capability.
 	// Allows the agent to create or modify files within the client's environment.
 	//
-	// See protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)
+	// See protocol docs: [Client](https://agentclientprotocol.com/protocol/v1/draft/overview#client)
 	WriteTextFile(context.Context, *WriteTextFileRequest) (*WriteTextFileResponse, error)
 }
 
@@ -64,9 +64,9 @@ type SessionClientHandler interface {
 	// to the user and return their decision.
 	//
 	// If the client cancels the prompt turn via `session/cancel`, it MUST
-	// respond to this request with `RequestPermissionOutcome::Cancelled`.
+	// respond to this request with the `cancelled` outcome.
 	//
-	// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
+	// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v1/draft/tool-calls#requesting-permission)
 	RequestPermission(context.Context, *RequestPermissionRequest) (*RequestPermissionResponse, error)
 
 	// Update: Handles session update notifications from the agent.
@@ -79,7 +79,7 @@ type SessionClientHandler interface {
 	// sending a `session/cancel` notification, as the agent may send final
 	// updates before responding with the cancelled stop reason.
 	//
-	// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
+	// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v1/draft/prompt-turn#3-agent-reports-output)
 	Update(context.Context, *SessionNotification) error
 }
 
@@ -93,12 +93,12 @@ type TerminalClientHandler interface {
 	// to get the current output, wait for exit, and kill the command.
 	//
 	// The `TerminalId` can also be used to embed the terminal in a tool call
-	// by using the `ToolCallContent::Terminal` variant.
+	// by using `terminal` tool call content.
 	//
 	// The Agent is responsible for releasing the terminal by using the `terminal/release`
 	// method.
 	//
-	// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
+	// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/v1/draft/terminals)
 	CreateTerminal(context.Context, *CreateTerminalRequest) (*CreateTerminalResponse, error)
 
 	// KillTerminal: Kills the terminal command without releasing the terminal
@@ -112,7 +112,7 @@ type TerminalClientHandler interface {
 	//
 	// Note: Call `terminal/release` when `TerminalId` is no longer needed.
 	//
-	// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
+	// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/v1/draft/terminals)
 	KillTerminal(context.Context, *KillTerminalRequest) (*KillTerminalResponse, error)
 
 	// TerminalOutput: Gets the terminal output and exit status
@@ -120,7 +120,7 @@ type TerminalClientHandler interface {
 	// Returns the current content in the terminal without waiting for the command to exit.
 	// If the command has already exited, the exit status is included.
 	//
-	// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
+	// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/v1/draft/terminals)
 	TerminalOutput(context.Context, *TerminalOutputRequest) (*TerminalOutputResponse, error)
 
 	// ReleaseTerminal: Releases a terminal
@@ -134,12 +134,12 @@ type TerminalClientHandler interface {
 	// The `terminal/kill` method can be used to terminate the command without releasing
 	// the terminal, allowing the Agent to call `terminal/output` and other methods.
 	//
-	// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
+	// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/v1/draft/terminals)
 	ReleaseTerminal(context.Context, *ReleaseTerminalRequest) (*ReleaseTerminalResponse, error)
 
 	// WaitForTerminalExit: Waits for the terminal command to exit and return its exit status
 	//
-	// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
+	// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/v1/draft/terminals)
 	WaitForTerminalExit(context.Context, *WaitForTerminalExitRequest) (*WaitForTerminalExitResponse, error)
 }
 
@@ -150,9 +150,9 @@ type TerminalClientHandler interface {
 // initialization and whose type defines the `authenticate` flow.
 //
 // After successful authentication, the client can proceed to create sessions with
-// `new_session` without receiving an `auth_required` error.
+// `session/new` without receiving an `auth_required` (`-32000`) error.
 //
-// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
+// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v1/draft/initialization)
 func (c *Client) Authenticate(ctx context.Context, params *AuthenticateRequest) (*AuthenticateResponse, error) {
 	return call[AuthenticateResponse](ctx, c.rpc.conn, MethodAuthenticate, params)
 }
@@ -166,7 +166,7 @@ func (c *Client) Authenticate(ctx context.Context, params *AuthenticateRequest) 
 //
 // The agent should respond with its supported protocol version and capabilities.
 //
-// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
+// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v1/draft/initialization)
 func (c *Client) Initialize(ctx context.Context, params *InitializeRequest) (*InitializeResponse, error) {
 	return call[InitializeResponse](ctx, c.rpc.conn, MethodInitialize, params)
 }
@@ -223,9 +223,9 @@ func (c *Client) SetProvider(ctx context.Context, params *SetProviderRequest) (*
 // - Stop all language model requests as soon as possible
 // - Abort all tool call invocations in progress
 // - Send any pending `session/update` notifications
-// - Respond to the original `session/prompt` request with `StopReason::Cancelled`
+// - Respond to the original `session/prompt` request with the `cancelled` stop reason
 //
-// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
+// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v1/draft/prompt-turn#cancellation)
 func (c *Client) Cancel(ctx context.Context, params *CancelNotification) error {
 	return notify(ctx, c.rpc.conn, MethodSessionCancel, params)
 }
@@ -284,7 +284,7 @@ func (c *Client) ListSessions(ctx context.Context, params *ListSessionsRequest) 
 // - Connect to the specified MCP servers
 // - Stream the entire conversation history back to the client via notifications
 //
-// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
+// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/v1/draft/session-setup#loading-sessions)
 func (c *Client) LoadSession(ctx context.Context, params *LoadSessionRequest) (*LoadSessionResponse, error) {
 	return call[LoadSessionResponse](ctx, c.rpc.conn, MethodSessionLoad, params)
 }
@@ -298,9 +298,9 @@ func (c *Client) LoadSession(ctx context.Context, params *LoadSessionRequest) (*
 // - Connect to any specified MCP servers
 // - Return a unique session ID for future requests
 //
-// May return an `auth_required` error if the agent requires authentication.
+// May return an `auth_required` (`-32000`) error if the agent requires authentication.
 //
-// See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/session-setup)
+// See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/v1/draft/session-setup)
 func (c *Client) NewSession(ctx context.Context, params *NewSessionRequest) (*NewSessionResponse, error) {
 	return call[NewSessionResponse](ctx, c.rpc.conn, MethodSessionNew, params)
 }
@@ -315,7 +315,7 @@ func (c *Client) NewSession(ctx context.Context, params *NewSessionRequest) (*Ne
 // - Executes any requested tool calls
 // - Returns when the turn is complete with a stop reason
 //
-// See protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/prompt-turn)
+// See protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/v1/draft/prompt-turn)
 func (c *Client) Prompt(ctx context.Context, params *PromptRequest) (*PromptResponse, error) {
 	return call[PromptResponse](ctx, c.rpc.conn, MethodSessionPrompt, params)
 }
@@ -347,7 +347,7 @@ func (c *Client) SetSessionConfigOption(ctx context.Context, params *SetSessionC
 // This method can be called at any time during a session, whether the Agent is
 // idle or actively generating a response.
 //
-// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/v1/draft/session-modes)
 func (c *Client) SetSessionMode(ctx context.Context, params *SetSessionModeRequest) (*SetSessionModeResponse, error) {
 	return call[SetSessionModeResponse](ctx, c.rpc.conn, MethodSessionSetMode, params)
 }
