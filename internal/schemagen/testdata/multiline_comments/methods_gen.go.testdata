@@ -1,0 +1,24 @@
+package acp
+
+import "context"
+
+const (
+	// MethodDocsGenerate: Generates documentation from structured input.
+	//
+	// The agent should preserve Markdown formatting.
+	//
+	// - Validate the title
+	// - Render the body
+	MethodDocsGenerate = "docs/generate"
+)
+
+// DocsGenerateHandler handles docs/generate requests.
+type DocsGenerateHandler interface {
+	// DocsGenerate: Generates documentation from structured input.
+	//
+	// The agent should preserve Markdown formatting.
+	//
+	// - Validate the title
+	// - Render the body
+	DocsGenerate(context.Context, *GenerateDocsRequest) (*GenerateDocsResponse, error)
+}

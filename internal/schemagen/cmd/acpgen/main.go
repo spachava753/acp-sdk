@@ -6,7 +6,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -52,33 +51,27 @@ func run(schemaPath, outDir string) error {
 	if len(files) == 0 {
 		return fmt.Errorf("schemagen produced no files for %s", schemaPath)
 	}
+	// Remove generated files from earlier runs that this schema no longer produces.
+	stale, err := filepath.Glob(filepath.Join(outDir, "*_gen.go"))
+	if err != nil {
+		return err
+	}
+	produced := map[string]bool{}
 	for _, file := range files {
-		contents := addGeneratedFileScaffolding(file.Filename, file.Contents)
+		produced[file.Filename] = true
+	}
+	for _, path := range stale {
+		if !produced[filepath.Base(path)] {
+			if err := os.Remove(path); err != nil {
+				return err
+			}
+		}
+	}
+	for _, file := range files {
+		contents := append([]byte(generatedHeader), file.Contents...)
 		if err := os.WriteFile(filepath.Join(outDir, file.Filename), contents, 0644); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func addGeneratedFileScaffolding(filename string, contents []byte) []byte {
-	if filename == "agent_gen.go" || filename == "client_gen.go" {
-		contents = addRPCImports(contents)
-	}
-	return append([]byte(generatedHeader), contents...)
-}
-
-func addRPCImports(contents []byte) []byte {
-	const pkg = "package acp\n\n"
-	const imports = `package acp
-
-import (
-	"context"
-
-	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
-	"github.com/spachava753/acp-sdk/jsonrpc"
-)
-
-`
-	return bytes.Replace(contents, []byte(pkg), []byte(imports), 1)
 }

@@ -1,0 +1,14 @@
+package acp
+
+import "context"
+
+const (
+	// MethodMcpMessage: Asks the peer to process a message.
+	MethodMcpMessage = "mcp/message"
+)
+
+// McpMessageHandler handles mcp/message requests.
+type McpMessageHandler interface {
+	// McpMessage: Asks the peer to process a message.
+	McpMessage(context.Context, *MessageRequest) (*MessageResponse, error)
+}

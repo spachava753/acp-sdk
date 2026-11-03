@@ -1,0 +1,38 @@
+package acp
+
+import "context"
+
+const (
+	// MethodAlphaStart: Asks the agent to start alpha processing.
+	MethodAlphaStart = "alpha/start"
+	// MethodBetaStop: Asks the agent to stop beta processing.
+	MethodBetaStop = "beta/stop"
+	// MethodDeltaWrite: Asks the client to write delta state.
+	MethodDeltaWrite = "delta/write"
+	// MethodGammaRead: Asks the client to read gamma state.
+	MethodGammaRead = "gamma/read"
+)
+
+// AlphaStartHandler handles alpha/start requests.
+type AlphaStartHandler interface {
+	// AlphaStart: Asks the agent to start alpha processing.
+	AlphaStart(context.Context, *StartAlphaRequest) (*StartAlphaResponse, error)
+}
+
+// BetaStopHandler handles beta/stop requests.
+type BetaStopHandler interface {
+	// BetaStop: Asks the agent to stop beta processing.
+	BetaStop(context.Context, *StopBetaRequest) (*StopBetaResponse, error)
+}
+
+// DeltaWriteHandler handles delta/write requests.
+type DeltaWriteHandler interface {
+	// DeltaWrite: Asks the client to write delta state.
+	DeltaWrite(context.Context, *WriteDeltaRequest) (*WriteDeltaResponse, error)
+}
+
+// GammaReadHandler handles gamma/read requests.
+type GammaReadHandler interface {
+	// GammaRead: Asks the client to read gamma state.
+	GammaRead(context.Context, *ReadGammaRequest) (*ReadGammaResponse, error)
+}

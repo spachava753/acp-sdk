@@ -20,7 +20,7 @@ type Client struct {
 func Connect(ctx context.Context, transport Transport, handler any) (*Client, error) {
 	client := &Client{handler: handler}
 	rpc, err := connectRPC(ctx, transport, func(ctx context.Context, req *jsonrpc.Request) (any, error) {
-		return client.handle(ctx, req)
+		return handleClientRequest(ctx, client.handler, req)
 	})
 	if err != nil {
 		return nil, err

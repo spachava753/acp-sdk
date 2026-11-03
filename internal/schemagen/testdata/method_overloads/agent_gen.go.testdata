@@ -1,37 +1,27 @@
 package acp
 
-const (
-	// MethodMcpMessage: Sends an MCP-over-ACP notification.
-	MethodMcpMessage = "mcp/message"
+import (
+	"context"
+	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
+	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
-// McpHandler handles all mcp related agent methods.
-type McpHandler interface {
-	// Message: Sends an MCP-over-ACP notification.
-	Message(context.Context, *MessageMcpNotification) error
-
-	// MessageMcp: Asks the peer to process an MCP message.
-	MessageMcp(context.Context, *MessageMcpRequest) (*MessageMcpResponse, error)
-}
-
-// Message: Sends an MCP-over-ACP notification.
-func (c *AgentConnection) Message(ctx context.Context, params *MessageMcpNotification) error {
-	return notify(ctx, c.rpc.conn, MethodMcpMessage, params)
-}
-
-// MessageMcp: Asks the peer to process an MCP message.
-func (c *AgentConnection) MessageMcp(ctx context.Context, params *MessageMcpRequest) (*MessageMcpResponse, error) {
+// McpMessage: Asks the peer to process an MCP message.
+func (c *AgentConnection) McpMessage(ctx context.Context, params *MessageMcpRequest) (*MessageMcpResponse, error) {
 	return call[MessageMcpResponse](ctx, c.rpc.conn, MethodMcpMessage, params)
 }
 
-func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (any, error) {
+// McpMessageNotification: Sends an MCP-over-ACP notification.
+func (c *AgentConnection) McpMessageNotification(ctx context.Context, params *MessageMcpNotification) error {
+	return notify(ctx, c.rpc.conn, MethodMcpMessage, params)
+}
+
+func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
 	switch req.Method {
 	case MethodMcpMessage:
 		if req.IsCall() {
-			handler, ok := agent.(interface {
-				MessageMcp(context.Context, *MessageMcpRequest) (*MessageMcpResponse, error)
-			})
+			h, ok := handler.(McpMessageHandler)
 			if !ok {
 				return nil, methodNotFound(req.Method)
 			}
@@ -39,11 +29,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 			if err != nil {
 				return nil, err
 			}
-			return rpcResult(handler.MessageMcp(ctx, params))
+			return rpcResult(h.McpMessage(ctx, params))
 		}
-		handler, ok := agent.(interface {
-			Message(context.Context, *MessageMcpNotification) error
-		})
+		h, ok := handler.(McpMessageNotificationHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -51,8 +39,8 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return nil, handler.Message(ctx, params)
+		return nil, h.McpMessageNotification(ctx, params)
 	default:
-		return handleExtension(ctx, agent, req)
+		return handleExtension(ctx, handler, req)
 	}
 }

@@ -28,7 +28,7 @@ func TestCommandTransport(t *testing.T) {
 	if init.ProtocolVersion != ProtocolVersion(1) {
 		t.Fatalf("protocol version = %d, want %d", init.ProtocolVersion, ProtocolVersion(1))
 	}
-	session, err := client.NewSession(t.Context(), &NewSessionRequest{Cwd: "/repo"})
+	session, err := client.SessionNew(t.Context(), &NewSessionRequest{Cwd: "/repo"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,12 +59,12 @@ func (a *commandTransportAgent) Initialize(context.Context, *InitializeRequest) 
 	return &InitializeResponse{ProtocolVersion: ProtocolVersion(1)}, nil
 }
 
-func (a *commandTransportAgent) NewSession(context.Context, *NewSessionRequest) (*NewSessionResponse, error) {
+func (a *commandTransportAgent) SessionNew(context.Context, *NewSessionRequest) (*NewSessionResponse, error) {
 	return &NewSessionResponse{SessionID: "helper-session"}, nil
 }
 
-func (a *commandTransportAgent) Prompt(context.Context, *PromptRequest) (*PromptResponse, error) {
+func (a *commandTransportAgent) SessionPrompt(context.Context, *PromptRequest) (*PromptResponse, error) {
 	return &PromptResponse{StopReason: StopReasonEndTurn}, nil
 }
 
-func (a *commandTransportAgent) Cancel(context.Context, *CancelNotification) error { return nil }
+func (a *commandTransportAgent) SessionCancel(context.Context, *CancelNotification) error { return nil }

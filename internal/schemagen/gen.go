@@ -2,8 +2,7 @@ package schemagen
 
 import (
 	"github.com/google/jsonschema-go/jsonschema"
-	"github.com/spachava753/acp-sdk/internal/schemagen/agentgen"
-	"github.com/spachava753/acp-sdk/internal/schemagen/clientgen"
+	"github.com/spachava753/acp-sdk/internal/schemagen/rpcgen"
 	"github.com/spachava753/acp-sdk/internal/schemagen/typegen"
 )
 
@@ -12,20 +11,14 @@ type GeneratedFile struct {
 	Contents []byte
 }
 
-// Generate takes a json schema and returns generated ACP source files.
+// Generate returns the ACP source files for schema.
 func Generate(schema *jsonschema.Schema) []GeneratedFile {
-	// The eventual generator has three passes: types, agent RPC glue, and client
-	// RPC glue. This first pass intentionally emits only protocol data types so
-	// the type-shape rules can be reviewed independently before wiring methods.
 	var gf []GeneratedFile
 	if contents := typegen.Generate(schema); len(contents) > 0 {
 		gf = append(gf, GeneratedFile{Filename: "types_gen.go", Contents: contents})
 	}
-	if contents := agentgen.Generate(schema); len(contents) > 0 {
-		gf = append(gf, GeneratedFile{Filename: "agent_gen.go", Contents: contents})
-	}
-	if contents := clientgen.Generate(schema); len(contents) > 0 {
-		gf = append(gf, GeneratedFile{Filename: "client_gen.go", Contents: contents})
+	for _, file := range rpcgen.Generate(schema) {
+		gf = append(gf, GeneratedFile{Filename: file.Name, Contents: file.Contents})
 	}
 	return gf
 }

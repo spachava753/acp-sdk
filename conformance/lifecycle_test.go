@@ -32,32 +32,32 @@ func TestConformanceLifecycleAndOptionalAgentMethods(t *testing.T) {
 		t.Fatalf("agent capabilities = %#v, want loadSession", init.AgentCapabilities)
 	}
 
-	session, err := client.NewSession(ctx, &acp.NewSessionRequest{Cwd: "/workspace", McpServers: []acp.McpServer{}})
+	session, err := client.SessionNew(ctx, &acp.NewSessionRequest{Cwd: "/workspace", McpServers: []acp.McpServer{}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if session.SessionID != "sess-123" {
 		t.Fatalf("session ID = %q, want sess-123", session.SessionID)
 	}
-	if _, err := client.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: session.SessionID, Cwd: "/workspace", McpServers: []acp.McpServer{}}); err != nil {
+	if _, err := client.SessionLoad(ctx, &acp.LoadSessionRequest{SessionID: session.SessionID, Cwd: "/workspace", McpServers: []acp.McpServer{}}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := client.Authenticate(ctx, &acp.AuthenticateRequest{MethodID: "password"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.ListSessions(ctx, &acp.ListSessionsRequest{Cwd: stringPtr("/workspace")}); err != nil {
+	if _, err := client.SessionList(ctx, &acp.ListSessionsRequest{Cwd: stringPtr("/workspace")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.ResumeSession(ctx, &acp.ResumeSessionRequest{SessionID: session.SessionID, Cwd: "/workspace"}); err != nil {
+	if _, err := client.SessionResume(ctx, &acp.ResumeSessionRequest{SessionID: session.SessionID, Cwd: "/workspace"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.SetSessionMode(ctx, &acp.SetSessionModeRequest{SessionID: session.SessionID, ModeID: "code"}); err != nil {
+	if _, err := client.SessionSetMode(ctx, &acp.SetSessionModeRequest{SessionID: session.SessionID, ModeID: "code"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.SetSessionConfigOption(ctx, &acp.SetSessionConfigOptionRequest{SessionID: session.SessionID, ConfigID: "model", Value: "gpt-4o-mini"}); err != nil {
+	if _, err := client.SessionSetConfigOption(ctx, &acp.SetSessionConfigOptionRequest{SessionID: session.SessionID, ConfigID: "model", Value: "gpt-4o-mini"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.CloseSession(ctx, &acp.CloseSessionRequest{SessionID: session.SessionID}); err != nil {
+	if _, err := client.SessionClose(ctx, &acp.CloseSessionRequest{SessionID: session.SessionID}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -89,16 +89,16 @@ func (a *lifecycleAgent) Initialize(_ context.Context, params *acp.InitializeReq
 	return &acp.InitializeResponse{ProtocolVersion: params.ProtocolVersion, AgentCapabilities: &acp.AgentCapabilities{LoadSession: true}, AuthMethods: []acp.AuthMethod{}}, nil
 }
 
-func (a *lifecycleAgent) NewSession(_ context.Context, params *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
+func (a *lifecycleAgent) SessionNew(_ context.Context, params *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
 	a.record(acp.MethodSessionNew, *params)
 	return &acp.NewSessionResponse{SessionID: acp.SessionId("sess-123")}, nil
 }
 
-func (a *lifecycleAgent) Prompt(context.Context, *acp.PromptRequest) (*acp.PromptResponse, error) {
+func (a *lifecycleAgent) SessionPrompt(context.Context, *acp.PromptRequest) (*acp.PromptResponse, error) {
 	return &acp.PromptResponse{StopReason: acp.StopReasonEndTurn}, nil
 }
 
-func (a *lifecycleAgent) Cancel(_ context.Context, params *acp.CancelNotification) error {
+func (a *lifecycleAgent) SessionCancel(_ context.Context, params *acp.CancelNotification) error {
 	a.record(acp.MethodSessionCancel, *params)
 	return nil
 }
@@ -108,32 +108,32 @@ func (a *lifecycleAgent) Authenticate(_ context.Context, params *acp.Authenticat
 	return &acp.AuthenticateResponse{}, nil
 }
 
-func (a *lifecycleAgent) LoadSession(_ context.Context, params *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
+func (a *lifecycleAgent) SessionLoad(_ context.Context, params *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
 	a.record(acp.MethodSessionLoad, *params)
 	return &acp.LoadSessionResponse{}, nil
 }
 
-func (a *lifecycleAgent) ResumeSession(_ context.Context, params *acp.ResumeSessionRequest) (*acp.ResumeSessionResponse, error) {
+func (a *lifecycleAgent) SessionResume(_ context.Context, params *acp.ResumeSessionRequest) (*acp.ResumeSessionResponse, error) {
 	a.record(acp.MethodSessionResume, *params)
 	return &acp.ResumeSessionResponse{}, nil
 }
 
-func (a *lifecycleAgent) ListSessions(_ context.Context, params *acp.ListSessionsRequest) (*acp.ListSessionsResponse, error) {
+func (a *lifecycleAgent) SessionList(_ context.Context, params *acp.ListSessionsRequest) (*acp.ListSessionsResponse, error) {
 	a.record(acp.MethodSessionList, *params)
 	return &acp.ListSessionsResponse{Sessions: []acp.SessionInfo{{SessionID: acp.SessionId("sess-123"), Cwd: "/workspace"}}}, nil
 }
 
-func (a *lifecycleAgent) CloseSession(_ context.Context, params *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error) {
+func (a *lifecycleAgent) SessionClose(_ context.Context, params *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error) {
 	a.record(acp.MethodSessionClose, *params)
 	return &acp.CloseSessionResponse{}, nil
 }
 
-func (a *lifecycleAgent) SetSessionMode(_ context.Context, params *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error) {
+func (a *lifecycleAgent) SessionSetMode(_ context.Context, params *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error) {
 	a.record(acp.MethodSessionSetMode, *params)
 	return &acp.SetSessionModeResponse{}, nil
 }
 
-func (a *lifecycleAgent) SetSessionConfigOption(_ context.Context, params *acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
+func (a *lifecycleAgent) SessionSetConfigOption(_ context.Context, params *acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
 	a.record(acp.MethodSessionSetConfigOption, *params)
 	return &acp.SetSessionConfigOptionResponse{ConfigOptions: []acp.SessionConfigOption{}}, nil
 }

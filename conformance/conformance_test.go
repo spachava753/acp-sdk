@@ -26,31 +26,31 @@ func newConformanceClient() *conformanceClient {
 	return &conformanceClient{files: map[string]string{}}
 }
 
-func (c *conformanceClient) Update(_ context.Context, params *acp.SessionNotification) error {
+func (c *conformanceClient) SessionUpdate(_ context.Context, params *acp.SessionNotification) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.updates = append(c.updates, *params)
 	return nil
 }
 
-func (c *conformanceClient) ReadTextFile(_ context.Context, params *acp.ReadTextFileRequest) (*acp.ReadTextFileResponse, error) {
+func (c *conformanceClient) FsReadTextFile(_ context.Context, params *acp.ReadTextFileRequest) (*acp.ReadTextFileResponse, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return &acp.ReadTextFileResponse{Content: c.files[params.Path]}, nil
 }
 
-func (c *conformanceClient) WriteTextFile(_ context.Context, params *acp.WriteTextFileRequest) (*acp.WriteTextFileResponse, error) {
+func (c *conformanceClient) FsWriteTextFile(_ context.Context, params *acp.WriteTextFileRequest) (*acp.WriteTextFileResponse, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.files[params.Path] = params.Content
 	return &acp.WriteTextFileResponse{}, nil
 }
 
-func (c *conformanceClient) RequestPermission(context.Context, *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
+func (c *conformanceClient) SessionRequestPermission(context.Context, *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
 	return &acp.RequestPermissionResponse{Outcome: acp.RequestPermissionOutcome{Outcome: "selected", OptionID: "allow"}}, nil
 }
 
-func (c *conformanceClient) CreateTerminal(_ context.Context, params *acp.CreateTerminalRequest) (*acp.CreateTerminalResponse, error) {
+func (c *conformanceClient) TerminalCreate(_ context.Context, params *acp.CreateTerminalRequest) (*acp.CreateTerminalResponse, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.terminals = append(c.terminals, params.Command)
@@ -61,15 +61,15 @@ func (c *conformanceClient) TerminalOutput(context.Context, *acp.TerminalOutputR
 	return &acp.TerminalOutputResponse{Output: "ok"}, nil
 }
 
-func (c *conformanceClient) WaitForTerminalExit(context.Context, *acp.WaitForTerminalExitRequest) (*acp.WaitForTerminalExitResponse, error) {
+func (c *conformanceClient) TerminalWaitForExit(context.Context, *acp.WaitForTerminalExitRequest) (*acp.WaitForTerminalExitResponse, error) {
 	return &acp.WaitForTerminalExitResponse{}, nil
 }
 
-func (c *conformanceClient) KillTerminal(context.Context, *acp.KillTerminalRequest) (*acp.KillTerminalResponse, error) {
+func (c *conformanceClient) TerminalKill(context.Context, *acp.KillTerminalRequest) (*acp.KillTerminalResponse, error) {
 	return &acp.KillTerminalResponse{}, nil
 }
 
-func (c *conformanceClient) ReleaseTerminal(context.Context, *acp.ReleaseTerminalRequest) (*acp.ReleaseTerminalResponse, error) {
+func (c *conformanceClient) TerminalRelease(context.Context, *acp.ReleaseTerminalRequest) (*acp.ReleaseTerminalResponse, error) {
 	return &acp.ReleaseTerminalResponse{}, nil
 }
 
@@ -152,34 +152,34 @@ func genericPtr[T any](v T) *T   { return &v }
 
 type noopSessionHandler struct{}
 
-func (noopSessionHandler) Cancel(context.Context, *acp.CancelNotification) error { return nil }
-func (noopSessionHandler) CloseSession(context.Context, *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error) {
+func (noopSessionHandler) SessionCancel(context.Context, *acp.CancelNotification) error { return nil }
+func (noopSessionHandler) SessionClose(context.Context, *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error) {
 	return &acp.CloseSessionResponse{}, nil
 }
-func (noopSessionHandler) DeleteSession(context.Context, *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error) {
+func (noopSessionHandler) SessionDelete(context.Context, *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error) {
 	return &acp.DeleteSessionResponse{}, nil
 }
-func (noopSessionHandler) ForkSession(context.Context, *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
+func (noopSessionHandler) SessionFork(context.Context, *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
 	return &acp.ForkSessionResponse{}, nil
 }
-func (noopSessionHandler) ListSessions(context.Context, *acp.ListSessionsRequest) (*acp.ListSessionsResponse, error) {
+func (noopSessionHandler) SessionList(context.Context, *acp.ListSessionsRequest) (*acp.ListSessionsResponse, error) {
 	return &acp.ListSessionsResponse{}, nil
 }
-func (noopSessionHandler) LoadSession(context.Context, *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
+func (noopSessionHandler) SessionLoad(context.Context, *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
 	return &acp.LoadSessionResponse{}, nil
 }
-func (noopSessionHandler) NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
+func (noopSessionHandler) SessionNew(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
 	return &acp.NewSessionResponse{}, nil
 }
-func (noopSessionHandler) Prompt(context.Context, *acp.PromptRequest) (*acp.PromptResponse, error) {
+func (noopSessionHandler) SessionPrompt(context.Context, *acp.PromptRequest) (*acp.PromptResponse, error) {
 	return &acp.PromptResponse{StopReason: acp.StopReasonEndTurn}, nil
 }
-func (noopSessionHandler) ResumeSession(context.Context, *acp.ResumeSessionRequest) (*acp.ResumeSessionResponse, error) {
+func (noopSessionHandler) SessionResume(context.Context, *acp.ResumeSessionRequest) (*acp.ResumeSessionResponse, error) {
 	return &acp.ResumeSessionResponse{}, nil
 }
-func (noopSessionHandler) SetSessionConfigOption(context.Context, *acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
+func (noopSessionHandler) SessionSetConfigOption(context.Context, *acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
 	return &acp.SetSessionConfigOptionResponse{}, nil
 }
-func (noopSessionHandler) SetSessionMode(context.Context, *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error) {
+func (noopSessionHandler) SessionSetMode(context.Context, *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error) {
 	return &acp.SetSessionModeResponse{}, nil
 }

@@ -1,28 +1,21 @@
 package acp
 
-const (
-	// MethodMcpMessage: Asks the peer to process a message.
-	MethodMcpMessage = "mcp/message"
+import (
+	"context"
+	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
+	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
-// McpHandler handles all mcp related agent methods.
-type McpHandler interface {
-	// Message: Asks the peer to process a message.
-	Message(context.Context, *MessageRequest) (*MessageResponse, error)
-}
-
-// Message: Asks the peer to process a message.
-func (c *AgentConnection) Message(ctx context.Context, params *MessageRequest) (*MessageResponse, error) {
+// McpMessage: Asks the peer to process a message.
+func (c *AgentConnection) McpMessage(ctx context.Context, params *MessageRequest) (*MessageResponse, error) {
 	return call[MessageResponse](ctx, c.rpc.conn, MethodMcpMessage, params)
 }
 
-func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (any, error) {
+func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
 	switch req.Method {
 	case MethodMcpMessage:
-		handler, ok := agent.(interface {
-			Message(context.Context, *MessageRequest) (*MessageResponse, error)
-		})
+		h, ok := handler.(McpMessageHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -30,8 +23,8 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.Message(ctx, params))
+		return rpcResult(h.McpMessage(ctx, params))
 	default:
-		return handleExtension(ctx, agent, req)
+		return handleExtension(ctx, handler, req)
 	}
 }

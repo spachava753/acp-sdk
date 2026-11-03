@@ -61,12 +61,12 @@ func (*agent) Initialize(context.Context, *acp.InitializeRequest) (*acp.Initiali
 	}, nil
 }
 
-func (*agent) NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
+func (*agent) SessionNew(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
 	// Production agents should generate a unique ID for every session.
 	return &acp.NewSessionResponse{SessionID: "example-session"}, nil
 }
 
-func (a *agent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.PromptResponse, error) {
+func (a *agent) SessionPrompt(ctx context.Context, req *acp.PromptRequest) (*acp.PromptResponse, error) {
 	err := a.conn.SessionUpdate(ctx, &acp.SessionNotification{
 		SessionID: req.SessionID,
 		Update: acp.AgentMessageChunkSessionUpdate(
@@ -79,7 +79,7 @@ func (a *agent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.Prompt
 	return &acp.PromptResponse{StopReason: acp.StopReasonEndTurn}, nil
 }
 
-func (*agent) Cancel(context.Context, *acp.CancelNotification) error {
+func (*agent) SessionCancel(context.Context, *acp.CancelNotification) error {
 	return nil
 }
 
@@ -97,7 +97,7 @@ func main() {
 }
 ```
 
-See the complete [example agent](./examples/agent), which also demonstrates session IDs and optional session methods.
+See the complete [example agent](./examples/agent), which also demonstrates session IDs and interface guards.
 
 ## Quick Start: Client
 
@@ -118,7 +118,7 @@ import (
 
 type clientHandler struct{}
 
-func (clientHandler) Update(_ context.Context, notification *acp.SessionNotification) error {
+func (clientHandler) SessionUpdate(_ context.Context, notification *acp.SessionNotification) error {
 	fmt.Printf("session %s update: %s\n",
 		notification.SessionID,
 		notification.Update.SessionUpdate,
@@ -155,7 +155,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	session, err := client.NewSession(ctx, &acp.NewSessionRequest{
+	session, err := client.SessionNew(ctx, &acp.NewSessionRequest{
 		Cwd:        cwd,
 		McpServers: []acp.McpServer{},
 	})
@@ -163,7 +163,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Prompt(ctx, &acp.PromptRequest{
+	result, err := client.SessionPrompt(ctx, &acp.PromptRequest{
 		SessionID: session.SessionID,
 		Prompt:    []acp.ContentBlock{acp.TextContentBlock("Hello")},
 	})
@@ -178,16 +178,25 @@ See the complete [example client](./examples/client).
 
 ## Handler Model
 
-`RunAgent`'s factory and `Connect`'s callback-handler argument accept `any`. At dispatch time, the SDK checks whether the value implements the method signature for the incoming ACP request or notification. This lets applications implement a focused subset instead of one monolithic interface.
+`RunAgent`'s factory and `Connect`'s callback-handler argument accept `any`. At dispatch time, the SDK checks whether the value implements the handler for the incoming ACP request or notification. Implement only the methods you support; any other request gets a JSON-RPC `method not found` error. Advertise only capabilities whose methods you implement.
 
-Generated grouped interfaces are available for compile-time checks:
+Generated names follow the wire method: `session/prompt` is `SessionPrompt` on the sending connection and on the handler, and its constant is `MethodSessionPrompt`. When one method has both a request and a notification form, as `proxy/successor` does, the notification adds a `Notification` suffix (`ProxySuccessorNotification`).
 
-- Agent-side groups include `InitializeHandler`, `AuthenticateHandler`, `SessionHandler`, `DocumentHandler`, `ProvidersHandler`, `NesHandler`, and `McpHandler`.
-- Client-side groups include `SessionClientHandler`, `FsClientHandler`, `TerminalClientHandler`, `ElicitationClientHandler`, and `McpClientHandler`.
+Each handled method has a one-method interface named after it, such as `SessionPromptHandler`. Add an interface guard for every method you implement so a signature mismatch fails to compile instead of becoming `method not found` at runtime:
 
-A value does not need to satisfy a whole group. If it does not implement an incoming method, the SDK returns JSON-RPC `method not found`. Advertise only capabilities whose corresponding methods are implemented.
+```go
+var (
+	_ acp.InitializeHandler    = (*agent)(nil)
+	_ acp.SessionNewHandler    = (*agent)(nil)
+	_ acp.SessionPromptHandler = (*agent)(nil)
+	_ acp.SessionCancelHandler = (*agent)(nil)
+	_ acp.SessionLoadHandler   = (*agent)(nil) // advertised with loadSession
+)
+```
 
-Agents call client-side methods through `AgentConnection`, including `SessionUpdate`, `RequestPermission`, `ReadTextFile`, `WriteTextFile`, and the terminal lifecycle methods. Clients call agent-side methods through `Client`, including initialization, authentication, session lifecycle, prompting, cancellation, and supported unstable extensions.
+Agents call client methods through `AgentConnection`, such as `SessionUpdate`, `SessionRequestPermission`, `FsReadTextFile`, and the `Terminal*` methods. Clients call agent methods through `Client`, such as `Initialize`, `SessionNew`, `SessionPrompt`, and `SessionCancel`.
+
+Proxy Chains methods are generated on both sides: a conductor is a client and a proxy is an agent. `Client` sends `ProxyInitialize`, both sides send `ProxySuccessor` and `ProxySuccessorNotification`, and handlers implement the matching `Proxy*Handler` interfaces.
 
 ## Extensions
 
