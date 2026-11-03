@@ -17,35 +17,35 @@ func ptr[T any](v T) *T { return &v }
 
 type noopSessionHandler struct{}
 
-func (noopSessionHandler) Cancel(context.Context, *CancelNotification) error { return nil }
-func (noopSessionHandler) CloseSession(context.Context, *CloseSessionRequest) (*CloseSessionResponse, error) {
+func (noopSessionHandler) SessionCancel(context.Context, *CancelNotification) error { return nil }
+func (noopSessionHandler) SessionClose(context.Context, *CloseSessionRequest) (*CloseSessionResponse, error) {
 	return &CloseSessionResponse{}, nil
 }
-func (noopSessionHandler) DeleteSession(context.Context, *DeleteSessionRequest) (*DeleteSessionResponse, error) {
+func (noopSessionHandler) SessionDelete(context.Context, *DeleteSessionRequest) (*DeleteSessionResponse, error) {
 	return &DeleteSessionResponse{}, nil
 }
-func (noopSessionHandler) ForkSession(context.Context, *ForkSessionRequest) (*ForkSessionResponse, error) {
+func (noopSessionHandler) SessionFork(context.Context, *ForkSessionRequest) (*ForkSessionResponse, error) {
 	return &ForkSessionResponse{}, nil
 }
-func (noopSessionHandler) ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error) {
+func (noopSessionHandler) SessionList(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error) {
 	return &ListSessionsResponse{}, nil
 }
-func (noopSessionHandler) LoadSession(context.Context, *LoadSessionRequest) (*LoadSessionResponse, error) {
+func (noopSessionHandler) SessionLoad(context.Context, *LoadSessionRequest) (*LoadSessionResponse, error) {
 	return &LoadSessionResponse{}, nil
 }
-func (noopSessionHandler) NewSession(context.Context, *NewSessionRequest) (*NewSessionResponse, error) {
+func (noopSessionHandler) SessionNew(context.Context, *NewSessionRequest) (*NewSessionResponse, error) {
 	return &NewSessionResponse{}, nil
 }
-func (noopSessionHandler) Prompt(context.Context, *PromptRequest) (*PromptResponse, error) {
+func (noopSessionHandler) SessionPrompt(context.Context, *PromptRequest) (*PromptResponse, error) {
 	return &PromptResponse{StopReason: StopReasonEndTurn}, nil
 }
-func (noopSessionHandler) ResumeSession(context.Context, *ResumeSessionRequest) (*ResumeSessionResponse, error) {
+func (noopSessionHandler) SessionResume(context.Context, *ResumeSessionRequest) (*ResumeSessionResponse, error) {
 	return &ResumeSessionResponse{}, nil
 }
-func (noopSessionHandler) SetSessionConfigOption(context.Context, *SetSessionConfigOptionRequest) (*SetSessionConfigOptionResponse, error) {
+func (noopSessionHandler) SessionSetConfigOption(context.Context, *SetSessionConfigOptionRequest) (*SetSessionConfigOptionResponse, error) {
 	return &SetSessionConfigOptionResponse{}, nil
 }
-func (noopSessionHandler) SetSessionMode(context.Context, *SetSessionModeRequest) (*SetSessionModeResponse, error) {
+func (noopSessionHandler) SessionSetMode(context.Context, *SetSessionModeRequest) (*SetSessionModeResponse, error) {
 	return &SetSessionModeResponse{}, nil
 }
 
@@ -63,19 +63,19 @@ func (a *testAgent) Initialize(context.Context, *InitializeRequest) (*Initialize
 	}, nil
 }
 
-func (a *testAgent) NewSession(context.Context, *NewSessionRequest) (*NewSessionResponse, error) {
+func (a *testAgent) SessionNew(context.Context, *NewSessionRequest) (*NewSessionResponse, error) {
 	return &NewSessionResponse{SessionID: "session-1"}, nil
 }
 
-func (a *testAgent) Prompt(ctx context.Context, req *PromptRequest) (*PromptResponse, error) {
-	file, err := a.conn.ReadTextFile(ctx, &ReadTextFileRequest{SessionID: req.SessionID, Path: "/tmp/main.go"})
+func (a *testAgent) SessionPrompt(ctx context.Context, req *PromptRequest) (*PromptResponse, error) {
+	file, err := a.conn.FsReadTextFile(ctx, &ReadTextFileRequest{SessionID: req.SessionID, Path: "/tmp/main.go"})
 	if err != nil {
 		return nil, err
 	}
 	if file.Content != "package main\n" {
 		return nil, errUnexpectedCallbackResult
 	}
-	perm, err := a.conn.RequestPermission(ctx, &RequestPermissionRequest{
+	perm, err := a.conn.SessionRequestPermission(ctx, &RequestPermissionRequest{
 		SessionID: req.SessionID,
 		ToolCall:  ToolCallUpdate{ToolCallID: "call-1", Title: ptr("edit file")},
 		Options:   []PermissionOption{{OptionID: "allow", Name: "Allow", Kind: PermissionOptionKindAllowOnce}},
@@ -86,7 +86,7 @@ func (a *testAgent) Prompt(ctx context.Context, req *PromptRequest) (*PromptResp
 	if perm.Outcome.Outcome != "selected" || perm.Outcome.OptionID != "allow" {
 		return nil, errUnexpectedCallbackResult
 	}
-	term, err := a.conn.CreateTerminal(ctx, &CreateTerminalRequest{SessionID: req.SessionID, Command: "go", Args: []string{"test", "./..."}})
+	term, err := a.conn.TerminalCreate(ctx, &CreateTerminalRequest{SessionID: req.SessionID, Command: "go", Args: []string{"test", "./..."}})
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func (a *testAgent) Prompt(ctx context.Context, req *PromptRequest) (*PromptResp
 	return &PromptResponse{StopReason: StopReasonEndTurn}, nil
 }
 
-func (a *testAgent) Cancel(context.Context, *CancelNotification) error { return nil }
+func (a *testAgent) SessionCancel(context.Context, *CancelNotification) error { return nil }
 
 type testClientHandler struct {
 	updates chan SessionNotification
@@ -115,24 +115,24 @@ func newTestClientHandler() *testClientHandler {
 	return &testClientHandler{updates: make(chan SessionNotification, 8)}
 }
 
-func (h *testClientHandler) Update(_ context.Context, params *SessionNotification) error {
+func (h *testClientHandler) SessionUpdate(_ context.Context, params *SessionNotification) error {
 	h.updates <- *params
 	return nil
 }
 
-func (h *testClientHandler) ReadTextFile(context.Context, *ReadTextFileRequest) (*ReadTextFileResponse, error) {
+func (h *testClientHandler) FsReadTextFile(context.Context, *ReadTextFileRequest) (*ReadTextFileResponse, error) {
 	return &ReadTextFileResponse{Content: "package main\n"}, nil
 }
 
-func (h *testClientHandler) WriteTextFile(context.Context, *WriteTextFileRequest) (*WriteTextFileResponse, error) {
+func (h *testClientHandler) FsWriteTextFile(context.Context, *WriteTextFileRequest) (*WriteTextFileResponse, error) {
 	return &WriteTextFileResponse{}, nil
 }
 
-func (h *testClientHandler) RequestPermission(context.Context, *RequestPermissionRequest) (*RequestPermissionResponse, error) {
+func (h *testClientHandler) SessionRequestPermission(context.Context, *RequestPermissionRequest) (*RequestPermissionResponse, error) {
 	return &RequestPermissionResponse{Outcome: RequestPermissionOutcome{Outcome: "selected", OptionID: "allow"}}, nil
 }
 
-func (h *testClientHandler) CreateTerminal(context.Context, *CreateTerminalRequest) (*CreateTerminalResponse, error) {
+func (h *testClientHandler) TerminalCreate(context.Context, *CreateTerminalRequest) (*CreateTerminalResponse, error) {
 	return &CreateTerminalResponse{TerminalID: "terminal-1"}, nil
 }
 
@@ -140,15 +140,15 @@ func (h *testClientHandler) TerminalOutput(context.Context, *TerminalOutputReque
 	return &TerminalOutputResponse{Output: "ok", Truncated: false}, nil
 }
 
-func (h *testClientHandler) WaitForTerminalExit(context.Context, *WaitForTerminalExitRequest) (*WaitForTerminalExitResponse, error) {
+func (h *testClientHandler) TerminalWaitForExit(context.Context, *WaitForTerminalExitRequest) (*WaitForTerminalExitResponse, error) {
 	return &WaitForTerminalExitResponse{}, nil
 }
 
-func (h *testClientHandler) KillTerminal(context.Context, *KillTerminalRequest) (*KillTerminalResponse, error) {
+func (h *testClientHandler) TerminalKill(context.Context, *KillTerminalRequest) (*KillTerminalResponse, error) {
 	return &KillTerminalResponse{}, nil
 }
 
-func (h *testClientHandler) ReleaseTerminal(context.Context, *ReleaseTerminalRequest) (*ReleaseTerminalResponse, error) {
+func (h *testClientHandler) TerminalRelease(context.Context, *ReleaseTerminalRequest) (*ReleaseTerminalResponse, error) {
 	return &ReleaseTerminalResponse{}, nil
 }
 
@@ -178,7 +178,7 @@ func TestClientAgentPrompt(t *testing.T) {
 		t.Fatalf("protocol version = %d, want %d", init.ProtocolVersion, ProtocolVersion(1))
 	}
 
-	session, err := client.NewSession(ctx, &NewSessionRequest{Cwd: "/tmp"})
+	session, err := client.SessionNew(ctx, &NewSessionRequest{Cwd: "/tmp"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +186,7 @@ func TestClientAgentPrompt(t *testing.T) {
 		t.Fatalf("session ID = %q, want session-1", session.SessionID)
 	}
 
-	prompt, err := client.Prompt(ctx, &PromptRequest{
+	prompt, err := client.SessionPrompt(ctx, &PromptRequest{
 		SessionID: session.SessionID,
 		Prompt:    []ContentBlock{{Type: ContentBlockTypeText, Text: "hi"}},
 	})

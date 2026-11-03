@@ -165,7 +165,7 @@ func primitiveConstLiteral(kind string, value any) jen.Code {
 
 func primitiveConstName(branch *jsonschema.Schema) string {
 	if branch.Title != "" {
-		name := pascalIdentifier(branch.Title)
+		name := PascalIdentifier(branch.Title)
 		if name != "" {
 			return name
 		}
@@ -180,7 +180,7 @@ func constValueName(value any) string {
 	if text, ok := value.(string); ok && text == "" {
 		return "Empty"
 	}
-	name := pascalIdentifier(fmt.Sprint(value))
+	name := PascalIdentifier(fmt.Sprint(value))
 	if name == "" {
 		return "Value"
 	}
@@ -230,7 +230,7 @@ func fieldName(jsonName string) string {
 	if jsonName == "uri" {
 		return "URI"
 	}
-	name := pascalIdentifier(jsonName)
+	name := PascalIdentifier(jsonName)
 	if strings.HasSuffix(name, "Id") {
 		name = strings.TrimSuffix(name, "Id") + "ID"
 	}
@@ -268,11 +268,12 @@ func uniqueParameterNames(jsonNames []string) map[string]string {
 	return names
 }
 
-func goDefinitionNames(defs map[string]*jsonschema.Schema) map[string]string {
+// DefinitionNames returns the Go type name generated for each schema definition.
+func DefinitionNames(defs map[string]*jsonschema.Schema) map[string]string {
 	names := make(map[string]string, len(defs))
 	used := map[string]bool{}
 	for _, rawName := range sortedDefNames(defs) {
-		name := pascalIdentifier(rawName)
+		name := PascalIdentifier(rawName)
 		if name == "" {
 			name = "Definition"
 		}
@@ -285,17 +286,18 @@ func goDefinitionName(defs map[string]*jsonschema.Schema, rawName string) string
 	if rawName == "" {
 		return ""
 	}
-	if name := goDefinitionNames(defs)[rawName]; name != "" {
+	if name := DefinitionNames(defs)[rawName]; name != "" {
 		return name
 	}
-	name := pascalIdentifier(rawName)
+	name := PascalIdentifier(rawName)
 	if name == "" {
 		return "Definition"
 	}
 	return name
 }
 
-func pascalIdentifier(value string) string {
+// PascalIdentifier converts a schema name such as "session/new" to a Go identifier.
+func PascalIdentifier(value string) string {
 	var words []string
 	var word strings.Builder
 	for _, r := range value {

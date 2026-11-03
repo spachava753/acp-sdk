@@ -34,7 +34,7 @@ func numberType(defs map[string]*jsonschema.Schema, text string, collections boo
 		return false
 	}
 	seen[text] = true
-	for name, goName := range goDefinitionNames(defs) {
+	for name, goName := range DefinitionNames(defs) {
 		if goName != text {
 			continue
 		}

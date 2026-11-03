@@ -27,7 +27,7 @@ func TestConformanceConcurrentPrompts(t *testing.T) {
 	var wg sync.WaitGroup
 	for i := range n {
 		wg.Go(func() {
-			_, err := client.Prompt(t.Context(), &acp.PromptRequest{
+			_, err := client.SessionPrompt(t.Context(), &acp.PromptRequest{
 				SessionID: acp.SessionId(fmt.Sprintf("sess-%d", i)),
 				Prompt:    []acp.ContentBlock{{Type: acp.ContentBlockTypeText, Text: "hello"}},
 			})
@@ -55,14 +55,14 @@ func (a *concurrentAgent) Initialize(context.Context, *acp.InitializeRequest) (*
 	return &acp.InitializeResponse{ProtocolVersion: acp.ProtocolVersion(1), AuthMethods: []acp.AuthMethod{}}, nil
 }
 
-func (a *concurrentAgent) NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
+func (a *concurrentAgent) SessionNew(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
 	return &acp.NewSessionResponse{SessionID: acp.SessionId("sess-123")}, nil
 }
 
-func (a *concurrentAgent) Prompt(context.Context, *acp.PromptRequest) (*acp.PromptResponse, error) {
+func (a *concurrentAgent) SessionPrompt(context.Context, *acp.PromptRequest) (*acp.PromptResponse, error) {
 	a.prompts.Add(1)
 	time.Sleep(25 * time.Millisecond)
 	return &acp.PromptResponse{StopReason: acp.StopReasonEndTurn}, nil
 }
 
-func (a *concurrentAgent) Cancel(context.Context, *acp.CancelNotification) error { return nil }
+func (a *concurrentAgent) SessionCancel(context.Context, *acp.CancelNotification) error { return nil }

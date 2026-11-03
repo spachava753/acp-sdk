@@ -20,10 +20,11 @@
 //     request, response, and notification envelopes, and provide RPC method
 //     documentation.
 //
-// The top-level schema has title, $schema, and anyOf entries for Agent, Client,
-// and ProtocolLevel messages. The top-level Agent and Client titles describe
-// the side that sends the JSON-RPC envelope, not the side that implements a
-// method.
+// The top-level schema has title, $schema, and anyOf entries for each message
+// family: Agent, Client, ProtocolLevel, and Proxy. The Agent and Client titles
+// describe the side that sends the JSON-RPC envelope, not the side that
+// implements a method. Proxy messages travel in both directions between a
+// conductor and its proxies.
 //
 // # RPC direction
 //
@@ -37,18 +38,33 @@
 //     request or notification to the client.
 //   - x-side "both" means both sides implement the same method shape.
 //   - x-side "protocol" is for protocol-level messages such as
-//     "$/cancel_request". These messages should not generate agent/client RPC
-//     constants, outbound helpers, handler interfaces, dispatch cases, or
-//     protocol-only payload types.
+//     "$/cancel_request". These messages do not generate RPC constants,
+//     outbound helpers, handler interfaces, dispatch cases, or protocol-only
+//     payload types.
+//   - x-side "proxy" is for Proxy Chains methods. A conductor is a client and a
+//     proxy is an agent, so both sides handle "proxy/successor", while only the
+//     agent side handles "proxy/initialize".
+//
+// The schema states only some of these directions, so rpcgen.sides records the
+// endpoints that handle each x-side. Generation panics on an x-side missing
+// from that table; add an entry when upstream introduces a new side.
 //
 // A request/response method is represented by two concrete definitions with the
 // same x-method and x-side: one *Request and one *Response. A notification is
 // represented by one concrete *Notification definition with x-method and x-side.
 // The same x-method can have both a request/response form and a notification
 // form; generated dispatch must distinguish those by whether the JSON-RPC
-// request has an ID. Method grouping is derived from the path segment before
-// '/', so methods like "terminal/create" and "terminal/release" belong to a
-// Terminal handler group.
+// request has an ID.
+//
+// # RPC names
+//
+// Go names come from the wire method: "session/prompt" generates the constant
+// MethodSessionPrompt, the SessionPrompt method on the sending connection, and
+// the one-method SessionPromptHandler interface. When a method has both forms,
+// the notification name adds a Notification suffix. Every name is a method on
+// a connection type and on handlers that implement several interfaces, so
+// generation panics if two operations, or an operation and a schema type,
+// produce the same identifier.
 //
 // # Method descriptions
 //
@@ -56,18 +72,12 @@
 // description. Concrete $defs descriptions are type comments only.
 //
 // RPC method descriptions live on the JSON-RPC envelope union branches that
-// reference concrete payload definitions. The generator should find these by
-// matching the branch allOf $ref, not by assuming a fixed branch index. Examples:
-//
-//   - Agent-implemented request methods are described under
-//     $defs.ClientRequest.properties.params.anyOf[0].anyOf[i].description, where
-//     anyOf[i].allOf[0].$ref references the concrete *Request def.
-//   - Agent-implemented notifications are described under
-//     $defs.ClientNotification.properties.params.anyOf[0].anyOf[i].description.
-//   - Client-implemented request methods are described under
-//     $defs.AgentRequest.properties.params.anyOf[0].anyOf[i].description.
-//   - Client-implemented notifications are described under
-//     $defs.AgentNotification.properties.params.anyOf[0].anyOf[i].description.
+// reference concrete payload definitions, such as
+// $defs.ClientRequest.properties.params.anyOf[0].anyOf[i].description, where
+// anyOf[i].allOf[0].$ref references the concrete *Request def. The generator
+// reads every envelope definition with a params union, including ProxyRequest
+// and ProxyNotification, and matches branches by their allOf $ref rather than
+// by a fixed branch index.
 //
 // Response descriptions remain on the generated response type comments; they
 // should not be repeated on the generated RPC method comments.

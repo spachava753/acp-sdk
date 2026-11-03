@@ -22,7 +22,7 @@ func TestConformanceBidirectionalCallbacksDuringPrompt(t *testing.T) {
 	})
 	defer closeConformanceClient(t, client, done)
 
-	res, err := client.Prompt(t.Context(), &acp.PromptRequest{
+	res, err := client.SessionPrompt(t.Context(), &acp.PromptRequest{
 		SessionID: acp.SessionId("sess-123"),
 		Prompt:    []acp.ContentBlock{{Type: acp.ContentBlockTypeText, Text: "inspect"}},
 	})
@@ -52,22 +52,22 @@ func (a *callbackAgent) Initialize(context.Context, *acp.InitializeRequest) (*ac
 	return &acp.InitializeResponse{ProtocolVersion: acp.ProtocolVersion(1), AuthMethods: []acp.AuthMethod{}}, nil
 }
 
-func (a *callbackAgent) NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
+func (a *callbackAgent) SessionNew(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
 	return &acp.NewSessionResponse{SessionID: acp.SessionId("sess-123")}, nil
 }
 
-func (a *callbackAgent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.PromptResponse, error) {
-	file, err := a.conn.ReadTextFile(ctx, &acp.ReadTextFileRequest{SessionID: req.SessionID, Path: "/workspace/main.go"})
+func (a *callbackAgent) SessionPrompt(ctx context.Context, req *acp.PromptRequest) (*acp.PromptResponse, error) {
+	file, err := a.conn.FsReadTextFile(ctx, &acp.ReadTextFileRequest{SessionID: req.SessionID, Path: "/workspace/main.go"})
 	if err != nil {
 		return nil, err
 	}
 	if file.Content != "package main\n" {
 		return nil, fmt.Errorf("read file content = %q", file.Content)
 	}
-	if _, err := a.conn.WriteTextFile(ctx, &acp.WriteTextFileRequest{SessionID: req.SessionID, Path: "/workspace/generated.go", Content: "package generated\n"}); err != nil {
+	if _, err := a.conn.FsWriteTextFile(ctx, &acp.WriteTextFileRequest{SessionID: req.SessionID, Path: "/workspace/generated.go", Content: "package generated\n"}); err != nil {
 		return nil, err
 	}
-	permission, err := a.conn.RequestPermission(ctx, &acp.RequestPermissionRequest{
+	permission, err := a.conn.SessionRequestPermission(ctx, &acp.RequestPermissionRequest{
 		SessionID: req.SessionID,
 		ToolCall:  acp.ToolCallUpdate{ToolCallID: "call-1", Title: stringPtr("Write File")},
 		Options:   []acp.PermissionOption{{OptionID: "allow", Name: "Allow", Kind: acp.PermissionOptionKindAllowOnce}},
@@ -78,7 +78,7 @@ func (a *callbackAgent) Prompt(ctx context.Context, req *acp.PromptRequest) (*ac
 	if permission.Outcome.Outcome != "selected" || permission.Outcome.OptionID != "allow" {
 		return nil, fmt.Errorf("permission response = %#v", permission)
 	}
-	terminal, err := a.conn.CreateTerminal(ctx, &acp.CreateTerminalRequest{SessionID: req.SessionID, Command: "go", Args: []string{"test", "./..."}})
+	terminal, err := a.conn.TerminalCreate(ctx, &acp.CreateTerminalRequest{SessionID: req.SessionID, Command: "go", Args: []string{"test", "./..."}})
 	if err != nil {
 		return nil, err
 	}
@@ -91,4 +91,4 @@ func (a *callbackAgent) Prompt(ctx context.Context, req *acp.PromptRequest) (*ac
 	return &acp.PromptResponse{StopReason: acp.StopReasonEndTurn}, nil
 }
 
-func (a *callbackAgent) Cancel(context.Context, *acp.CancelNotification) error { return nil }
+func (a *callbackAgent) SessionCancel(context.Context, *acp.CancelNotification) error { return nil }

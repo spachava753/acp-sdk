@@ -20,6 +20,15 @@ type agent struct {
 	sessions map[string]struct{}
 }
 
+// Interface guards catch handler signature mismatches at compile time. Methods
+// the agent does not implement are answered with "method not found".
+var (
+	_ acp.InitializeHandler    = (*agent)(nil)
+	_ acp.SessionNewHandler    = (*agent)(nil)
+	_ acp.SessionPromptHandler = (*agent)(nil)
+	_ acp.SessionCancelHandler = (*agent)(nil)
+)
+
 func (a *agent) Initialize(context.Context, *acp.InitializeRequest) (*acp.InitializeResponse, error) {
 	return &acp.InitializeResponse{
 		ProtocolVersion: acp.ProtocolVersion(1),
@@ -30,7 +39,7 @@ func (a *agent) Initialize(context.Context, *acp.InitializeRequest) (*acp.Initia
 	}, nil
 }
 
-func (a *agent) NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
+func (a *agent) SessionNew(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
 	var idBytes [16]byte
 	if _, err := rand.Read(idBytes[:]); err != nil {
 		return nil, err
@@ -42,7 +51,7 @@ func (a *agent) NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSes
 	return &acp.NewSessionResponse{SessionID: acp.SessionId(id)}, nil
 }
 
-func (a *agent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.PromptResponse, error) {
+func (a *agent) SessionPrompt(ctx context.Context, req *acp.PromptRequest) (*acp.PromptResponse, error) {
 	if err := a.conn.SessionUpdate(ctx, &acp.SessionNotification{
 		SessionID: req.SessionID,
 		Update: acp.SessionUpdate{
@@ -55,39 +64,7 @@ func (a *agent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.Prompt
 	return &acp.PromptResponse{StopReason: acp.StopReasonEndTurn}, nil
 }
 
-func (a *agent) Cancel(context.Context, *acp.CancelNotification) error { return nil }
-
-func (a *agent) CloseSession(context.Context, *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error) {
-	return &acp.CloseSessionResponse{}, nil
-}
-
-func (a *agent) DeleteSession(context.Context, *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error) {
-	return &acp.DeleteSessionResponse{}, nil
-}
-
-func (a *agent) ForkSession(context.Context, *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
-	return &acp.ForkSessionResponse{}, nil
-}
-
-func (a *agent) ListSessions(context.Context, *acp.ListSessionsRequest) (*acp.ListSessionsResponse, error) {
-	return &acp.ListSessionsResponse{}, nil
-}
-
-func (a *agent) LoadSession(context.Context, *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
-	return &acp.LoadSessionResponse{}, nil
-}
-
-func (a *agent) ResumeSession(context.Context, *acp.ResumeSessionRequest) (*acp.ResumeSessionResponse, error) {
-	return &acp.ResumeSessionResponse{}, nil
-}
-
-func (a *agent) SetSessionConfigOption(context.Context, *acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
-	return &acp.SetSessionConfigOptionResponse{}, nil
-}
-
-func (a *agent) SetSessionMode(context.Context, *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error) {
-	return &acp.SetSessionModeResponse{}, nil
-}
+func (a *agent) SessionCancel(context.Context, *acp.CancelNotification) error { return nil }
 
 func main() {
 	err := acp.RunAgent(context.Background(), &acp.StdioTransport{}, func(conn *acp.AgentConnection) any {

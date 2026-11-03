@@ -1,23 +1,21 @@
 package acp
 
-// McpClientHandler handles all mcp related client methods.
-type McpClientHandler interface {
-	// Message: Asks the peer to process a message.
-	Message(context.Context, *MessageRequest) (*MessageResponse, error)
-}
+import (
+	"context"
+	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
+	"github.com/spachava753/acp-sdk/jsonrpc"
+)
 
-// Message: Asks the peer to process a message.
-func (c *Client) Message(ctx context.Context, params *MessageRequest) (*MessageResponse, error) {
+// McpMessage: Asks the peer to process a message.
+func (c *Client) McpMessage(ctx context.Context, params *MessageRequest) (*MessageResponse, error) {
 	return call[MessageResponse](ctx, c.rpc.conn, MethodMcpMessage, params)
 }
 
-func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) {
+func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
 	switch req.Method {
 	case MethodMcpMessage:
-		handler, ok := c.handler.(interface {
-			Message(context.Context, *MessageRequest) (*MessageResponse, error)
-		})
+		h, ok := handler.(McpMessageHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -25,8 +23,8 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.Message(ctx, params))
+		return rpcResult(h.McpMessage(ctx, params))
 	default:
-		return handleExtension(ctx, c.handler, req)
+		return handleExtension(ctx, handler, req)
 	}
 }

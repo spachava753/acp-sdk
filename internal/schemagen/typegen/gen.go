@@ -27,7 +27,7 @@ func Generate(schema *jsonschema.Schema) []byte {
 
 	ignoredProtocolRefs := ignoredTopLevelProtocolRefs(schema)
 	publicRefs := publicDefinitionRefs(schema, ignoredProtocolRefs)
-	goNames := goDefinitionNames(schema.Defs)
+	goNames := DefinitionNames(schema.Defs)
 	for _, name := range sortedDefNames(schema.Defs) {
 		def := schema.Defs[name]
 		if ignoredProtocolRefs[name] || (docsIgnored(def) && !publicRefs[name]) {
@@ -103,7 +103,7 @@ func commented(name, description string, code jen.Code) jen.Code {
 	if description == "" {
 		return code
 	}
-	return commentStatement(name, description).Add(code)
+	return CommentStatement(name, description).Add(code)
 }
 
 func functionCommented(name, prefix, description string, code jen.Code) jen.Code {
@@ -127,7 +127,8 @@ func functionCommented(name, prefix, description string, code jen.Code) jen.Code
 	return stmt
 }
 
-func commentStatement(name, description string) *jen.Statement {
+// CommentStatement renders description as a doc comment whose first line starts with name.
+func CommentStatement(name, description string) *jen.Statement {
 	stmt := jen.Empty()
 	for i, line := range strings.Split(description, "\n") {
 		if line == "" {

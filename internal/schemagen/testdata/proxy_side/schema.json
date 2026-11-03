@@ -1,0 +1,179 @@
+{
+  "$defs": {
+    "ProxyRequest": {
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/InitializeProxyRequest"
+                    }
+                  ],
+                  "description": "Initializes a component as a proxy.",
+                  "title": "InitializeProxyRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ProxySuccessorRequest"
+                    }
+                  ],
+                  "description": "Forwards a request to or from a proxy's successor.",
+                  "title": "ProxySuccessorRequest"
+                }
+              ],
+              "description": "Requests exchanged between a conductor and its proxies."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        }
+      },
+      "required": [
+        "id",
+        "method"
+      ],
+      "type": "object",
+      "x-docs-ignore": true
+    },
+    "ProxyNotification": {
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ProxySuccessorNotification"
+                    }
+                  ],
+                  "description": "Forwards a notification to or from a proxy's successor.",
+                  "title": "ProxySuccessorNotification"
+                }
+              ],
+              "description": "Notifications exchanged between a conductor and its proxies."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "method"
+      ],
+      "type": "object",
+      "x-docs-ignore": true
+    },
+    "InitializeProxyRequest": {
+      "description": "Parameters for proxy/initialize.",
+      "properties": {
+        "protocolVersion": {
+          "description": "The protocol version the conductor selected.",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "protocolVersion"
+      ],
+      "type": "object",
+      "x-method": "proxy/initialize",
+      "x-side": "proxy"
+    },
+    "InitializeProxyResponse": {
+      "description": "Result of proxy/initialize.",
+      "properties": {
+        "protocolVersion": {
+          "description": "The protocol version the chain accepted.",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "protocolVersion"
+      ],
+      "type": "object",
+      "x-method": "proxy/initialize",
+      "x-side": "proxy"
+    },
+    "ProxySuccessorRequest": {
+      "description": "Parameters of a proxy/successor request.",
+      "properties": {
+        "method": {
+          "description": "Method name of the wrapped request.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "method"
+      ],
+      "type": "object",
+      "x-method": "proxy/successor",
+      "x-side": "proxy"
+    },
+    "ProxySuccessorResponse": {
+      "description": "Result of the wrapped request.",
+      "type": "object",
+      "x-method": "proxy/successor",
+      "x-side": "proxy"
+    },
+    "ProxySuccessorNotification": {
+      "description": "Parameters of a proxy/successor notification.",
+      "properties": {
+        "method": {
+          "description": "Method name of the wrapped notification.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "method"
+      ],
+      "type": "object",
+      "x-method": "proxy/successor",
+      "x-side": "proxy"
+    },
+    "RequestId": {
+      "description": "A JSON-RPC request identifier.",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProxyRequest"
+            }
+          ],
+          "title": "Request"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProxyNotification"
+            }
+          ],
+          "title": "Notification"
+        }
+      ],
+      "title": "Proxy",
+      "type": "object"
+    }
+  ],
+  "title": "Proxy Side Test Fixture"
+}

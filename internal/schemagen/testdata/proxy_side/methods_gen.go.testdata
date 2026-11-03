@@ -1,0 +1,28 @@
+package acp
+
+import "context"
+
+const (
+	// MethodProxyInitialize: Initializes a component as a proxy.
+	MethodProxyInitialize = "proxy/initialize"
+	// MethodProxySuccessor: Forwards a request to or from a proxy's successor.
+	MethodProxySuccessor = "proxy/successor"
+)
+
+// ProxyInitializeHandler handles proxy/initialize requests.
+type ProxyInitializeHandler interface {
+	// ProxyInitialize: Initializes a component as a proxy.
+	ProxyInitialize(context.Context, *InitializeProxyRequest) (*InitializeProxyResponse, error)
+}
+
+// ProxySuccessorHandler handles proxy/successor requests.
+type ProxySuccessorHandler interface {
+	// ProxySuccessor: Forwards a request to or from a proxy's successor.
+	ProxySuccessor(context.Context, *ProxySuccessorRequest) (*ProxySuccessorResponse, error)
+}
+
+// ProxySuccessorNotificationHandler handles proxy/successor notifications.
+type ProxySuccessorNotificationHandler interface {
+	// ProxySuccessorNotification: Forwards a notification to or from a proxy's successor.
+	ProxySuccessorNotification(context.Context, *ProxySuccessorNotification) error
+}

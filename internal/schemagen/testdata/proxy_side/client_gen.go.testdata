@@ -1,0 +1,51 @@
+package acp
+
+import (
+	"context"
+	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
+	"github.com/spachava753/acp-sdk/jsonrpc"
+)
+
+// ProxyInitialize: Initializes a component as a proxy.
+func (c *Client) ProxyInitialize(ctx context.Context, params *InitializeProxyRequest) (*InitializeProxyResponse, error) {
+	return call[InitializeProxyResponse](ctx, c.rpc.conn, MethodProxyInitialize, params)
+}
+
+// ProxySuccessor: Forwards a request to or from a proxy's successor.
+func (c *Client) ProxySuccessor(ctx context.Context, params *ProxySuccessorRequest) (*ProxySuccessorResponse, error) {
+	return call[ProxySuccessorResponse](ctx, c.rpc.conn, MethodProxySuccessor, params)
+}
+
+// ProxySuccessorNotification: Forwards a notification to or from a proxy's successor.
+func (c *Client) ProxySuccessorNotification(ctx context.Context, params *ProxySuccessorNotification) error {
+	return notify(ctx, c.rpc.conn, MethodProxySuccessor, params)
+}
+
+func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
+	jsonrpc2.Async(ctx)
+	switch req.Method {
+	case MethodProxySuccessor:
+		if req.IsCall() {
+			h, ok := handler.(ProxySuccessorHandler)
+			if !ok {
+				return nil, methodNotFound(req.Method)
+			}
+			params, err := decodeParams[ProxySuccessorRequest](req)
+			if err != nil {
+				return nil, err
+			}
+			return rpcResult(h.ProxySuccessor(ctx, params))
+		}
+		h, ok := handler.(ProxySuccessorNotificationHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[ProxySuccessorNotification](req)
+		if err != nil {
+			return nil, err
+		}
+		return nil, h.ProxySuccessorNotification(ctx, params)
+	default:
+		return handleExtension(ctx, handler, req)
+	}
+}

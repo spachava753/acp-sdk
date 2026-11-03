@@ -1,31 +1,26 @@
 package acp
 
-// GroupClientHandler handles all group related client methods.
-type GroupClientHandler interface {
-	// ClientMethod: Asks the client to run the test client method.
-	ClientMethod(context.Context, *ClientMethodRequest) (*ClientMethodResponse, error)
+import (
+	"context"
+	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
+	"github.com/spachava753/acp-sdk/jsonrpc"
+)
 
-	// ClientNotify: Tells the client about the test client notification.
-	ClientNotify(context.Context, *ClientMethodNotification) error
-}
-
-// AgentMethod: Asks the agent to run the test agent method.
-func (c *Client) AgentMethod(ctx context.Context, params *AgentMethodRequest) (*AgentMethodResponse, error) {
+// GroupAgentMethod: Asks the agent to run the test agent method.
+func (c *Client) GroupAgentMethod(ctx context.Context, params *AgentMethodRequest) (*AgentMethodResponse, error) {
 	return call[AgentMethodResponse](ctx, c.rpc.conn, MethodGroupAgentMethod, params)
 }
 
-// AgentNotify: Tells the agent about the test agent notification.
-func (c *Client) AgentNotify(ctx context.Context, params *AgentMethodNotification) error {
+// GroupAgentNotify: Tells the agent about the test agent notification.
+func (c *Client) GroupAgentNotify(ctx context.Context, params *AgentMethodNotification) error {
 	return notify(ctx, c.rpc.conn, MethodGroupAgentNotify, params)
 }
 
-func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) {
+func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
 	switch req.Method {
 	case MethodGroupClientMethod:
-		handler, ok := c.handler.(interface {
-			ClientMethod(context.Context, *ClientMethodRequest) (*ClientMethodResponse, error)
-		})
+		h, ok := handler.(GroupClientMethodHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -33,11 +28,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.ClientMethod(ctx, params))
+		return rpcResult(h.GroupClientMethod(ctx, params))
 	case MethodGroupClientNotify:
-		handler, ok := c.handler.(interface {
-			ClientNotify(context.Context, *ClientMethodNotification) error
-		})
+		h, ok := handler.(GroupClientNotifyHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -45,8 +38,8 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return nil, handler.ClientNotify(ctx, params)
+		return nil, h.GroupClientNotify(ctx, params)
 	default:
-		return handleExtension(ctx, c.handler, req)
+		return handleExtension(ctx, handler, req)
 	}
 }

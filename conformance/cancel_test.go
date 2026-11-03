@@ -24,7 +24,7 @@ func TestConformanceCancelReachesAgentDuringPendingPrompt(t *testing.T) {
 
 	promptDone := make(chan promptResult, 1)
 	go func() {
-		res, err := client.Prompt(t.Context(), &acp.PromptRequest{
+		res, err := client.SessionPrompt(t.Context(), &acp.PromptRequest{
 			SessionID: acp.SessionId("sess-cancel"),
 			Prompt:    []acp.ContentBlock{{Type: acp.ContentBlockTypeText, Text: "wait"}},
 		})
@@ -41,7 +41,7 @@ func TestConformanceCancelReachesAgentDuringPendingPrompt(t *testing.T) {
 		t.Fatalf("prompt completed before cancel: %#v", result)
 	default:
 	}
-	if err := client.Cancel(t.Context(), &acp.CancelNotification{SessionID: acp.SessionId("sess-cancel")}); err != nil {
+	if err := client.SessionCancel(t.Context(), &acp.CancelNotification{SessionID: acp.SessionId("sess-cancel")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -78,11 +78,11 @@ func (a *cancelDuringPromptAgent) Initialize(context.Context, *acp.InitializeReq
 	return &acp.InitializeResponse{ProtocolVersion: acp.ProtocolVersion(1), AuthMethods: []acp.AuthMethod{}}, nil
 }
 
-func (a *cancelDuringPromptAgent) NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
+func (a *cancelDuringPromptAgent) SessionNew(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
 	return &acp.NewSessionResponse{SessionID: acp.SessionId("sess-cancel")}, nil
 }
 
-func (a *cancelDuringPromptAgent) Prompt(ctx context.Context, _ *acp.PromptRequest) (*acp.PromptResponse, error) {
+func (a *cancelDuringPromptAgent) SessionPrompt(ctx context.Context, _ *acp.PromptRequest) (*acp.PromptResponse, error) {
 	a.startOnce.Do(func() { close(a.started) })
 	select {
 	case <-a.cancelled:
@@ -94,7 +94,7 @@ func (a *cancelDuringPromptAgent) Prompt(ctx context.Context, _ *acp.PromptReque
 	}
 }
 
-func (a *cancelDuringPromptAgent) Cancel(_ context.Context, params *acp.CancelNotification) error {
+func (a *cancelDuringPromptAgent) SessionCancel(_ context.Context, params *acp.CancelNotification) error {
 	a.cancelledSession.Store(params.SessionID)
 	a.cancelOnce.Do(func() { close(a.cancelled) })
 	return nil

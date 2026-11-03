@@ -1,33 +1,16 @@
 package acp
 
-const (
-	// MethodDocsGenerate: Generates documentation from structured input.
-	//
-	// The agent should preserve Markdown formatting.
-	//
-	// - Validate the title
-	// - Render the body
-	MethodDocsGenerate = "docs/generate"
+import (
+	"context"
+	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
+	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
-// DocsHandler handles all docs related agent methods.
-type DocsHandler interface {
-	// GenerateDocs: Generates documentation from structured input.
-	//
-	// The agent should preserve Markdown formatting.
-	//
-	// - Validate the title
-	// - Render the body
-	GenerateDocs(context.Context, *GenerateDocsRequest) (*GenerateDocsResponse, error)
-}
-
-func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (any, error) {
+func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
 	switch req.Method {
 	case MethodDocsGenerate:
-		handler, ok := agent.(interface {
-			GenerateDocs(context.Context, *GenerateDocsRequest) (*GenerateDocsResponse, error)
-		})
+		h, ok := handler.(DocsGenerateHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -35,8 +18,8 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.GenerateDocs(ctx, params))
+		return rpcResult(h.DocsGenerate(ctx, params))
 	default:
-		return handleExtension(ctx, agent, req)
+		return handleExtension(ctx, handler, req)
 	}
 }

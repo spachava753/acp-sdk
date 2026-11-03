@@ -1,0 +1,38 @@
+package acp
+
+import "context"
+
+const (
+	// MethodGroupAgentMethod: Asks the agent to run the test agent method.
+	MethodGroupAgentMethod = "group/agent_method"
+	// MethodGroupAgentNotify: Tells the agent about the test agent notification.
+	MethodGroupAgentNotify = "group/agent_notify"
+	// MethodGroupClientMethod: Asks the client to run the test client method.
+	MethodGroupClientMethod = "group/client_method"
+	// MethodGroupClientNotify: Tells the client about the test client notification.
+	MethodGroupClientNotify = "group/client_notify"
+)
+
+// GroupAgentMethodHandler handles group/agent_method requests.
+type GroupAgentMethodHandler interface {
+	// GroupAgentMethod: Asks the agent to run the test agent method.
+	GroupAgentMethod(context.Context, *AgentMethodRequest) (*AgentMethodResponse, error)
+}
+
+// GroupAgentNotifyHandler handles group/agent_notify notifications.
+type GroupAgentNotifyHandler interface {
+	// GroupAgentNotify: Tells the agent about the test agent notification.
+	GroupAgentNotify(context.Context, *AgentMethodNotification) error
+}
+
+// GroupClientMethodHandler handles group/client_method requests.
+type GroupClientMethodHandler interface {
+	// GroupClientMethod: Asks the client to run the test client method.
+	GroupClientMethod(context.Context, *ClientMethodRequest) (*ClientMethodResponse, error)
+}
+
+// GroupClientNotifyHandler handles group/client_notify notifications.
+type GroupClientNotifyHandler interface {
+	// GroupClientNotify: Tells the client about the test client notification.
+	GroupClientNotify(context.Context, *ClientMethodNotification) error
+}

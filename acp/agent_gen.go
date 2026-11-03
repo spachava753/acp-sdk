@@ -8,515 +8,96 @@ package acp
 
 import (
 	"context"
-
 	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
-const (
-	// MethodAuthenticate: Authenticates the client using the specified authentication method.
-	//
-	// Called when the agent requires authentication before allowing session creation.
-	// The client provides an authentication method ID that was advertised during
-	// initialization and whose type defines the `authenticate` flow.
-	//
-	// After successful authentication, the client can proceed to create sessions with
-	// `new_session` without receiving an `auth_required` error.
-	//
-	// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
-	MethodAuthenticate = "authenticate"
-	// MethodElicitationComplete: Notification that a URL-based elicitation has completed.
-	//
-	// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation#url-completion)
-	MethodElicitationComplete = "elicitation/complete"
-	// MethodElicitationCreate: Requests structured user input via a form or URL.
-	//
-	// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation)
-	MethodElicitationCreate = "elicitation/create"
-	// MethodFsReadTextFile: Reads content from a text file in the client's file system.
-	//
-	// Only available if the client advertises the `fs.readTextFile` capability.
-	// Allows the agent to access file contents within the client's environment.
-	//
-	// See protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)
-	MethodFsReadTextFile = "fs/read_text_file"
-	// MethodFsWriteTextFile: Writes content to a text file in the client's file system.
-	//
-	// Only available if the client advertises the `fs.writeTextFile` capability.
-	// Allows the agent to create or modify files within the client's environment.
-	//
-	// See protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)
-	MethodFsWriteTextFile = "fs/write_text_file"
-	// MethodInitialize: Establishes the connection with a client and negotiates protocol capabilities.
-	//
-	// This method is called once at the beginning of the connection to:
-	// - Negotiate the protocol version to use
-	// - Exchange capability information between client and agent
-	// - Determine available authentication methods
-	//
-	// The agent should respond with its supported protocol version and capabilities.
-	//
-	// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
-	MethodInitialize = "initialize"
-	// MethodLogout: Logs out of the current authenticated state.
-	//
-	// After a successful logout, all new sessions will require authentication.
-	// There is no guarantee about the behavior of already running sessions.
-	MethodLogout = "logout"
-	// MethodMcpMessage: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Sends an MCP-over-ACP notification.
-	MethodMcpMessage = "mcp/message"
-	// MethodProvidersDisable: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Disables a provider.
-	MethodProvidersDisable = "providers/disable"
-	// MethodProvidersList: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Lists providers that can be configured by the client.
-	MethodProvidersList = "providers/list"
-	// MethodProvidersSet: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Replaces the configuration for a provider.
-	MethodProvidersSet = "providers/set"
-	// MethodSessionCancel: Cancels ongoing operations for a session.
-	//
-	// This is a notification sent by the client to cancel an ongoing prompt turn.
-	//
-	// Upon receiving this notification, the Agent SHOULD:
-	// - Stop all language model requests as soon as possible
-	// - Abort all tool call invocations in progress
-	// - Send any pending `session/update` notifications
-	// - Respond to the original `session/prompt` request with `StopReason::Cancelled`
-	//
-	// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
-	MethodSessionCancel = "session/cancel"
-	// MethodSessionClose: Closes an active session and frees up any resources associated with it.
-	//
-	// This method is only available if the agent advertises the `sessionCapabilities.close` capability.
-	//
-	// The agent must cancel any ongoing work (as if `session/cancel` was called)
-	// and then free up any resources associated with the session.
-	MethodSessionClose = "session/close"
-	// MethodSessionDelete: Deletes an existing session from `session/list`.
-	//
-	// This method is only available if the agent advertises the `sessionCapabilities.delete` capability.
-	MethodSessionDelete = "session/delete"
-	// MethodSessionFork: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Forks an existing session to create a new independent session.
-	//
-	// This method is only available if the agent advertises the `session.fork` capability.
-	//
-	// The agent should create a new session with the same conversation context as the
-	// original, allowing operations like generating summaries without affecting the
-	// original session's history.
-	//
-	// As with `session/new`, the forked session is active once the agent responds,
-	// set up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.
-	// The client can prompt it without calling `session/load` or `session/resume` first.
-	MethodSessionFork = "session/fork"
-	// MethodSessionList: Lists existing sessions known to the agent.
-	//
-	// This method is only available if the agent advertises the `sessionCapabilities.list` capability.
-	//
-	// The agent should return metadata about sessions with optional filtering and pagination support.
-	MethodSessionList = "session/list"
-	// MethodSessionLoad: Loads an existing session to resume a previous conversation.
-	//
-	// This method is only available if the agent advertises the `loadSession` capability.
-	//
-	// The agent should:
-	// - Restore the session context and conversation history
-	// - Connect to the specified MCP servers
-	// - Stream the entire conversation history back to the client via notifications
-	//
-	// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
-	MethodSessionLoad = "session/load"
-	// MethodSessionNew: Creates a new conversation session with the agent.
-	//
-	// Sessions represent independent conversation contexts with their own history and state.
-	//
-	// The agent should:
-	// - Create a new session context
-	// - Connect to any specified MCP servers
-	// - Return a unique session ID for future requests
-	//
-	// May return an `auth_required` error if the agent requires authentication.
-	//
-	// See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/session-setup)
-	MethodSessionNew = "session/new"
-	// MethodSessionPrompt: Processes a user prompt within a session.
-	//
-	// This method handles the whole lifecycle of a prompt:
-	// - Receives user messages with optional context (files, images, etc.)
-	// - Processes the prompt using language models
-	// - Reports language model content and tool calls to the Clients
-	// - Requests permission to run tools
-	// - Executes any requested tool calls
-	// - Returns when the turn is complete with a stop reason
-	//
-	// See protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/prompt-turn)
-	MethodSessionPrompt = "session/prompt"
-	// MethodSessionRequestPermission: Requests permission from the user for a tool call operation.
-	//
-	// Called by the agent when it needs user authorization before executing
-	// a potentially sensitive operation. The client should present the options
-	// to the user and return their decision.
-	//
-	// If the client cancels the prompt turn via `session/cancel`, it MUST
-	// respond to this request with `RequestPermissionOutcome::Cancelled`.
-	//
-	// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
-	MethodSessionRequestPermission = "session/request_permission"
-	// MethodSessionResume: Resumes an existing session without returning previous messages.
-	//
-	// This method is only available if the agent advertises the `sessionCapabilities.resume` capability.
-	//
-	// The agent should resume the session context, allowing the conversation to continue
-	// without replaying the message history (unlike `session/load`).
-	MethodSessionResume = "session/resume"
-	// MethodSessionSetConfigOption: Sets the current value for a session configuration option.
-	MethodSessionSetConfigOption = "session/set_config_option"
-	// MethodSessionSetMode: Sets the current mode for a session.
-	//
-	// Allows switching between different agent modes (e.g., "ask", "architect", "code")
-	// that affect system prompts, tool availability, and permission behaviors.
-	//
-	// The mode must be one of the modes advertised in `availableModes` during session
-	// creation or loading. Agents may also change modes autonomously and notify the
-	// client via `current_mode_update` notifications.
-	//
-	// This method can be called at any time during a session, whether the Agent is
-	// idle or actively generating a response.
-	//
-	// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
-	MethodSessionSetMode = "session/set_mode"
-	// MethodSessionUpdate: Handles session update notifications from the agent.
-	//
-	// This is a notification endpoint (no response expected) that receives
-	// real-time updates about session progress, including message chunks,
-	// tool calls, and execution plans.
-	//
-	// Note: Clients SHOULD continue accepting tool call updates even after
-	// sending a `session/cancel` notification, as the agent may send final
-	// updates before responding with the cancelled stop reason.
-	//
-	// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
-	MethodSessionUpdate = "session/update"
-	// MethodTerminalCreate: Executes a command in a new terminal
-	//
-	// Only available if the `terminal` Client capability is set to `true`.
-	//
-	// Returns a `TerminalId` that can be used with other terminal methods
-	// to get the current output, wait for exit, and kill the command.
-	//
-	// The `TerminalId` can also be used to embed the terminal in a tool call
-	// by using the `ToolCallContent::Terminal` variant.
-	//
-	// The Agent is responsible for releasing the terminal by using the `terminal/release`
-	// method.
-	//
-	// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
-	MethodTerminalCreate = "terminal/create"
-	// MethodTerminalKill: Kills the terminal command without releasing the terminal
-	//
-	// While `terminal/release` will also kill the command, this method will keep
-	// the `TerminalId` valid so it can be used with other methods.
-	//
-	// This method can be helpful when implementing command timeouts which terminate
-	// the command as soon as elapsed, and then get the final output so it can be sent
-	// to the model.
-	//
-	// Note: Call `terminal/release` when `TerminalId` is no longer needed.
-	//
-	// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
-	MethodTerminalKill = "terminal/kill"
-	// MethodTerminalOutput: Gets the terminal output and exit status
-	//
-	// Returns the current content in the terminal without waiting for the command to exit.
-	// If the command has already exited, the exit status is included.
-	//
-	// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
-	MethodTerminalOutput = "terminal/output"
-	// MethodTerminalRelease: Releases a terminal
-	//
-	// The command is killed if it hasn't exited yet. Use `terminal/wait_for_exit`
-	// to wait for the command to exit before releasing the terminal.
-	//
-	// After release, the `TerminalId` can no longer be used with other `terminal/*` methods,
-	// but tool calls that already contain it, continue to display its output.
-	//
-	// The `terminal/kill` method can be used to terminate the command without releasing
-	// the terminal, allowing the Agent to call `terminal/output` and other methods.
-	//
-	// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
-	MethodTerminalRelease = "terminal/release"
-	// MethodTerminalWaitForExit: Waits for the terminal command to exit and return its exit status
-	//
-	// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
-	MethodTerminalWaitForExit = "terminal/wait_for_exit"
-)
-
-// AuthenticateHandler handles all authenticate related agent methods.
-type AuthenticateHandler interface {
-	// Authenticate: Authenticates the client using the specified authentication method.
-	//
-	// Called when the agent requires authentication before allowing session creation.
-	// The client provides an authentication method ID that was advertised during
-	// initialization and whose type defines the `authenticate` flow.
-	//
-	// After successful authentication, the client can proceed to create sessions with
-	// `new_session` without receiving an `auth_required` error.
-	//
-	// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
-	Authenticate(context.Context, *AuthenticateRequest) (*AuthenticateResponse, error)
-}
-
-// InitializeHandler handles all initialize related agent methods.
-type InitializeHandler interface {
-	// Initialize: Establishes the connection with a client and negotiates protocol capabilities.
-	//
-	// This method is called once at the beginning of the connection to:
-	// - Negotiate the protocol version to use
-	// - Exchange capability information between client and agent
-	// - Determine available authentication methods
-	//
-	// The agent should respond with its supported protocol version and capabilities.
-	//
-	// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
-	Initialize(context.Context, *InitializeRequest) (*InitializeResponse, error)
-}
-
-// LogoutHandler handles all logout related agent methods.
-type LogoutHandler interface {
-	// Logout: Logs out of the current authenticated state.
-	//
-	// After a successful logout, all new sessions will require authentication.
-	// There is no guarantee about the behavior of already running sessions.
-	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
-}
-
-// McpHandler handles all mcp related agent methods.
-type McpHandler interface {
-	// Message: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Sends an MCP-over-ACP notification.
-	Message(context.Context, *MessageMcpNotification) error
-}
-
-// ProvidersHandler handles all providers related agent methods.
-type ProvidersHandler interface {
-	// DisableProvider: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Disables a provider.
-	DisableProvider(context.Context, *DisableProviderRequest) (*DisableProviderResponse, error)
-
-	// ListProviders: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Lists providers that can be configured by the client.
-	ListProviders(context.Context, *ListProvidersRequest) (*ListProvidersResponse, error)
-
-	// SetProvider: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Replaces the configuration for a provider.
-	SetProvider(context.Context, *SetProviderRequest) (*SetProviderResponse, error)
-}
-
-// SessionHandler handles all session related agent methods.
-type SessionHandler interface {
-	// Cancel: Cancels ongoing operations for a session.
-	//
-	// This is a notification sent by the client to cancel an ongoing prompt turn.
-	//
-	// Upon receiving this notification, the Agent SHOULD:
-	// - Stop all language model requests as soon as possible
-	// - Abort all tool call invocations in progress
-	// - Send any pending `session/update` notifications
-	// - Respond to the original `session/prompt` request with `StopReason::Cancelled`
-	//
-	// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
-	Cancel(context.Context, *CancelNotification) error
-
-	// CloseSession: Closes an active session and frees up any resources associated with it.
-	//
-	// This method is only available if the agent advertises the `sessionCapabilities.close` capability.
-	//
-	// The agent must cancel any ongoing work (as if `session/cancel` was called)
-	// and then free up any resources associated with the session.
-	CloseSession(context.Context, *CloseSessionRequest) (*CloseSessionResponse, error)
-
-	// DeleteSession: Deletes an existing session from `session/list`.
-	//
-	// This method is only available if the agent advertises the `sessionCapabilities.delete` capability.
-	DeleteSession(context.Context, *DeleteSessionRequest) (*DeleteSessionResponse, error)
-
-	// ForkSession: **UNSTABLE**
-	//
-	// This capability is not part of the spec yet, and may be removed or changed at any point.
-	//
-	// Forks an existing session to create a new independent session.
-	//
-	// This method is only available if the agent advertises the `session.fork` capability.
-	//
-	// The agent should create a new session with the same conversation context as the
-	// original, allowing operations like generating summaries without affecting the
-	// original session's history.
-	//
-	// As with `session/new`, the forked session is active once the agent responds,
-	// set up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.
-	// The client can prompt it without calling `session/load` or `session/resume` first.
-	ForkSession(context.Context, *ForkSessionRequest) (*ForkSessionResponse, error)
-
-	// ListSessions: Lists existing sessions known to the agent.
-	//
-	// This method is only available if the agent advertises the `sessionCapabilities.list` capability.
-	//
-	// The agent should return metadata about sessions with optional filtering and pagination support.
-	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
-
-	// LoadSession: Loads an existing session to resume a previous conversation.
-	//
-	// This method is only available if the agent advertises the `loadSession` capability.
-	//
-	// The agent should:
-	// - Restore the session context and conversation history
-	// - Connect to the specified MCP servers
-	// - Stream the entire conversation history back to the client via notifications
-	//
-	// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
-	LoadSession(context.Context, *LoadSessionRequest) (*LoadSessionResponse, error)
-
-	// NewSession: Creates a new conversation session with the agent.
-	//
-	// Sessions represent independent conversation contexts with their own history and state.
-	//
-	// The agent should:
-	// - Create a new session context
-	// - Connect to any specified MCP servers
-	// - Return a unique session ID for future requests
-	//
-	// May return an `auth_required` error if the agent requires authentication.
-	//
-	// See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/session-setup)
-	NewSession(context.Context, *NewSessionRequest) (*NewSessionResponse, error)
-
-	// Prompt: Processes a user prompt within a session.
-	//
-	// This method handles the whole lifecycle of a prompt:
-	// - Receives user messages with optional context (files, images, etc.)
-	// - Processes the prompt using language models
-	// - Reports language model content and tool calls to the Clients
-	// - Requests permission to run tools
-	// - Executes any requested tool calls
-	// - Returns when the turn is complete with a stop reason
-	//
-	// See protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/prompt-turn)
-	Prompt(context.Context, *PromptRequest) (*PromptResponse, error)
-
-	// ResumeSession: Resumes an existing session without returning previous messages.
-	//
-	// This method is only available if the agent advertises the `sessionCapabilities.resume` capability.
-	//
-	// The agent should resume the session context, allowing the conversation to continue
-	// without replaying the message history (unlike `session/load`).
-	ResumeSession(context.Context, *ResumeSessionRequest) (*ResumeSessionResponse, error)
-
-	// SetSessionConfigOption: Sets the current value for a session configuration option.
-	SetSessionConfigOption(context.Context, *SetSessionConfigOptionRequest) (*SetSessionConfigOptionResponse, error)
-
-	// SetSessionMode: Sets the current mode for a session.
-	//
-	// Allows switching between different agent modes (e.g., "ask", "architect", "code")
-	// that affect system prompts, tool availability, and permission behaviors.
-	//
-	// The mode must be one of the modes advertised in `availableModes` during session
-	// creation or loading. Agents may also change modes autonomously and notify the
-	// client via `current_mode_update` notifications.
-	//
-	// This method can be called at any time during a session, whether the Agent is
-	// idle or actively generating a response.
-	//
-	// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
-	SetSessionMode(context.Context, *SetSessionModeRequest) (*SetSessionModeResponse, error)
-}
-
-// Complete: Notification that a URL-based elicitation has completed.
+// AuthStatusUpdate: **UNSTABLE**
 //
-// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation#url-completion)
-func (c *AgentConnection) Complete(ctx context.Context, params *CompleteElicitationNotification) error {
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Notification that the agent's authentication state changed.
+//
+// Only sent by agents that advertise the `auth.status` capability.
+func (c *AgentConnection) AuthStatusUpdate(ctx context.Context, params *AuthStatusUpdateNotification) error {
+	return notify(ctx, c.rpc.conn, MethodAuthStatusUpdate, params)
+}
+
+// ElicitationComplete: Notification that a URL-based elicitation has completed.
+//
+// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v1/draft/elicitation#url-completion)
+func (c *AgentConnection) ElicitationComplete(ctx context.Context, params *CompleteElicitationNotification) error {
 	return notify(ctx, c.rpc.conn, MethodElicitationComplete, params)
 }
 
-// CreateElicitation: Requests structured user input via a form or URL.
+// ElicitationCreate: Requests structured user input via a form or URL.
 //
-// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation)
-func (c *AgentConnection) CreateElicitation(ctx context.Context, params *CreateElicitationRequest) (*CreateElicitationResponse, error) {
+// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v1/draft/elicitation)
+func (c *AgentConnection) ElicitationCreate(ctx context.Context, params *CreateElicitationRequest) (*CreateElicitationResponse, error) {
 	return call[CreateElicitationResponse](ctx, c.rpc.conn, MethodElicitationCreate, params)
 }
 
-// ReadTextFile: Reads content from a text file in the client's file system.
+// FsReadTextFile: Reads content from a text file in the client's file system.
 //
 // Only available if the client advertises the `fs.readTextFile` capability.
 // Allows the agent to access file contents within the client's environment.
 //
-// See protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)
-func (c *AgentConnection) ReadTextFile(ctx context.Context, params *ReadTextFileRequest) (*ReadTextFileResponse, error) {
+// See protocol docs: [Client](https://agentclientprotocol.com/protocol/v1/draft/overview#client)
+func (c *AgentConnection) FsReadTextFile(ctx context.Context, params *ReadTextFileRequest) (*ReadTextFileResponse, error) {
 	return call[ReadTextFileResponse](ctx, c.rpc.conn, MethodFsReadTextFile, params)
 }
 
-// WriteTextFile: Writes content to a text file in the client's file system.
+// FsWriteTextFile: Writes content to a text file in the client's file system.
 //
 // Only available if the client advertises the `fs.writeTextFile` capability.
 // Allows the agent to create or modify files within the client's environment.
 //
-// See protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)
-func (c *AgentConnection) WriteTextFile(ctx context.Context, params *WriteTextFileRequest) (*WriteTextFileResponse, error) {
+// See protocol docs: [Client](https://agentclientprotocol.com/protocol/v1/draft/overview#client)
+func (c *AgentConnection) FsWriteTextFile(ctx context.Context, params *WriteTextFileRequest) (*WriteTextFileResponse, error) {
 	return call[WriteTextFileResponse](ctx, c.rpc.conn, MethodFsWriteTextFile, params)
 }
 
-// MessageMcp: **UNSTABLE**
+// McpMessage: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
 //
 // Exchanges an MCP-over-ACP message.
-func (c *AgentConnection) MessageMcp(ctx context.Context, params *MessageMcpRequest) (*MessageMcpResponse, error) {
+func (c *AgentConnection) McpMessage(ctx context.Context, params *MessageMcpRequest) (*MessageMcpResponse, error) {
 	return call[MessageMcpResponse](ctx, c.rpc.conn, MethodMcpMessage, params)
 }
 
-// RequestPermission: Requests permission from the user for a tool call operation.
+// ProxySuccessor: Forwards a request to or from a proxy's successor.
+//
+// A proxy sends it to its conductor to forward a request downstream. The conductor sends
+// it to the proxy to deliver a request from the successor. The wrapped request's result
+// or error is returned unchanged.
+func (c *AgentConnection) ProxySuccessor(ctx context.Context, params *ProxySuccessorRequest) (*ProxySuccessorResponse, error) {
+	return call[ProxySuccessorResponse](ctx, c.rpc.conn, MethodProxySuccessor, params)
+}
+
+// ProxySuccessorNotification: Forwards a notification to or from a proxy's successor.
+//
+// A proxy sends it to its conductor to forward a notification downstream. The conductor
+// sends it to the proxy to deliver a notification from the successor.
+func (c *AgentConnection) ProxySuccessorNotification(ctx context.Context, params *ProxySuccessorNotification) error {
+	return notify(ctx, c.rpc.conn, MethodProxySuccessor, params)
+}
+
+// SessionRequestPermission: Requests permission from the user for a tool call operation.
 //
 // Called by the agent when it needs user authorization before executing
 // a potentially sensitive operation. The client should present the options
 // to the user and return their decision.
 //
 // If the client cancels the prompt turn via `session/cancel`, it MUST
-// respond to this request with `RequestPermissionOutcome::Cancelled`.
+// respond to this request with the `cancelled` outcome.
 //
-// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
-func (c *AgentConnection) RequestPermission(ctx context.Context, params *RequestPermissionRequest) (*RequestPermissionResponse, error) {
+// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v1/draft/tool-calls#requesting-permission)
+func (c *AgentConnection) SessionRequestPermission(ctx context.Context, params *RequestPermissionRequest) (*RequestPermissionResponse, error) {
 	return call[RequestPermissionResponse](ctx, c.rpc.conn, MethodSessionRequestPermission, params)
 }
 
-// Update: Handles session update notifications from the agent.
+// SessionUpdate: Handles session update notifications from the agent.
 //
 // This is a notification endpoint (no response expected) that receives
 // real-time updates about session progress, including message chunks,
@@ -526,12 +107,12 @@ func (c *AgentConnection) RequestPermission(ctx context.Context, params *Request
 // sending a `session/cancel` notification, as the agent may send final
 // updates before responding with the cancelled stop reason.
 //
-// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
-func (c *AgentConnection) Update(ctx context.Context, params *SessionNotification) error {
+// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v1/draft/prompt-turn#3-agent-reports-output)
+func (c *AgentConnection) SessionUpdate(ctx context.Context, params *SessionNotification) error {
 	return notify(ctx, c.rpc.conn, MethodSessionUpdate, params)
 }
 
-// CreateTerminal: Executes a command in a new terminal
+// TerminalCreate: Executes a command in a new terminal
 //
 // Only available if the `terminal` Client capability is set to `true`.
 //
@@ -539,17 +120,17 @@ func (c *AgentConnection) Update(ctx context.Context, params *SessionNotificatio
 // to get the current output, wait for exit, and kill the command.
 //
 // The `TerminalId` can also be used to embed the terminal in a tool call
-// by using the `ToolCallContent::Terminal` variant.
+// by using `terminal` tool call content.
 //
 // The Agent is responsible for releasing the terminal by using the `terminal/release`
 // method.
 //
-// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
-func (c *AgentConnection) CreateTerminal(ctx context.Context, params *CreateTerminalRequest) (*CreateTerminalResponse, error) {
+// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/v1/draft/terminals)
+func (c *AgentConnection) TerminalCreate(ctx context.Context, params *CreateTerminalRequest) (*CreateTerminalResponse, error) {
 	return call[CreateTerminalResponse](ctx, c.rpc.conn, MethodTerminalCreate, params)
 }
 
-// KillTerminal: Kills the terminal command without releasing the terminal
+// TerminalKill: Kills the terminal command without releasing the terminal
 //
 // While `terminal/release` will also kill the command, this method will keep
 // the `TerminalId` valid so it can be used with other methods.
@@ -560,8 +141,8 @@ func (c *AgentConnection) CreateTerminal(ctx context.Context, params *CreateTerm
 //
 // Note: Call `terminal/release` when `TerminalId` is no longer needed.
 //
-// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
-func (c *AgentConnection) KillTerminal(ctx context.Context, params *KillTerminalRequest) (*KillTerminalResponse, error) {
+// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/v1/draft/terminals)
+func (c *AgentConnection) TerminalKill(ctx context.Context, params *KillTerminalRequest) (*KillTerminalResponse, error) {
 	return call[KillTerminalResponse](ctx, c.rpc.conn, MethodTerminalKill, params)
 }
 
@@ -570,12 +151,12 @@ func (c *AgentConnection) KillTerminal(ctx context.Context, params *KillTerminal
 // Returns the current content in the terminal without waiting for the command to exit.
 // If the command has already exited, the exit status is included.
 //
-// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
+// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/v1/draft/terminals)
 func (c *AgentConnection) TerminalOutput(ctx context.Context, params *TerminalOutputRequest) (*TerminalOutputResponse, error) {
 	return call[TerminalOutputResponse](ctx, c.rpc.conn, MethodTerminalOutput, params)
 }
 
-// ReleaseTerminal: Releases a terminal
+// TerminalRelease: Releases a terminal
 //
 // The command is killed if it hasn't exited yet. Use `terminal/wait_for_exit`
 // to wait for the command to exit before releasing the terminal.
@@ -586,25 +167,33 @@ func (c *AgentConnection) TerminalOutput(ctx context.Context, params *TerminalOu
 // The `terminal/kill` method can be used to terminate the command without releasing
 // the terminal, allowing the Agent to call `terminal/output` and other methods.
 //
-// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
-func (c *AgentConnection) ReleaseTerminal(ctx context.Context, params *ReleaseTerminalRequest) (*ReleaseTerminalResponse, error) {
+// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/v1/draft/terminals)
+func (c *AgentConnection) TerminalRelease(ctx context.Context, params *ReleaseTerminalRequest) (*ReleaseTerminalResponse, error) {
 	return call[ReleaseTerminalResponse](ctx, c.rpc.conn, MethodTerminalRelease, params)
 }
 
-// WaitForTerminalExit: Waits for the terminal command to exit and return its exit status
+// TerminalWaitForExit: Waits for the terminal command to exit and return its exit status
 //
-// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
-func (c *AgentConnection) WaitForTerminalExit(ctx context.Context, params *WaitForTerminalExitRequest) (*WaitForTerminalExitResponse, error) {
+// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/v1/draft/terminals)
+func (c *AgentConnection) TerminalWaitForExit(ctx context.Context, params *WaitForTerminalExitRequest) (*WaitForTerminalExitResponse, error) {
 	return call[WaitForTerminalExitResponse](ctx, c.rpc.conn, MethodTerminalWaitForExit, params)
 }
 
-func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (any, error) {
+func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
 	switch req.Method {
+	case MethodAuthStatus:
+		h, ok := handler.(AuthStatusHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[AuthStatusRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(h.AuthStatus(ctx, params))
 	case MethodAuthenticate:
-		handler, ok := agent.(interface {
-			Authenticate(context.Context, *AuthenticateRequest) (*AuthenticateResponse, error)
-		})
+		h, ok := handler.(AuthenticateHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -612,11 +201,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.Authenticate(ctx, params))
+		return rpcResult(h.Authenticate(ctx, params))
 	case MethodInitialize:
-		handler, ok := agent.(interface {
-			Initialize(context.Context, *InitializeRequest) (*InitializeResponse, error)
-		})
+		h, ok := handler.(InitializeHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -624,11 +211,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.Initialize(ctx, params))
+		return rpcResult(h.Initialize(ctx, params))
 	case MethodLogout:
-		handler, ok := agent.(interface {
-			Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
-		})
+		h, ok := handler.(LogoutHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -636,11 +221,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.Logout(ctx, params))
+		return rpcResult(h.Logout(ctx, params))
 	case MethodMcpMessage:
-		handler, ok := agent.(interface {
-			Message(context.Context, *MessageMcpNotification) error
-		})
+		h, ok := handler.(McpMessageNotificationHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -648,11 +231,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return nil, handler.Message(ctx, params)
+		return nil, h.McpMessageNotification(ctx, params)
 	case MethodProvidersDisable:
-		handler, ok := agent.(interface {
-			DisableProvider(context.Context, *DisableProviderRequest) (*DisableProviderResponse, error)
-		})
+		h, ok := handler.(ProvidersDisableHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -660,11 +241,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.DisableProvider(ctx, params))
+		return rpcResult(h.ProvidersDisable(ctx, params))
 	case MethodProvidersList:
-		handler, ok := agent.(interface {
-			ListProviders(context.Context, *ListProvidersRequest) (*ListProvidersResponse, error)
-		})
+		h, ok := handler.(ProvidersListHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -672,11 +251,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.ListProviders(ctx, params))
+		return rpcResult(h.ProvidersList(ctx, params))
 	case MethodProvidersSet:
-		handler, ok := agent.(interface {
-			SetProvider(context.Context, *SetProviderRequest) (*SetProviderResponse, error)
-		})
+		h, ok := handler.(ProvidersSetHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -684,11 +261,50 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.SetProvider(ctx, params))
+		return rpcResult(h.ProvidersSet(ctx, params))
+	case MethodProxyInitialize:
+		h, ok := handler.(ProxyInitializeHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[InitializeProxyRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(h.ProxyInitialize(ctx, params))
+	case MethodProxySuccessor:
+		if req.IsCall() {
+			h, ok := handler.(ProxySuccessorHandler)
+			if !ok {
+				return nil, methodNotFound(req.Method)
+			}
+			params, err := decodeParams[ProxySuccessorRequest](req)
+			if err != nil {
+				return nil, err
+			}
+			return rpcResult(h.ProxySuccessor(ctx, params))
+		}
+		h, ok := handler.(ProxySuccessorNotificationHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[ProxySuccessorNotification](req)
+		if err != nil {
+			return nil, err
+		}
+		return nil, h.ProxySuccessorNotification(ctx, params)
+	case MethodSessionArchive:
+		h, ok := handler.(SessionArchiveHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[ArchiveSessionRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(h.SessionArchive(ctx, params))
 	case MethodSessionCancel:
-		handler, ok := agent.(interface {
-			Cancel(context.Context, *CancelNotification) error
-		})
+		h, ok := handler.(SessionCancelHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -696,11 +312,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return nil, handler.Cancel(ctx, params)
+		return nil, h.SessionCancel(ctx, params)
 	case MethodSessionClose:
-		handler, ok := agent.(interface {
-			CloseSession(context.Context, *CloseSessionRequest) (*CloseSessionResponse, error)
-		})
+		h, ok := handler.(SessionCloseHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -708,11 +322,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.CloseSession(ctx, params))
+		return rpcResult(h.SessionClose(ctx, params))
 	case MethodSessionDelete:
-		handler, ok := agent.(interface {
-			DeleteSession(context.Context, *DeleteSessionRequest) (*DeleteSessionResponse, error)
-		})
+		h, ok := handler.(SessionDeleteHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -720,11 +332,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.DeleteSession(ctx, params))
+		return rpcResult(h.SessionDelete(ctx, params))
 	case MethodSessionFork:
-		handler, ok := agent.(interface {
-			ForkSession(context.Context, *ForkSessionRequest) (*ForkSessionResponse, error)
-		})
+		h, ok := handler.(SessionForkHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -732,11 +342,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.ForkSession(ctx, params))
+		return rpcResult(h.SessionFork(ctx, params))
 	case MethodSessionList:
-		handler, ok := agent.(interface {
-			ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
-		})
+		h, ok := handler.(SessionListHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -744,11 +352,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.ListSessions(ctx, params))
+		return rpcResult(h.SessionList(ctx, params))
 	case MethodSessionLoad:
-		handler, ok := agent.(interface {
-			LoadSession(context.Context, *LoadSessionRequest) (*LoadSessionResponse, error)
-		})
+		h, ok := handler.(SessionLoadHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -756,11 +362,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.LoadSession(ctx, params))
+		return rpcResult(h.SessionLoad(ctx, params))
 	case MethodSessionNew:
-		handler, ok := agent.(interface {
-			NewSession(context.Context, *NewSessionRequest) (*NewSessionResponse, error)
-		})
+		h, ok := handler.(SessionNewHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -768,11 +372,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.NewSession(ctx, params))
+		return rpcResult(h.SessionNew(ctx, params))
 	case MethodSessionPrompt:
-		handler, ok := agent.(interface {
-			Prompt(context.Context, *PromptRequest) (*PromptResponse, error)
-		})
+		h, ok := handler.(SessionPromptHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -780,11 +382,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.Prompt(ctx, params))
+		return rpcResult(h.SessionPrompt(ctx, params))
 	case MethodSessionResume:
-		handler, ok := agent.(interface {
-			ResumeSession(context.Context, *ResumeSessionRequest) (*ResumeSessionResponse, error)
-		})
+		h, ok := handler.(SessionResumeHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -792,11 +392,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.ResumeSession(ctx, params))
+		return rpcResult(h.SessionResume(ctx, params))
 	case MethodSessionSetConfigOption:
-		handler, ok := agent.(interface {
-			SetSessionConfigOption(context.Context, *SetSessionConfigOptionRequest) (*SetSessionConfigOptionResponse, error)
-		})
+		h, ok := handler.(SessionSetConfigOptionHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -804,11 +402,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.SetSessionConfigOption(ctx, params))
+		return rpcResult(h.SessionSetConfigOption(ctx, params))
 	case MethodSessionSetMode:
-		handler, ok := agent.(interface {
-			SetSessionMode(context.Context, *SetSessionModeRequest) (*SetSessionModeResponse, error)
-		})
+		h, ok := handler.(SessionSetModeHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -816,8 +412,38 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.SetSessionMode(ctx, params))
+		return rpcResult(h.SessionSetMode(ctx, params))
+	case MethodSessionSetTitle:
+		h, ok := handler.(SessionSetTitleHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[SetSessionTitleRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(h.SessionSetTitle(ctx, params))
+	case MethodSessionStatus:
+		h, ok := handler.(SessionStatusHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[SessionStatusRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(h.SessionStatus(ctx, params))
+	case MethodSessionUnarchive:
+		h, ok := handler.(SessionUnarchiveHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeParams[UnarchiveSessionRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(h.SessionUnarchive(ctx, params))
 	default:
-		return handleExtension(ctx, agent, req)
+		return handleExtension(ctx, handler, req)
 	}
 }

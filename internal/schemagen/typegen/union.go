@@ -800,7 +800,7 @@ func unionConstructorNames(defs map[string]*jsonschema.Schema, unionName, discri
 }
 
 func unionConstructorName(defs map[string]*jsonschema.Schema, unionName, discriminator string, branch *jsonschema.Schema) string {
-	constructorName := pascalIdentifier(branch.Title)
+	constructorName := PascalIdentifier(branch.Title)
 	value, _ := variantConst(defs, branch, discriminator)
 	ref := variantRef(branch)
 	refName := goDefinitionName(defs, ref)
@@ -1234,7 +1234,7 @@ func arrayUnionVariants(defs map[string]*jsonschema.Schema, name string, branche
 		if fieldName == "" {
 			fieldName = "Variant"
 		}
-		typePrefix := pascalIdentifier(branch.Title)
+		typePrefix := PascalIdentifier(branch.Title)
 		if typePrefix == "" {
 			typePrefix = "Variant"
 		}
@@ -1251,7 +1251,7 @@ func arrayUnionBaseFieldName(title string) string {
 	if title == "Grouped" {
 		return "Groups"
 	}
-	return pascalIdentifier(title)
+	return PascalIdentifier(title)
 }
 
 func arrayUnionDecodeVariants(defs map[string]*jsonschema.Schema, variants []arrayUnionVariant) (arrayUnionVariant, arrayUnionVariant) {

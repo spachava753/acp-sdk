@@ -1,0 +1,38 @@
+package acp
+
+import "context"
+
+const (
+	// MethodTaskRead: Asks the client to read task details.
+	MethodTaskRead = "task/read"
+	// MethodTaskStart: Asks the agent to start a task.
+	MethodTaskStart = "task/start"
+	// MethodTaskStop: Asks the agent to stop a task.
+	MethodTaskStop = "task/stop"
+	// MethodTaskWrite: Asks the client to write task details.
+	MethodTaskWrite = "task/write"
+)
+
+// TaskReadHandler handles task/read requests.
+type TaskReadHandler interface {
+	// TaskRead: Asks the client to read task details.
+	TaskRead(context.Context, *ReadTaskRequest) (*ReadTaskResponse, error)
+}
+
+// TaskStartHandler handles task/start requests.
+type TaskStartHandler interface {
+	// TaskStart: Asks the agent to start a task.
+	TaskStart(context.Context, *StartTaskRequest) (*StartTaskResponse, error)
+}
+
+// TaskStopHandler handles task/stop requests.
+type TaskStopHandler interface {
+	// TaskStop: Asks the agent to stop a task.
+	TaskStop(context.Context, *StopTaskRequest) (*StopTaskResponse, error)
+}
+
+// TaskWriteHandler handles task/write requests.
+type TaskWriteHandler interface {
+	// TaskWrite: Asks the client to write task details.
+	TaskWrite(context.Context, *WriteTaskRequest) (*WriteTaskResponse, error)
+}

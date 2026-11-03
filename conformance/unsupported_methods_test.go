@@ -41,12 +41,12 @@ func (a *basicAgent) Initialize(context.Context, *acp.InitializeRequest) (*acp.I
 	return &acp.InitializeResponse{ProtocolVersion: acp.ProtocolVersion(1), AuthMethods: []acp.AuthMethod{}}, nil
 }
 
-func (a *basicAgent) NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
+func (a *basicAgent) SessionNew(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
 	return &acp.NewSessionResponse{SessionID: acp.SessionId("sess-123")}, nil
 }
 
-func (a *basicAgent) Prompt(context.Context, *acp.PromptRequest) (*acp.PromptResponse, error) {
+func (a *basicAgent) SessionPrompt(context.Context, *acp.PromptRequest) (*acp.PromptResponse, error) {
 	return &acp.PromptResponse{StopReason: acp.StopReasonEndTurn}, nil
 }
 
-func (a *basicAgent) Cancel(context.Context, *acp.CancelNotification) error { return nil }
+func (a *basicAgent) SessionCancel(context.Context, *acp.CancelNotification) error { return nil }

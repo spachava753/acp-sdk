@@ -1,0 +1,18 @@
+package acp
+
+import "context"
+
+const (
+	MethodChatSendMessage  = "chat/send-message"
+	MethodChatSendMessage2 = "chat/send_message"
+)
+
+// ChatSendMessageHandler handles chat/send-message requests.
+type ChatSendMessageHandler interface {
+	ChatSendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
+}
+
+// ChatSendMessage2Handler handles chat/send_message requests.
+type ChatSendMessage2Handler interface {
+	ChatSendMessage2(context.Context, *SendMessageAltRequest) (*SendMessageAltResponse, error)
+}

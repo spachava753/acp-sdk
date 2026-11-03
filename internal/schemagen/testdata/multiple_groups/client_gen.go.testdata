@@ -1,34 +1,26 @@
 package acp
 
-// DeltaClientHandler handles all delta related client methods.
-type DeltaClientHandler interface {
-	// WriteDelta: Asks the client to write delta state.
-	WriteDelta(context.Context, *WriteDeltaRequest) (*WriteDeltaResponse, error)
-}
+import (
+	"context"
+	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
+	"github.com/spachava753/acp-sdk/jsonrpc"
+)
 
-// GammaClientHandler handles all gamma related client methods.
-type GammaClientHandler interface {
-	// ReadGamma: Asks the client to read gamma state.
-	ReadGamma(context.Context, *ReadGammaRequest) (*ReadGammaResponse, error)
-}
-
-// StartAlpha: Asks the agent to start alpha processing.
-func (c *Client) StartAlpha(ctx context.Context, params *StartAlphaRequest) (*StartAlphaResponse, error) {
+// AlphaStart: Asks the agent to start alpha processing.
+func (c *Client) AlphaStart(ctx context.Context, params *StartAlphaRequest) (*StartAlphaResponse, error) {
 	return call[StartAlphaResponse](ctx, c.rpc.conn, MethodAlphaStart, params)
 }
 
-// StopBeta: Asks the agent to stop beta processing.
-func (c *Client) StopBeta(ctx context.Context, params *StopBetaRequest) (*StopBetaResponse, error) {
+// BetaStop: Asks the agent to stop beta processing.
+func (c *Client) BetaStop(ctx context.Context, params *StopBetaRequest) (*StopBetaResponse, error) {
 	return call[StopBetaResponse](ctx, c.rpc.conn, MethodBetaStop, params)
 }
 
-func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) {
+func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
 	switch req.Method {
 	case MethodDeltaWrite:
-		handler, ok := c.handler.(interface {
-			WriteDelta(context.Context, *WriteDeltaRequest) (*WriteDeltaResponse, error)
-		})
+		h, ok := handler.(DeltaWriteHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -36,11 +28,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.WriteDelta(ctx, params))
+		return rpcResult(h.DeltaWrite(ctx, params))
 	case MethodGammaRead:
-		handler, ok := c.handler.(interface {
-			ReadGamma(context.Context, *ReadGammaRequest) (*ReadGammaResponse, error)
-		})
+		h, ok := handler.(GammaReadHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -48,8 +38,8 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.ReadGamma(ctx, params))
+		return rpcResult(h.GammaRead(ctx, params))
 	default:
-		return handleExtension(ctx, c.handler, req)
+		return handleExtension(ctx, handler, req)
 	}
 }

@@ -9,8 +9,8 @@ import (
 // expose a schema keyword for that distinction. Keep those semantic overrides
 // here rather than changing the downloaded schema or all optional field types.
 var nullSensitiveFields = map[string][]string{
-	"SubagentUpdate": {"title", "description", "capabilities", "state", "_meta"},
-	"SessionMessage": {"content", "_meta"},
+	"SubagentUpdate": {"title", "description", "capabilities", "state", "cwd", "additionalDirectories", "_meta"},
+	"SessionMessage": {"content", "senderSessionId", "recipientSessionId", "senderMessageId", "recipientMessageId", "_meta"},
 	"McpError":       {"data"},
 }
 

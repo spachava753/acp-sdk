@@ -1,0 +1,33 @@
+package acp
+
+// InitializeProxyRequest: Parameters for proxy/initialize.
+type InitializeProxyRequest struct {
+	ProtocolVersion int64 `json:"protocolVersion"`
+}
+
+// InitializeProxyResponse: Result of proxy/initialize.
+type InitializeProxyResponse struct {
+	ProtocolVersion int64 `json:"protocolVersion"`
+}
+
+// ProxySuccessorNotification: Parameters of a proxy/successor notification.
+type ProxySuccessorNotification struct {
+	Method string `json:"method"`
+}
+
+// ProxySuccessorRequest: Parameters of a proxy/successor request.
+type ProxySuccessorRequest struct {
+	Method string `json:"method"`
+}
+
+// ProxySuccessorResponse: Result of the wrapped request.
+type ProxySuccessorResponse map[string]any
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (r *ProxySuccessorResponse) UnmarshalJSON(data []byte) error {
+	type plain ProxySuccessorResponse
+	return unmarshalJSON(data, (*plain)(r))
+}
+
+// RequestId: A JSON-RPC request identifier.
+type RequestId string

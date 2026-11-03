@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       UPDATE_BRANCH: automation/update-acp-schema
+      GENERATED_PATHS: internal/schemagen/schema.json acp/*_gen.go
     steps:
       - name: Check out code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -27,50 +28,75 @@ jobs:
         with:
           go-version: "1.26"
 
-      - name: Regenerate schema and ACP types
+      - name: Fetch latest schema
+        run: go generate ./internal/schemagen
+
+      # Failures below still open a draft PR with the log, so a schema the
+      # generator cannot handle is visible instead of silently skipped.
+      - name: Regenerate ACP code
+        id: generate
+        continue-on-error: true
         run: |
-          go generate ./internal/schemagen
-          go generate ./acp
+          set -o pipefail
+          go generate ./acp 2>&1 | tee -a "$RUNNER_TEMP/verify.log"
 
       - name: Test generated code
-        run: go test ./...
+        id: test
+        if: steps.generate.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          go test ./... 2>&1 | tee -a "$RUNNER_TEMP/verify.log"
 
       - name: Detect generated changes
         id: changes
         run: |
-          if git diff --quiet -- internal/schemagen/schema.json acp/agent_gen.go acp/client_gen.go acp/types_gen.go; then
+          # Let git expand the acp/*_gen.go pathspec so deleted files match too.
+          set -f
+          if [ -z "$(git status --porcelain -- $GENERATED_PATHS)" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            git diff --name-only -- internal/schemagen/schema.json acp/agent_gen.go acp/client_gen.go acp/types_gen.go
+            git status --short -- $GENERATED_PATHS
           fi
 
       - name: Create or update pull request
         if: steps.changes.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          VERIFIED: ${{ steps.generate.outcome == 'success' && steps.test.outcome == 'success' }}
         run: |
+          set -f
           branch="$UPDATE_BRANCH"
+          body="$RUNNER_TEMP/pr-body.md"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$branch"
-          git add internal/schemagen/schema.json acp/agent_gen.go acp/client_gen.go acp/types_gen.go
+          git add -A -- $GENERATED_PATHS
           git commit -m "acp: update generated schema"
           git push --force-with-lease origin "$branch"
 
-          body=$(cat <<'EOF'
-          This automated PR updates the checked-in ACP schema from the latest schema release and regenerates the ACP Go types/RPC glue.
-
-          Verification run before updating this PR:
-
-          - `go generate ./internal/schemagen`
-          - `go generate ./acp`
-          - `go test ./...`
-
-          The full Test workflow is dispatched for the PR head after every automated update.
-          EOF
-          )
+          {
+            echo "This automated PR updates the checked-in ACP schema from the latest schema release and regenerates the ACP Go types/RPC glue."
+            echo
+            if [ "$VERIFIED" = true ]; then
+              echo "Verification run before updating this PR:"
+              echo
+              echo '- `go generate ./internal/schemagen`'
+              echo '- `go generate ./acp`'
+              echo '- `go test ./...`'
+              echo
+              echo "The full Test workflow is dispatched for the PR head after every automated update."
+            else
+              echo "> [!WARNING]"
+              echo "> Regenerating or testing the SDK against this schema failed, so this PR is a draft. It contains the new schema inputs and any code that was generated. Fix the generator on this branch, then mark the PR ready for review."
+              echo
+              echo '```'
+              tail -n 80 "$RUNNER_TEMP/verify.log"
+              echo '```'
+            fi
+          } > "$body"
 
           pr=$(gh pr list \
             --repo "$GITHUB_REPOSITORY" \
@@ -84,21 +110,38 @@ jobs:
             gh pr edit "$pr" \
               --repo "$GITHUB_REPOSITORY" \
               --title "acp: update generated schema" \
-              --body "$body"
+              --body-file "$body"
+            draft=$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)
+            if [ "$VERIFIED" = true ] && [ "$draft" = true ]; then
+              gh pr ready "$pr" --repo "$GITHUB_REPOSITORY"
+            elif [ "$VERIFIED" != true ] && [ "$draft" != true ]; then
+              gh pr ready "$pr" --repo "$GITHUB_REPOSITORY" --undo
+            fi
           else
+            draft_flag=()
+            if [ "$VERIFIED" != true ]; then
+              draft_flag=(--draft)
+            fi
             gh pr create \
               --repo "$GITHUB_REPOSITORY" \
               --head "$branch" \
               --base "main" \
               --title "acp: update generated schema" \
-              --body "$body"
+              --body-file "$body" \
+              "${draft_flag[@]}"
           fi
 
       - name: Dispatch pull request checks
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' && steps.generate.outcome == 'success' && steps.test.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh workflow run test.yml \
             --repo "$GITHUB_REPOSITORY" \
             --ref "$UPDATE_BRANCH"
+
+      - name: Fail when regeneration or tests failed
+        if: steps.generate.outcome != 'success' || steps.test.outcome != 'success'
+        run: |
+          echo "::error::Regenerating or testing the SDK against the latest ACP schema failed. See the steps above and the draft schema update PR."
+          exit 1

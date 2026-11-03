@@ -43,11 +43,6 @@ func RunAgent(ctx context.Context, transport Transport, newAgent AgentFactory) e
 	return rpc.Wait()
 }
 
-// SessionUpdate sends a session/update notification to the client.
-func (c *AgentConnection) SessionUpdate(ctx context.Context, params *SessionNotification) error {
-	return c.Update(ctx, params)
-}
-
 // Close closes the agent-side ACP connection.
 func (c *AgentConnection) Close() error {
 	return c.rpc.conn.Close()

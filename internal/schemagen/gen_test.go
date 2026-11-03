@@ -10,6 +10,7 @@ import (
 	"go/types"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -42,7 +43,7 @@ func TestGenerate(t *testing.T) {
 
 			want := readExpectedFiles(t, filepath.Dir(schemaPath))
 			got := generatedFilesByName(t, schemagen.Generate(&schema))
-			typeCheckGeneratedTypes(t, got["types_gen.go"])
+			typeCheckGenerated(t, got)
 
 			for filename, wantContents := range want {
 				gotContents, ok := got[filename]
@@ -74,6 +75,7 @@ func TestGenerateDeterministic(t *testing.T) {
 	}
 
 	want := generatedFilesByName(t, schemagen.Generate(&schema))
+	typeCheckGenerated(t, want)
 	for i := 0; i < 50; i++ {
 		got := generatedFilesByName(t, schemagen.Generate(&schema))
 		for filename, wantContents := range want {
@@ -92,26 +94,66 @@ func TestGenerateDeterministic(t *testing.T) {
 	}
 }
 
-func typeCheckGeneratedTypes(t *testing.T, src []byte) {
+// The source importer resolves the module's internal packages. Sharing one
+// caches each imported package across fixtures instead of rechecking it.
+var (
+	files          = token.NewFileSet()
+	sourceImporter = importer.ForCompiler(files, "source", nil)
+)
+
+// typeCheckGenerated type-checks generated files as part of package acp. RPC
+// glue is checked together with the handwritten runtime it calls, so a schema
+// that generates conflicting or mismatched declarations fails here.
+func typeCheckGenerated(t *testing.T, generated map[string][]byte) {
 	t.Helper()
-	if len(src) == 0 {
+	if len(generated) == 0 {
 		return
 	}
 
-	files := token.NewFileSet()
-	file, err := parser.ParseFile(files, "types_gen.go", src, parser.AllErrors)
-	if err != nil {
-		t.Fatalf("parse generated types: %v", err)
+	acpDir := filepath.Join("..", "..", "acp")
+	// Type-only output needs just the JSON helpers its decoders call.
+	handwritten := []string{filepath.Join(acpDir, "json.go")}
+	if _, ok := generated["methods_gen.go"]; ok {
+		paths, err := filepath.Glob(filepath.Join(acpDir, "*.go"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		handwritten = handwritten[:0]
+		for _, path := range paths {
+			if !strings.HasSuffix(path, "_test.go") && !strings.HasSuffix(path, "_gen.go") {
+				handwritten = append(handwritten, path)
+			}
+		}
 	}
-	// Generated decoders share the handwritten ACP JSON helper.
-	helper, err := parser.ParseFile(files, filepath.Join("..", "..", "acp", "json.go"), nil, parser.AllErrors)
-	if err != nil {
-		t.Fatalf("parse JSON helper: %v", err)
+
+	var parsed []*ast.File
+	for _, name := range sortedNames(generated) {
+		file, err := parser.ParseFile(files, name, generated[name], parser.AllErrors)
+		if err != nil {
+			t.Fatalf("parse generated %s: %v", name, err)
+		}
+		parsed = append(parsed, file)
 	}
-	config := types.Config{Importer: importer.Default()}
-	if _, err := config.Check("acp", files, []*ast.File{file, helper}, nil); err != nil {
-		t.Fatalf("type-check generated types: %v", err)
+	for _, path := range handwritten {
+		file, err := parser.ParseFile(files, path, nil, parser.AllErrors)
+		if err != nil {
+			t.Fatalf("parse %s: %v", path, err)
+		}
+		parsed = append(parsed, file)
 	}
+	config := types.Config{Importer: sourceImporter}
+	if _, err := config.Check("acp", files, parsed, nil); err != nil {
+		t.Fatalf("type-check generated code: %v", err)
+	}
+}
+
+func sortedNames(files map[string][]byte) []string {
+	names := make([]string, 0, len(files))
+	for name := range files {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 func readExpectedFiles(t *testing.T, dir string) map[string][]byte {

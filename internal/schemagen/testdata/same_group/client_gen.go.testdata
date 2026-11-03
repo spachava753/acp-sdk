@@ -1,31 +1,26 @@
 package acp
 
-// TaskClientHandler handles all task related client methods.
-type TaskClientHandler interface {
-	// ReadTask: Asks the client to read task details.
-	ReadTask(context.Context, *ReadTaskRequest) (*ReadTaskResponse, error)
+import (
+	"context"
+	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
+	"github.com/spachava753/acp-sdk/jsonrpc"
+)
 
-	// WriteTask: Asks the client to write task details.
-	WriteTask(context.Context, *WriteTaskRequest) (*WriteTaskResponse, error)
-}
-
-// StartTask: Asks the agent to start a task.
-func (c *Client) StartTask(ctx context.Context, params *StartTaskRequest) (*StartTaskResponse, error) {
+// TaskStart: Asks the agent to start a task.
+func (c *Client) TaskStart(ctx context.Context, params *StartTaskRequest) (*StartTaskResponse, error) {
 	return call[StartTaskResponse](ctx, c.rpc.conn, MethodTaskStart, params)
 }
 
-// StopTask: Asks the agent to stop a task.
-func (c *Client) StopTask(ctx context.Context, params *StopTaskRequest) (*StopTaskResponse, error) {
+// TaskStop: Asks the agent to stop a task.
+func (c *Client) TaskStop(ctx context.Context, params *StopTaskRequest) (*StopTaskResponse, error) {
 	return call[StopTaskResponse](ctx, c.rpc.conn, MethodTaskStop, params)
 }
 
-func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) {
+func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
 	switch req.Method {
 	case MethodTaskRead:
-		handler, ok := c.handler.(interface {
-			ReadTask(context.Context, *ReadTaskRequest) (*ReadTaskResponse, error)
-		})
+		h, ok := handler.(TaskReadHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -33,11 +28,9 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.ReadTask(ctx, params))
+		return rpcResult(h.TaskRead(ctx, params))
 	case MethodTaskWrite:
-		handler, ok := c.handler.(interface {
-			WriteTask(context.Context, *WriteTaskRequest) (*WriteTaskResponse, error)
-		})
+		h, ok := handler.(TaskWriteHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -45,8 +38,8 @@ func (c *Client) handle(ctx context.Context, req *jsonrpc.Request) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.WriteTask(ctx, params))
+		return rpcResult(h.TaskWrite(ctx, params))
 	default:
-		return handleExtension(ctx, c.handler, req)
+		return handleExtension(ctx, handler, req)
 	}
 }

@@ -24,8 +24,9 @@ func (m *Meta) UnmarshalJSON(data []byte) error {
 
 // AgentAuthCapabilities: Authentication-related capabilities supported by the agent.
 type AgentAuthCapabilities struct {
-	Meta   Meta                `json:"_meta,omitzero"`
-	Logout *LogoutCapabilities `json:"logout,omitempty"`
+	Meta   Meta                    `json:"_meta,omitzero"`
+	Logout *LogoutCapabilities     `json:"logout,omitempty"`
+	Status *AuthStatusCapabilities `json:"status,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -34,6 +35,7 @@ func (c *AgentAuthCapabilities) UnmarshalJSON(data []byte) error {
 	decoded := alias{}
 	raw := struct {
 		Logout json.RawMessage `json:"logout"`
+		Status json.RawMessage `json:"status"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
@@ -41,6 +43,9 @@ func (c *AgentAuthCapabilities) UnmarshalJSON(data []byte) error {
 	}
 	if len(raw.Logout) > 0 {
 		_ = unmarshalJSON(raw.Logout, &decoded.Logout)
+	}
+	if len(raw.Status) > 0 {
+		_ = unmarshalJSON(raw.Status, &decoded.Status)
 	}
 	*c = AgentAuthCapabilities(decoded)
 	return nil
@@ -51,7 +56,7 @@ func (c *AgentAuthCapabilities) UnmarshalJSON(data []byte) error {
 // Advertised during initialization to inform the client about
 // available features and content types.
 //
-// See protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol/initialization#agent-capabilities)
+// See protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol/v1/draft/initialization#agent-capabilities)
 type AgentCapabilities struct {
 	Meta                Meta                   `json:"_meta,omitzero"`
 	Auth                *AgentAuthCapabilities `json:"auth,omitempty"`
@@ -147,6 +152,32 @@ func (a *Annotations) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// ArchiveSessionRequest: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Request parameters for archiving a session.
+//
+// Only available if the Agent supports the `sessionCapabilities.archive` capability.
+//
+// Archiving hides the session from default `session/list` results. It keeps the session ID
+// and saved history. If the session is active, the Agent MUST cancel any ongoing work and
+// free the session's resources as if `session/close` had been called, then archive it.
+// Archiving an archived session succeeds. A session that does not exist gets `-32002`.
+type ArchiveSessionRequest struct {
+	Meta      Meta      `json:"_meta,omitzero"`
+	SessionID SessionId `json:"sessionId"`
+}
+
+// ArchiveSessionResponse: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Response from archiving a session.
+type ArchiveSessionResponse struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
 // AudioContent: Audio provided to or from an LLM.
 type AudioContent struct {
 	Meta        Meta         `json:"_meta,omitzero"`
@@ -170,6 +201,55 @@ func (c *AudioContent) UnmarshalJSON(data []byte) error {
 		_ = unmarshalJSON(raw.Annotations, &decoded.Annotations)
 	}
 	*c = AudioContent(decoded)
+	return nil
+}
+
+// AuthAccount: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// An account or credential the agent has configured, such as a signed-in user
+// account or an API key.
+//
+// All fields are display information only. Clients MUST NOT use them as stable
+// account identifiers, and SHOULD NOT log them or send them elsewhere, such as to
+// telemetry.
+type AuthAccount struct {
+	Meta         Meta    `json:"_meta,omitzero"`
+	Active       *bool   `json:"active,omitempty"`
+	Email        *string `json:"email,omitempty"`
+	Label        string  `json:"label"`
+	Name         *string `json:"name,omitempty"`
+	Organization *string `json:"organization,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (a *AuthAccount) UnmarshalJSON(data []byte) error {
+	type alias AuthAccount
+	decoded := alias{}
+	raw := struct {
+		Active       json.RawMessage `json:"active"`
+		Email        json.RawMessage `json:"email"`
+		Name         json.RawMessage `json:"name"`
+		Organization json.RawMessage `json:"organization"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Active) > 0 {
+		_ = unmarshalJSON(raw.Active, &decoded.Active)
+	}
+	if len(raw.Email) > 0 {
+		_ = unmarshalJSON(raw.Email, &decoded.Email)
+	}
+	if len(raw.Name) > 0 {
+		_ = unmarshalJSON(raw.Name, &decoded.Name)
+	}
+	if len(raw.Organization) > 0 {
+		_ = unmarshalJSON(raw.Organization, &decoded.Organization)
+	}
+	*a = AuthAccount(decoded)
 	return nil
 }
 
@@ -296,7 +376,7 @@ type AuthMethodId string
 // The client runs the configured agent program as a separate interactive
 // process for the user to authenticate via a TUI. Agents MUST advertise this
 // method only when the client enabled its terminal authentication capability.
-// A zero exit status signals success; any other termination signals failure.
+// A zero exit status signals success. Any other termination signals failure.
 // The client MUST NOT pass this method to `authenticate`.
 type AuthMethodTerminal struct {
 	Meta        Meta              `json:"_meta,omitzero"`
@@ -322,6 +402,130 @@ func (t *AuthMethodTerminal) UnmarshalJSON(data []byte) error {
 		_ = unmarshalJSON(raw.Description, &decoded.Description)
 	}
 	*t = AuthMethodTerminal(decoded)
+	return nil
+}
+
+// AuthState: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// The agent's overall authentication state.
+type AuthState string
+
+const (
+	// AuthStateAuthenticated: Credentials are configured. This does not guarantee that they are valid.
+	AuthStateAuthenticated AuthState = "authenticated"
+	// AuthStateUnauthenticated: The user needs to sign in. This includes credentials that are missing,
+	// expired, or known to be invalid.
+	AuthStateUnauthenticated AuthState = "unauthenticated"
+	// AuthStateNotRequired: No authentication is needed, for example because the agent uses a local model.
+	AuthStateNotRequired AuthState = "not_required"
+	// AuthStateUnknown: The agent cannot currently determine the state.
+	AuthStateUnknown AuthState = "unknown"
+)
+
+// AuthStatusCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Auth status capabilities supported by the agent.
+//
+// Supplying `{}` means the agent supports the `auth/status` method.
+type AuthStatusCapabilities struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
+// AuthStatusRequest: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Request parameters for the `auth/status` method.
+//
+// Queries the agent's current authentication state without changing it.
+//
+// Agents MUST NOT reject it with `auth_required` (`-32000`), since Clients call it to learn
+// whether authentication is required.
+type AuthStatusRequest struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
+// AuthStatusResponse: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Response to the `auth/status` method.
+type AuthStatusResponse struct {
+	Meta     Meta          `json:"_meta,omitzero"`
+	Accounts []AuthAccount `json:"accounts,omitempty"`
+	State    AuthState     `json:"state"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *AuthStatusResponse) UnmarshalJSON(data []byte) error {
+	type alias AuthStatusResponse
+	decoded := alias{}
+	raw := struct {
+		Accounts json.RawMessage `json:"accounts"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Accounts) > 0 {
+		var values []json.RawMessage
+		if err := unmarshalJSON(raw.Accounts, &values); err == nil {
+			decoded.Accounts = []AuthAccount{}
+			for _, value := range values {
+				var item AuthAccount
+				if err := unmarshalJSON(value, &item); err == nil {
+					decoded.Accounts = append(decoded.Accounts, item)
+				}
+			}
+		}
+	}
+	*r = AuthStatusResponse(decoded)
+	return nil
+}
+
+// AuthStatusUpdateNotification: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Notification sent by the agent when its authentication status changes.
+//
+// Carries the same fields as the `auth/status` response. Agents that advertise the
+// `auth.status` capability MAY send it at any time after `initialize`, and SHOULD only
+// send it when the reported status differs from the last one sent on the connection.
+type AuthStatusUpdateNotification struct {
+	Meta     Meta          `json:"_meta,omitzero"`
+	Accounts []AuthAccount `json:"accounts,omitempty"`
+	State    AuthState     `json:"state"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (n *AuthStatusUpdateNotification) UnmarshalJSON(data []byte) error {
+	type alias AuthStatusUpdateNotification
+	decoded := alias{}
+	raw := struct {
+		Accounts json.RawMessage `json:"accounts"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Accounts) > 0 {
+		var values []json.RawMessage
+		if err := unmarshalJSON(raw.Accounts, &values); err == nil {
+			decoded.Accounts = []AuthAccount{}
+			for _, value := range values {
+				var item AuthAccount
+				if err := unmarshalJSON(value, &item); err == nil {
+					decoded.Accounts = append(decoded.Accounts, item)
+				}
+			}
+		}
+	}
+	*n = AuthStatusUpdateNotification(decoded)
 	return nil
 }
 
@@ -489,7 +693,7 @@ func (s *BooleanPropertySchema) UnmarshalJSON(data []byte) error {
 
 // CancelNotification: Notification to cancel ongoing operations for a session.
 //
-// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
+// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v1/draft/prompt-turn#cancellation)
 type CancelNotification struct {
 	Meta      Meta      `json:"_meta,omitzero"`
 	SessionID SessionId `json:"sessionId"`
@@ -500,7 +704,7 @@ type CancelNotification struct {
 // Advertised during initialization to inform the agent about
 // available features and methods.
 //
-// See protocol docs: [Client Capabilities](https://agentclientprotocol.com/protocol/initialization#client-capabilities)
+// See protocol docs: [Client Capabilities](https://agentclientprotocol.com/protocol/v1/draft/initialization#client-capabilities)
 type ClientCapabilities struct {
 	Meta        Meta                       `json:"_meta,omitzero"`
 	Auth        *AuthCapabilities          `json:"auth,omitempty"`
@@ -634,7 +838,7 @@ const (
 // CompactionSummaryChunk: A content block appended to a compaction's summary. A first-seen ID creates
 // an in-progress compaction. Chunks append in receive order.
 // Agents MUST only send this update when the Client advertised
-// [`ClientSessionCapabilities::compaction`].
+// the `session.compaction` Client capability.
 type CompactionSummaryChunk struct {
 	Meta         Meta         `json:"_meta,omitzero"`
 	CompactionID CompactionId `json:"compactionId"`
@@ -644,7 +848,7 @@ type CompactionSummaryChunk struct {
 // CompactionUpdate: A context compaction upsert. The first notification fixes the compaction's
 // timeline position. Later updates with the same ID patch that entity in place.
 // Agents MUST only send this update when the Client advertised
-// [`ClientSessionCapabilities::compaction`].
+// the `session.compaction` Client capability.
 //
 // `summary`, `error`, and `_meta` have patch semantics: omission leaves the
 // stored value unchanged, `null` clears it, and a concrete value replaces it.
@@ -752,18 +956,15 @@ type Content struct {
 
 // ContentBlock: Content blocks represent displayable information in the Agent Client Protocol.
 //
-// They provide a structured way to handle various types of user-facing content—whether
-// it's text from language models, images for analysis, or embedded resources for context.
-//
 // Content blocks appear in:
 // - User prompts sent via `session/prompt`
 // - Language model output streamed through `session/update` notifications
 // - Progress updates and results from tool calls
 //
-// This structure is compatible with the Model Context Protocol (MCP), enabling
-// agents to seamlessly forward content from MCP tool outputs without transformation.
+// This structure is compatible with the Model Context Protocol (MCP), so agents can
+// forward content from MCP tool outputs without transformation.
 //
-// See protocol docs: [Content](https://agentclientprotocol.com/protocol/content)
+// See protocol docs: [Content](https://agentclientprotocol.com/protocol/v1/draft/content)
 type ContentBlock struct {
 	Type        ContentBlockType         `json:"type"`
 	Meta        Meta                     `json:"_meta,omitzero"`
@@ -1202,7 +1403,7 @@ type CreateTerminalResponse struct {
 
 // CurrentModeUpdate: The current mode of the session has changed
 //
-// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/v1/draft/session-modes)
 type CurrentModeUpdate struct {
 	Meta          Meta          `json:"_meta,omitzero"`
 	CurrentModeID SessionModeId `json:"currentModeId"`
@@ -1225,7 +1426,7 @@ type DeleteSessionResponse struct {
 //
 // Shows changes to files in a format suitable for display in the client UI.
 //
-// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
+// See protocol docs: [Content](https://agentclientprotocol.com/protocol/v1/draft/tool-calls#content)
 type Diff struct {
 	Meta    Meta    `json:"_meta,omitzero"`
 	NewText string  `json:"newText"`
@@ -1304,7 +1505,7 @@ func (c *ElicitationCapabilities) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ElicitationContentValue: Allowed wire representations for [`ElicitationContentValue`].
+// ElicitationContentValue: Allowed wire representations for `ElicitationContentValue`.
 type ElicitationContentValue = json.RawMessage
 
 // ElicitationFormCapabilities: Form-based elicitation capabilities.
@@ -1363,8 +1564,8 @@ type ElicitationId string
 // ElicitationPropertySchema: Property schema for elicitation form fields.
 //
 // Each variant corresponds to a JSON Schema `"type"` value.
-// Single-select enums use the `String` variant with `enum` or `oneOf` set.
-// Multi-select enums use the `Array` variant.
+// Single-select enums use `type: "string"` with `enum` or `oneOf` set.
+// Multi-select enums use `type: "array"`.
 type ElicitationPropertySchema struct {
 	Type        ElicitationPropertySchemaType `json:"type"`
 	Meta        Meta                          `json:"_meta,omitzero"`
@@ -1586,7 +1787,7 @@ const (
 
 // ElicitationSessionScope: Session-scoped elicitation, optionally tied to a specific tool call.
 //
-// When `tool_call_id` is set, the elicitation is tied to a specific tool call.
+// When `toolCallId` is set, the elicitation is tied to a specific tool call.
 // This is useful when an agent receives an elicitation from an MCP server
 // during a tool call and needs to redirect it to the user.
 type ElicitationSessionScope struct {
@@ -1798,8 +1999,9 @@ func (e *Error) UnmarshalJSON(data []byte) error {
 
 // ErrorCode: Predefined error codes for common JSON-RPC and ACP-specific errors.
 //
-// These codes follow the JSON-RPC 2.0 specification for standard errors
-// and use the reserved range (-32000 to -32099) for protocol-specific errors.
+// Standard errors use the JSON-RPC 2.0 codes. ACP-specific errors use the JSON-RPC
+// server-error range (-32000 to -32099), and request cancellation uses -32800 from the
+// range LSP reserves (-32899 to -32800).
 type ErrorCode int32
 
 const (
@@ -1813,14 +2015,13 @@ const (
 	// ErrorCodeInvalidParams: **Invalid params**: Invalid method parameter(s).
 	ErrorCodeInvalidParams ErrorCode = -32602
 	// ErrorCodeInternalError: **Internal error**: Internal JSON-RPC error.
-	// Reserved for implementation-defined server errors.
 	ErrorCodeInternalError ErrorCode = -32603
 	// ErrorCodeRequestCancelled: **Request cancelled**: Execution of the method was aborted either due to a cancellation request from the caller or
 	// because of resource constraints or shutdown.
 	ErrorCodeRequestCancelled ErrorCode = -32800
 	// ErrorCodeAuthenticationRequired: **Authentication required**: Authentication is required before this operation can be performed.
 	ErrorCodeAuthenticationRequired ErrorCode = -32000
-	// ErrorCodeResourceNotFound: **Resource not found**: A given resource, such as a file, was not found.
+	// ErrorCodeResourceNotFound: **Resource not found**: A given resource, such as a session or file, was not found.
 	ErrorCodeResourceNotFound ErrorCode = -32002
 )
 
@@ -1851,30 +2052,30 @@ func (r *ErrorStopReason) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ExtNotification: Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
+// ExtNotification: Allows either side to send an arbitrary notification that is not part of the ACP spec.
 // Extension notifications provide a way to send one-way messages for custom functionality
 // while maintaining protocol compatibility.
 //
-// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 type ExtNotification any
 
 // ExtRequest: Allows for sending an arbitrary request that is not part of the ACP spec.
 // Extension methods provide a way to add custom functionality while maintaining
 // protocol compatibility.
 //
-// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 type ExtRequest any
 
-// ExtResponse: Allows for sending an arbitrary response to an [`ExtRequest`] that is not part of the ACP spec.
+// ExtResponse: Allows for sending an arbitrary response to an extension request that is not part of the ACP spec.
 // Extension methods provide a way to add custom functionality while maintaining
 // protocol compatibility.
 //
-// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 type ExtResponse any
 
 // FileSystemCapabilities: File system capabilities that a client may support.
 //
-// See protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)
+// See protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/v1/draft/initialization#filesystem)
 type FileSystemCapabilities struct {
 	Meta          Meta `json:"_meta,omitzero"`
 	ReadTextFile  bool `json:"readTextFile,omitempty"`
@@ -2137,11 +2338,39 @@ func (i *Implementation) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// InitializeProxyRequest: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Request parameters for `proxy/initialize`.
+//
+// A conductor sends `proxy/initialize` instead of `initialize` to every component that has a
+// successor, which tells the component to run as a proxy. The params and the response are
+// the same as for `initialize`. A conductor sends `initialize` to the final agent.
+//
+// The params carry the protocol version the conductor selected: the client's requested
+// version, unless the conductor supports only a lower one. Before answering successfully,
+// the proxy MUST forward an `initialize` request to its successor through `proxy/successor`.
+//
+// See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
+type InitializeProxyRequest InitializeRequest
+
+// InitializeProxyResponse: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Response to `proxy/initialize`.
+//
+// The same as the `initialize` response. The proxy builds it from its successor's
+// `initialize` response and answers with the capabilities of the chain from itself onward.
+// It MUST NOT change `protocolVersion`.
+type InitializeProxyResponse InitializeResponse
+
 // InitializeRequest: Request parameters for the initialize method.
 //
 // Sent by the client to establish connection and negotiate capabilities.
 //
-// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
+// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v1/draft/initialization)
 type InitializeRequest struct {
 	Meta               Meta                `json:"_meta,omitzero"`
 	ClientCapabilities *ClientCapabilities `json:"clientCapabilities,omitempty"`
@@ -2175,7 +2404,7 @@ func (r *InitializeRequest) UnmarshalJSON(data []byte) error {
 //
 // Contains the negotiated protocol version and agent capabilities.
 //
-// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
+// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v1/draft/initialization)
 type InitializeResponse struct {
 	Meta              Meta               `json:"_meta,omitzero"`
 	AgentCapabilities *AgentCapabilities `json:"agentCapabilities,omitempty"`
@@ -2303,9 +2532,10 @@ func (r ListProvidersResponse) MarshalJSON() ([]byte, error) {
 //
 // Only available if the Agent supports the `sessionCapabilities.list` capability.
 type ListSessionsRequest struct {
-	Meta   Meta    `json:"_meta,omitzero"`
-	Cursor *string `json:"cursor,omitempty"`
-	Cwd    *string `json:"cwd,omitempty"`
+	Meta     Meta                  `json:"_meta,omitzero"`
+	Archived *SessionArchiveFilter `json:"archived,omitempty"`
+	Cursor   *string               `json:"cursor,omitempty"`
+	Cwd      *string               `json:"cwd,omitempty"`
 }
 
 // ListSessionsResponse: Response from listing sessions.
@@ -2344,7 +2574,7 @@ const (
 //
 // Only available if the Agent supports the `loadSession` capability.
 //
-// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
+// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/v1/draft/session-setup#loading-sessions)
 type LoadSessionRequest struct {
 	Meta                  Meta          `json:"_meta,omitzero"`
 	AdditionalDirectories []string      `json:"additionalDirectories,omitempty"`
@@ -2453,8 +2683,8 @@ func (c *McpCapabilities) UnmarshalJSON(data []byte) error {
 //
 // An inner MCP error, distinct from an outer ACP binding or runtime error.
 //
-// `code` and `message` are required and non-null. `data` is optional;
-// explicit `null` is preserved separately from an omitted key.
+// `code` and `message` are required and non-null. `data` is optional.
+// Explicit `null` is preserved separately from an omitted key.
 type McpError struct {
 	Code    int32  `json:"code"`
 	Data    any    `json:"data,omitempty"`
@@ -2524,7 +2754,7 @@ type McpRequestId string
 // MCP servers provide tools and context that the agent can use when
 // processing prompts.
 //
-// See protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)
+// See protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/v1/draft/session-setup#mcp-servers)
 type McpServer struct {
 	Type     McpServerType  `json:"type,omitempty"`
 	Meta     Meta           `json:"_meta,omitzero"`
@@ -2764,7 +2994,7 @@ type MessageId string
 // Notification parameters for `mcp/message`.
 //
 // Sent by the provider to the consumer for an active request (including
-// subscription acknowledgements and updates); the outer envelope has no `id`.
+// subscription acknowledgements and updates). The outer envelope has no `id`.
 type MessageMcpNotification struct {
 	Meta      Meta           `json:"_meta,omitzero"`
 	Method    string         `json:"method"`
@@ -2805,9 +3035,9 @@ func (r *MessageMcpRequest) UnmarshalJSON(data []byte) error {
 // Outer ACP errors are reserved for binding and runtime failures.
 //
 // Both branches require their carrier key. An error must be a non-null object.
-// Unknown outer fields are ignored; inner result and error fields are preserved.
-// Carrier `_meta` is optional; null or invalid values are treated as absent.
-// Senders must include exactly one outcome; receivers prefer `result` if both are present.
+// Unknown outer fields are ignored. Inner result and error fields are preserved.
+// Carrier `_meta` is optional. Null or invalid values are treated as absent.
+// Senders must include exactly one outcome. Receivers prefer `result` if both are present.
 type MessageMcpResponse struct {
 	Meta   Meta      `json:"_meta,omitzero"`
 	Error  *McpError `json:"error,omitempty,omitzero"`
@@ -2926,6 +3156,8 @@ func OtherMultiSelectItems(type_ string) MultiSelectItems {
 }
 
 // NewTitledMultiSelectItems creates an MultiSelectItems variant: Titled multi-select items with human-readable labels.
+//
+// As in MCP, titled items omit `type` and are identified by `anyOf`.
 func NewTitledMultiSelectItems(anyOf []EnumOption) MultiSelectItems {
 	return MultiSelectItems{
 		AnyOf: anyOf,
@@ -3015,7 +3247,7 @@ func (s *MultiSelectPropertySchema) UnmarshalJSON(data []byte) error {
 
 // NewSessionRequest: Request parameters for creating a new session.
 //
-// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
+// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/v1/draft/session-setup#creating-a-session)
 type NewSessionRequest struct {
 	Meta                  Meta          `json:"_meta,omitzero"`
 	AdditionalDirectories []string      `json:"additionalDirectories,omitempty"`
@@ -3026,7 +3258,7 @@ type NewSessionRequest struct {
 
 // NewSessionResponse: Response from creating a new session.
 //
-// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
+// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/v1/draft/session-setup#creating-a-session)
 type NewSessionResponse struct {
 	Meta          Meta                   `json:"_meta,omitzero"`
 	ConfigOptions *[]SessionConfigOption `json:"configOptions,omitempty"`
@@ -3074,7 +3306,7 @@ func (r *NewSessionResponse) UnmarshalJSON(data []byte) error {
 // Notices are live events rather than session history. Agents must not rely on
 // a notice being received, displayed, or seen by the user.
 // Agents MUST only send notices when the Client advertised
-// [`ClientSessionCapabilities::notices`]. Otherwise, Agents may use an agent
+// the `session.notices` Client capability. Otherwise, Agents may use an agent
 // message when the information should still be surfaced to the user.
 //
 // See RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)
@@ -3193,7 +3425,7 @@ const (
 // Agents report plans to clients to provide visibility into their execution strategy.
 // Plans can evolve during execution as the agent discovers new requirements or completes tasks.
 //
-// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
+// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/v1/draft/agent-plan)
 type Plan struct {
 	Meta    Meta        `json:"_meta,omitzero"`
 	Entries []PlanEntry `json:"entries"`
@@ -3249,7 +3481,7 @@ type PlanCapabilities struct {
 //
 // Represents a task or goal that the assistant intends to accomplish
 // as part of fulfilling the user's request.
-// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
+// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v1/draft/agent-plan#plan-entries)
 type PlanEntry struct {
 	Meta     Meta              `json:"_meta,omitzero"`
 	Content  string            `json:"content"`
@@ -3261,7 +3493,7 @@ type PlanEntry struct {
 //
 // Used to indicate the relative importance or urgency of different
 // tasks in the execution plan.
-// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
+// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v1/draft/agent-plan#plan-entries)
 type PlanEntryPriority string
 
 const (
@@ -3276,7 +3508,7 @@ const (
 // PlanEntryStatus: Status of a plan entry in the execution flow.
 //
 // Tracks the lifecycle of each task from planning through completion.
-// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
+// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v1/draft/agent-plan#plan-entries)
 type PlanEntryStatus string
 
 const (
@@ -3503,8 +3735,8 @@ func (c *PlanUpdateContent) UnmarshalJSON(data []byte) error {
 
 // PromptCapabilities: Prompt capabilities supported by the agent in `session/prompt` requests.
 //
-// Baseline agent functionality requires support for [`ContentBlock::Text`]
-// and [`ContentBlock::ResourceLink`] in prompt requests.
+// Baseline agent functionality requires support for `text`
+// and `resource_link` content blocks in prompt requests.
 //
 // Other variants must be explicitly opted in to.
 // Capabilities for different types of content in prompt requests.
@@ -3512,7 +3744,7 @@ func (c *PlanUpdateContent) UnmarshalJSON(data []byte) error {
 // Indicates which content types beyond the baseline (text and resource links)
 // the agent can process.
 //
-// See protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/initialization#prompt-capabilities)
+// See protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/v1/draft/initialization#prompt-capabilities)
 type PromptCapabilities struct {
 	Meta            Meta `json:"_meta,omitzero"`
 	Audio           bool `json:"audio,omitempty"`
@@ -3550,7 +3782,7 @@ func (c *PromptCapabilities) UnmarshalJSON(data []byte) error {
 //
 // Contains the user's message and any additional context.
 //
-// See protocol docs: [User Message](https://agentclientprotocol.com/protocol/prompt-turn#1-user-message)
+// See protocol docs: [User Message](https://agentclientprotocol.com/protocol/v1/draft/prompt-turn#1-user-message)
 type PromptRequest struct {
 	Meta      Meta           `json:"_meta,omitzero"`
 	Prompt    []ContentBlock `json:"prompt"`
@@ -3569,7 +3801,7 @@ func (r PromptRequest) MarshalJSON() ([]byte, error) {
 
 // PromptResponse: Response from processing a user prompt.
 //
-// See protocol docs: [Check for Completion](https://agentclientprotocol.com/protocol/prompt-turn#4-check-for-completion)
+// See protocol docs: [Check for Completion](https://agentclientprotocol.com/protocol/v1/draft/prompt-turn#4-check-for-completion)
 type PromptResponse struct {
 	Meta       Meta       `json:"_meta,omitzero"`
 	StopReason StopReason `json:"stopReason"`
@@ -3642,6 +3874,66 @@ type ProvidersCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// ProxySuccessorNotification: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Parameters of a `proxy/successor` notification.
+//
+// A proxy sends it to forward a message to its successor, and the conductor sends it to
+// deliver a message from the successor to the proxy. The envelope wraps one notification: `method`
+// and `params` are the wrapped notification's method and params.
+//
+// See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
+type ProxySuccessorNotification struct {
+	Meta   Meta   `json:"_meta,omitzero"`
+	Method string `json:"method"`
+	Params any    `json:"params,omitempty"`
+}
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (n *ProxySuccessorNotification) UnmarshalJSON(data []byte) error {
+	type plain ProxySuccessorNotification
+	return unmarshalJSON(data, (*plain)(n))
+}
+
+// ProxySuccessorRequest: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Parameters of a `proxy/successor` request.
+//
+// A proxy sends it to forward a message to its successor, and the conductor sends it to
+// deliver a message from the successor to the proxy. The envelope wraps one request: `method`
+// and `params` are the wrapped request's method and params.
+//
+// The result or error of the wrapped request is returned unchanged, as the same JSON value,
+// as the result or error of the `proxy/successor` request. Errors the conductor returns
+// itself, for example because the successor has exited, are not wrapped results.
+//
+// To cancel it, the sender sends `$/cancel_request` with the ID of this `proxy/successor`
+// request on the same connection. Cancellation is never forwarded to another hop.
+//
+// See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
+type ProxySuccessorRequest struct {
+	Meta   Meta   `json:"_meta,omitzero"`
+	Method string `json:"method"`
+	Params any    `json:"params,omitempty"`
+}
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (r *ProxySuccessorRequest) UnmarshalJSON(data []byte) error {
+	type plain ProxySuccessorRequest
+	return unmarshalJSON(data, (*plain)(r))
+}
+
+// ProxySuccessorResponse: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Result of a `proxy/successor` request: the wrapped request's result, forwarded unchanged.
+type ProxySuccessorResponse any
+
 // ReadTextFileRequest: Request to read content from a text file.
 //
 // Only available if the client supports the `fs.readTextFile` capability.
@@ -3701,9 +3993,9 @@ const (
 //
 // When a client sends a `session/cancel` notification to cancel an ongoing
 // prompt turn, it MUST respond to all pending `session/request_permission`
-// requests with this `Cancelled` outcome.
+// requests with this `cancelled` outcome.
 //
-// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
+// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v1/draft/prompt-turn#cancellation)
 func CancelledRequestPermissionOutcome() RequestPermissionOutcome {
 	return RequestPermissionOutcome{
 		Outcome: RequestPermissionOutcomeTypeCancelled,
@@ -3742,7 +4034,7 @@ func (o RequestPermissionOutcome) MarshalJSON() ([]byte, error) {
 //
 // Sent when the agent needs authorization before performing a sensitive operation.
 //
-// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
+// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v1/draft/tool-calls#requesting-permission)
 type RequestPermissionRequest struct {
 	Meta      Meta               `json:"_meta,omitzero"`
 	Options   []PermissionOption `json:"options"`
@@ -3905,13 +4197,44 @@ type SessionAdditionalDirectoriesCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// SessionArchiveCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Capabilities for `session/archive` and `session/unarchive`.
+//
+// Supplying `{}` means the agent supports both methods, the `archived` filter on
+// `session/list`, and `SessionInfo.archived`.
+type SessionArchiveCapabilities struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
+// SessionArchiveFilter: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Which sessions `session/list` returns based on their archive state.
+//
+// Unknown values are preserved so they can be stored, proxied, or forwarded. An Agent MUST
+// return `-32602` for a value it does not support rather than treating it as `exclude`.
+type SessionArchiveFilter string
+
+const (
+	// SessionArchiveFilterExclude: Only sessions that are not archived. This is the default.
+	SessionArchiveFilterExclude SessionArchiveFilter = "exclude"
+	// SessionArchiveFilterInclude: Both archived sessions and sessions that are not archived.
+	SessionArchiveFilterInclude SessionArchiveFilter = "include"
+	// SessionArchiveFilterOnly: Only archived sessions.
+	SessionArchiveFilterOnly SessionArchiveFilter = "only"
+)
+
 // SessionCancelCapabilities: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
 //
 // Capability to cancel work in a subagent session without ending that session.
 //
-// Supplying `{}` advertises support; an omitted or `null` `cancel` does not.
+// Supplying `{}` advertises support. An omitted or `null` `cancel` does not.
 type SessionCancelCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
@@ -3922,18 +4245,21 @@ type SessionCancelCapabilities struct {
 //
 // Optionally, they **MAY** support other session methods and notifications by specifying additional capabilities.
 //
-// Note: `session/load` is still handled by the top-level `load_session` capability. This will be unified in future versions of the protocol.
+// Note: `session/load` is still handled by the top-level `loadSession` capability. This will be unified in future versions of the protocol.
 //
-// See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)
+// See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/v1/draft/initialization#session-capabilities)
 type SessionCapabilities struct {
 	Meta                  Meta                                      `json:"_meta,omitzero"`
 	AdditionalDirectories *SessionAdditionalDirectoriesCapabilities `json:"additionalDirectories,omitempty"`
+	Archive               *SessionArchiveCapabilities               `json:"archive,omitempty"`
 	Close                 *SessionCloseCapabilities                 `json:"close,omitempty"`
 	Delete                *SessionDeleteCapabilities                `json:"delete,omitempty"`
 	Fork                  *SessionForkCapabilities                  `json:"fork,omitempty"`
 	List                  *SessionListCapabilities                  `json:"list,omitempty"`
 	Resume                *SessionResumeCapabilities                `json:"resume,omitempty"`
+	Status                *SessionStatusCapabilities                `json:"status,omitempty"`
 	SystemPrompt          *SessionSystemPromptCapabilities          `json:"systemPrompt,omitempty"`
+	Title                 *SessionTitleCapabilities                 `json:"title,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -3942,12 +4268,15 @@ func (c *SessionCapabilities) UnmarshalJSON(data []byte) error {
 	decoded := alias{}
 	raw := struct {
 		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
+		Archive               json.RawMessage `json:"archive"`
 		Close                 json.RawMessage `json:"close"`
 		Delete                json.RawMessage `json:"delete"`
 		Fork                  json.RawMessage `json:"fork"`
 		List                  json.RawMessage `json:"list"`
 		Resume                json.RawMessage `json:"resume"`
+		Status                json.RawMessage `json:"status"`
 		SystemPrompt          json.RawMessage `json:"systemPrompt"`
+		Title                 json.RawMessage `json:"title"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
@@ -3955,6 +4284,9 @@ func (c *SessionCapabilities) UnmarshalJSON(data []byte) error {
 	}
 	if len(raw.AdditionalDirectories) > 0 {
 		_ = unmarshalJSON(raw.AdditionalDirectories, &decoded.AdditionalDirectories)
+	}
+	if len(raw.Archive) > 0 {
+		_ = unmarshalJSON(raw.Archive, &decoded.Archive)
 	}
 	if len(raw.Close) > 0 {
 		_ = unmarshalJSON(raw.Close, &decoded.Close)
@@ -3971,8 +4303,14 @@ func (c *SessionCapabilities) UnmarshalJSON(data []byte) error {
 	if len(raw.Resume) > 0 {
 		_ = unmarshalJSON(raw.Resume, &decoded.Resume)
 	}
+	if len(raw.Status) > 0 {
+		_ = unmarshalJSON(raw.Status, &decoded.Status)
+	}
 	if len(raw.SystemPrompt) > 0 {
 		_ = unmarshalJSON(raw.SystemPrompt, &decoded.SystemPrompt)
+	}
+	if len(raw.Title) > 0 {
+		_ = unmarshalJSON(raw.Title, &decoded.Title)
 	}
 	*c = SessionCapabilities(decoded)
 	return nil
@@ -4304,16 +4642,17 @@ type SessionForkCapabilities struct {
 
 // SessionId: A unique identifier for a conversation session between a client and agent.
 //
-// Sessions maintain their own context, conversation history, and state,
-// allowing multiple independent interactions with the same agent.
+// Each session has its own context, conversation history, and state, so one
+// agent can run several independent sessions.
 //
-// See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)
+// See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/v1/draft/session-setup#session-id)
 type SessionId string
 
 // SessionInfo: Information about a session returned by session/list
 type SessionInfo struct {
 	Meta                  Meta      `json:"_meta,omitzero"`
 	AdditionalDirectories []string  `json:"additionalDirectories,omitempty"`
+	Archived              *bool     `json:"archived,omitempty"`
 	Cwd                   string    `json:"cwd"`
 	SessionID             SessionId `json:"sessionId"`
 	Title                 *string   `json:"title,omitempty"`
@@ -4326,6 +4665,7 @@ func (i *SessionInfo) UnmarshalJSON(data []byte) error {
 	decoded := alias{}
 	raw := struct {
 		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
+		Archived              json.RawMessage `json:"archived"`
 		Title                 json.RawMessage `json:"title"`
 		UpdatedAt             json.RawMessage `json:"updatedAt"`
 		*alias
@@ -4345,6 +4685,9 @@ func (i *SessionInfo) UnmarshalJSON(data []byte) error {
 			}
 		}
 	}
+	if len(raw.Archived) > 0 {
+		_ = unmarshalJSON(raw.Archived, &decoded.Archived)
+	}
 	if len(raw.Title) > 0 {
 		_ = unmarshalJSON(raw.Title, &decoded.Title)
 	}
@@ -4358,7 +4701,7 @@ func (i *SessionInfo) UnmarshalJSON(data []byte) error {
 // SessionInfoUpdate: Update to session metadata. All fields are optional to support partial updates.
 //
 // Agents send this notification to update session information like title or custom metadata.
-// This allows clients to display dynamic session names and track session state changes.
+// Clients can use it to keep session titles and state current.
 type SessionInfoUpdate struct {
 	Meta      Meta    `json:"_meta,omitzero"`
 	Title     *string `json:"title,omitempty"`
@@ -4403,7 +4746,9 @@ type SessionMessage struct {
 	Meta               Meta            `json:"_meta,omitzero"`
 	Content            *[]ContentBlock `json:"content,omitempty"`
 	MessageID          MessageId       `json:"messageId"`
+	RecipientMessageID *MessageId      `json:"recipientMessageId,omitempty"`
 	RecipientSessionID *SessionId      `json:"recipientSessionId,omitempty"`
+	SenderMessageID    *MessageId      `json:"senderMessageId,omitempty"`
 	SenderSessionID    *SessionId      `json:"senderSessionId,omitempty"`
 	// NullFields lists JSON field names to send as explicit null, regardless of their values.
 	// Decoding records explicit nulls here, separately from omitted fields.
@@ -4415,39 +4760,18 @@ type SessionMessage struct {
 // This capability is not part of the spec yet, and may be removed or changed at any point.
 //
 // A streamed content block of an inter-session message.
+//
+// A chunk carries only content. The message's participants and references come from
+// `session_message` upserts, which can arrive before, between, or after its chunks.
 type SessionMessageChunk struct {
-	Meta               Meta         `json:"_meta,omitzero"`
-	Content            ContentBlock `json:"content"`
-	MessageID          MessageId    `json:"messageId"`
-	RecipientSessionID *SessionId   `json:"recipientSessionId,omitempty"`
-	SenderSessionID    *SessionId   `json:"senderSessionId,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (c *SessionMessageChunk) UnmarshalJSON(data []byte) error {
-	type alias SessionMessageChunk
-	decoded := alias{}
-	raw := struct {
-		RecipientSessionID json.RawMessage `json:"recipientSessionId"`
-		SenderSessionID    json.RawMessage `json:"senderSessionId"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.RecipientSessionID) > 0 {
-		_ = unmarshalJSON(raw.RecipientSessionID, &decoded.RecipientSessionID)
-	}
-	if len(raw.SenderSessionID) > 0 {
-		_ = unmarshalJSON(raw.SenderSessionID, &decoded.SenderSessionID)
-	}
-	*c = SessionMessageChunk(decoded)
-	return nil
+	Meta      Meta         `json:"_meta,omitzero"`
+	Content   ContentBlock `json:"content"`
+	MessageID MessageId    `json:"messageId"`
 }
 
 // SessionMode: A mode the agent can operate in.
 //
-// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/v1/draft/session-modes)
 type SessionMode struct {
 	Meta        Meta          `json:"_meta,omitzero"`
 	Description *string       `json:"description,omitempty"`
@@ -4524,7 +4848,7 @@ func (s *SessionModeState) UnmarshalJSON(data []byte) error {
 //
 // Used to stream real-time progress and results during prompt processing.
 //
-// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
+// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v1/draft/prompt-turn#3-agent-reports-output)
 type SessionNotification struct {
 	Meta      Meta          `json:"_meta,omitzero"`
 	SessionID SessionId     `json:"sessionId"`
@@ -4536,6 +4860,67 @@ type SessionNotification struct {
 // Supplying `{}` means the agent supports resuming sessions.
 type SessionResumeCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// SessionStatus: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Whether the Agent has a session in memory, as reported by `session/status`.
+type SessionStatus string
+
+const (
+	// SessionStatusOpen: The Agent has the session in memory, for any connection.
+	//
+	// This does not mean the requesting connection is attached to it. A Client that did
+	// not create or resume the session on its own connection MUST still call
+	// `session/load` or `session/resume` before sending `session/prompt` or expecting
+	// `session/update` notifications.
+	SessionStatusOpen SessionStatus = "open"
+	// SessionStatusSaved: The Agent knows the session and can resume it, but does not have it in memory.
+	//
+	// The Client can call `session/load` or `session/resume` to start it.
+	SessionStatusSaved SessionStatus = "saved"
+)
+
+// SessionStatusCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Capabilities for the `session/status` method.
+//
+// Supplying `{}` means the agent supports checking session status.
+type SessionStatusCapabilities struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
+// SessionStatusRequest: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Request parameters for checking the status of a session.
+//
+// Only available if the Agent supports the `sessionCapabilities.status` capability.
+//
+// `session/status` MUST NOT have side effects. The Agent does not load, resume, create,
+// close, or change the session, and does not attach the requesting connection to it.
+// A session the Agent does not know gets `-32002` with the requested `sessionId` in `data`.
+type SessionStatusRequest struct {
+	Meta      Meta      `json:"_meta,omitzero"`
+	SessionID SessionId `json:"sessionId"`
+}
+
+// SessionStatusResponse: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Response from checking the status of a session.
+//
+// The result is a snapshot. A session reported `open` may be closed or evicted before
+// the Client's next request.
+type SessionStatusResponse struct {
+	Meta   Meta          `json:"_meta,omitzero"`
+	Status SessionStatus `json:"status"`
 }
 
 // SessionSystemPromptCapabilities: **UNSTABLE**
@@ -4612,44 +4997,60 @@ type SessionSystemPromptOverrideCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// SessionTitleCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Capabilities for Client-set session titles.
+//
+// Supplying `{}` means the agent supports `session/set_title`. Agents report titles
+// through `session/list` and `session_info_update` without this capability.
+type SessionTitleCapabilities struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
 // SessionUpdate: Different types of updates that can be sent during session processing.
 //
 // These updates provide real-time feedback about the agent's progress.
 //
-// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
+// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v1/draft/prompt-turn#3-agent-reports-output)
 type SessionUpdate struct {
-	SessionUpdate      SessionUpdateType            `json:"sessionUpdate"`
-	Meta               Meta                         `json:"_meta,omitzero"`
-	AvailableCommands  []AvailableCommand           `json:"availableCommands,omitempty"`
-	Capabilities       *SubagentSessionCapabilities `json:"capabilities,omitempty"`
-	CompactionID       CompactionId                 `json:"compactionId,omitempty"`
-	ConfigOptions      []SessionConfigOption        `json:"configOptions,omitempty"`
-	Content            any                          `json:"content,omitempty,omitzero"`
-	Cost               *Cost                        `json:"cost,omitempty"`
-	CurrentModeID      SessionModeId                `json:"currentModeId,omitempty"`
-	Description        *string                      `json:"description,omitempty"`
-	Entries            []PlanEntry                  `json:"entries,omitempty"`
-	Error              *string                      `json:"error,omitempty"`
-	Kind               *ToolKind                    `json:"kind,omitempty"`
-	Locations          *[]ToolCallLocation          `json:"locations,omitempty"`
-	MessageID          *MessageId                   `json:"messageId,omitempty"`
-	Name               *string                      `json:"name,omitempty"`
-	Plan               PlanUpdateContent            `json:"plan,omitempty,omitzero"`
-	PlanID             PlanId                       `json:"planId,omitempty"`
-	RawInput           any                          `json:"rawInput,omitempty"`
-	RawOutput          any                          `json:"rawOutput,omitempty"`
-	RecipientSessionID *SessionId                   `json:"recipientSessionId,omitempty"`
-	SenderSessionID    *SessionId                   `json:"senderSessionId,omitempty"`
-	SessionID          SessionId                    `json:"sessionId,omitempty"`
-	Severity           NoticeSeverity               `json:"severity,omitempty"`
-	Size               uint64                       `json:"size,omitempty"`
-	State              *StateUpdate                 `json:"state,omitempty"`
-	Status             *ToolCallStatus              `json:"status,omitempty"`
-	Summary            *[]ContentBlock              `json:"summary,omitempty"`
-	Title              *string                      `json:"title,omitempty"`
-	ToolCallID         ToolCallId                   `json:"toolCallId,omitempty"`
-	UpdatedAt          *string                      `json:"updatedAt,omitempty"`
-	Used               uint64                       `json:"used,omitempty"`
+	SessionUpdate         SessionUpdateType            `json:"sessionUpdate"`
+	Meta                  Meta                         `json:"_meta,omitzero"`
+	AdditionalDirectories *[]string                    `json:"additionalDirectories,omitempty"`
+	AvailableCommands     []AvailableCommand           `json:"availableCommands,omitempty"`
+	Capabilities          *SubagentSessionCapabilities `json:"capabilities,omitempty"`
+	CompactionID          CompactionId                 `json:"compactionId,omitempty"`
+	ConfigOptions         []SessionConfigOption        `json:"configOptions,omitempty"`
+	Content               any                          `json:"content,omitempty,omitzero"`
+	Cost                  *Cost                        `json:"cost,omitempty"`
+	CurrentModeID         SessionModeId                `json:"currentModeId,omitempty"`
+	Cwd                   *string                      `json:"cwd,omitempty"`
+	Description           *string                      `json:"description,omitempty"`
+	Entries               []PlanEntry                  `json:"entries,omitempty"`
+	Error                 *string                      `json:"error,omitempty"`
+	Kind                  *ToolKind                    `json:"kind,omitempty"`
+	Locations             *[]ToolCallLocation          `json:"locations,omitempty"`
+	MessageID             *MessageId                   `json:"messageId,omitempty"`
+	Name                  *string                      `json:"name,omitempty"`
+	Plan                  PlanUpdateContent            `json:"plan,omitempty,omitzero"`
+	PlanID                PlanId                       `json:"planId,omitempty"`
+	RawInput              any                          `json:"rawInput,omitempty"`
+	RawOutput             any                          `json:"rawOutput,omitempty"`
+	RecipientMessageID    *MessageId                   `json:"recipientMessageId,omitempty"`
+	RecipientSessionID    *SessionId                   `json:"recipientSessionId,omitempty"`
+	SenderMessageID       *MessageId                   `json:"senderMessageId,omitempty"`
+	SenderSessionID       *SessionId                   `json:"senderSessionId,omitempty"`
+	SessionID             SessionId                    `json:"sessionId,omitempty"`
+	Severity              NoticeSeverity               `json:"severity,omitempty"`
+	Size                  uint64                       `json:"size,omitempty"`
+	State                 *StateUpdate                 `json:"state,omitempty"`
+	Status                *ToolCallStatus              `json:"status,omitempty"`
+	Summary               *[]ContentBlock              `json:"summary,omitempty"`
+	Title                 *string                      `json:"title,omitempty"`
+	ToolCallID            ToolCallId                   `json:"toolCallId,omitempty"`
+	UpdatedAt             *string                      `json:"updatedAt,omitempty"`
+	Used                  uint64                       `json:"used,omitempty"`
 	// NullFields lists JSON field names to send as explicit null, regardless of their values.
 	// Decoding records explicit nulls here, separately from omitted fields.
 	NullFields []string `json:"-"`
@@ -4722,7 +5123,7 @@ func ToolCallUpdateSessionUpdate(toolCallID ToolCallId) SessionUpdate {
 }
 
 // PlanSessionUpdate creates an SessionUpdate variant: The agent's execution plan for complex tasks.
-// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
+// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/v1/draft/agent-plan)
 func PlanSessionUpdate(entries []PlanEntry) SessionUpdate {
 	return SessionUpdate{
 		SessionUpdate: SessionUpdateTypePlan,
@@ -4764,7 +5165,7 @@ func AvailableCommandsUpdateSessionUpdate(availableCommands []AvailableCommand) 
 
 // CurrentModeUpdateSessionUpdate creates an SessionUpdate variant: The current mode of the session has changed
 //
-// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/v1/draft/session-modes)
 func CurrentModeUpdateSessionUpdate(currentModeID SessionModeId) SessionUpdate {
 	return SessionUpdate{
 		SessionUpdate: SessionUpdateTypeCurrentModeUpdate,
@@ -4799,7 +5200,7 @@ func UsageUpdateSessionUpdate(used uint64, size uint64) SessionUpdate {
 // NoticeSessionUpdate creates an SessionUpdate variant: Information for the user that is not part of session history.
 //
 // Agents MUST only send this update when the Client advertised
-// [`ClientSessionCapabilities::notices`].
+// the `session.notices` Client capability.
 func NoticeSessionUpdate(severity NoticeSeverity, title string) SessionUpdate {
 	return SessionUpdate{
 		SessionUpdate: SessionUpdateTypeNotice,
@@ -4811,7 +5212,7 @@ func NoticeSessionUpdate(severity NoticeSeverity, title string) SessionUpdate {
 // CompactionUpdateSessionUpdate creates an SessionUpdate variant: A context compaction has been created or updated.
 //
 // Agents MUST only send this update when the Client advertised
-// [`ClientSessionCapabilities::compaction`].
+// the `session.compaction` Client capability.
 func CompactionUpdateSessionUpdate(compactionID CompactionId, status CompactionStatus) SessionUpdate {
 	return SessionUpdate{
 		SessionUpdate: SessionUpdateTypeCompactionUpdate,
@@ -4826,7 +5227,7 @@ func CompactionUpdateSessionUpdate(compactionID CompactionId, status CompactionS
 // CompactionSummaryChunkSessionUpdate creates an SessionUpdate variant: A content block appended to a context compaction's retained summary.
 //
 // Agents MUST only send this update when the Client advertised
-// [`ClientSessionCapabilities::compaction`].
+// the `session.compaction` Client capability.
 func CompactionSummaryChunkSessionUpdate(compactionID CompactionId, content ContentBlock) SessionUpdate {
 	return SessionUpdate{
 		SessionUpdate: SessionUpdateTypeCompactionSummaryChunk,
@@ -4879,26 +5280,32 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 	type alias SessionUpdate
 	type wire struct {
 		*alias
-		Content           *any                          `json:"content,omitempty"`
-		Title             **string                      `json:"title,omitempty"`
-		ToolCallID        *ToolCallId                   `json:"toolCallId,omitempty"`
-		Entries           *[]PlanEntry                  `json:"entries,omitempty"`
-		Plan              *PlanUpdateContent            `json:"plan,omitempty"`
-		PlanID            *PlanId                       `json:"planId,omitempty"`
-		AvailableCommands *[]AvailableCommand           `json:"availableCommands,omitempty"`
-		CurrentModeID     *SessionModeId                `json:"currentModeId,omitempty"`
-		ConfigOptions     *[]SessionConfigOption        `json:"configOptions,omitempty"`
-		Size              *uint64                       `json:"size,omitempty"`
-		Used              *uint64                       `json:"used,omitempty"`
-		Severity          *NoticeSeverity               `json:"severity,omitempty"`
-		CompactionID      *CompactionId                 `json:"compactionId,omitempty"`
-		Status            **ToolCallStatus              `json:"status,omitempty"`
-		SessionID         *SessionId                    `json:"sessionId,omitempty"`
-		MessageID         **MessageId                   `json:"messageId,omitempty"`
-		Meta              *Meta                         `json:"_meta,omitempty"`
-		Capabilities      **SubagentSessionCapabilities `json:"capabilities,omitempty"`
-		Description       **string                      `json:"description,omitempty"`
-		State             **StateUpdate                 `json:"state,omitempty"`
+		Content               *any                          `json:"content,omitempty"`
+		Title                 **string                      `json:"title,omitempty"`
+		ToolCallID            *ToolCallId                   `json:"toolCallId,omitempty"`
+		Entries               *[]PlanEntry                  `json:"entries,omitempty"`
+		Plan                  *PlanUpdateContent            `json:"plan,omitempty"`
+		PlanID                *PlanId                       `json:"planId,omitempty"`
+		AvailableCommands     *[]AvailableCommand           `json:"availableCommands,omitempty"`
+		CurrentModeID         *SessionModeId                `json:"currentModeId,omitempty"`
+		ConfigOptions         *[]SessionConfigOption        `json:"configOptions,omitempty"`
+		Size                  *uint64                       `json:"size,omitempty"`
+		Used                  *uint64                       `json:"used,omitempty"`
+		Severity              *NoticeSeverity               `json:"severity,omitempty"`
+		CompactionID          *CompactionId                 `json:"compactionId,omitempty"`
+		Status                **ToolCallStatus              `json:"status,omitempty"`
+		SessionID             *SessionId                    `json:"sessionId,omitempty"`
+		MessageID             **MessageId                   `json:"messageId,omitempty"`
+		Meta                  *Meta                         `json:"_meta,omitempty"`
+		AdditionalDirectories **[]string                    `json:"additionalDirectories,omitempty"`
+		Capabilities          **SubagentSessionCapabilities `json:"capabilities,omitempty"`
+		Cwd                   **string                      `json:"cwd,omitempty"`
+		Description           **string                      `json:"description,omitempty"`
+		RecipientMessageID    **MessageId                   `json:"recipientMessageId,omitempty"`
+		RecipientSessionID    **SessionId                   `json:"recipientSessionId,omitempty"`
+		SenderMessageID       **MessageId                   `json:"senderMessageId,omitempty"`
+		SenderSessionID       **SessionId                   `json:"senderSessionId,omitempty"`
+		State                 **StateUpdate                 `json:"state,omitempty"`
 	}
 	w := wire{alias: (*alias)(&u)}
 	if u.Content != nil {
@@ -4969,13 +5376,37 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 		Meta := u.Meta
 		w.Meta = &Meta
 	}
+	if u.AdditionalDirectories != nil {
+		AdditionalDirectories := u.AdditionalDirectories
+		w.AdditionalDirectories = &AdditionalDirectories
+	}
 	if u.Capabilities != nil {
 		Capabilities := u.Capabilities
 		w.Capabilities = &Capabilities
 	}
+	if u.Cwd != nil {
+		Cwd := u.Cwd
+		w.Cwd = &Cwd
+	}
 	if u.Description != nil {
 		Description := u.Description
 		w.Description = &Description
+	}
+	if u.RecipientMessageID != nil {
+		RecipientMessageID := u.RecipientMessageID
+		w.RecipientMessageID = &RecipientMessageID
+	}
+	if u.RecipientSessionID != nil {
+		RecipientSessionID := u.RecipientSessionID
+		w.RecipientSessionID = &RecipientSessionID
+	}
+	if u.SenderMessageID != nil {
+		SenderMessageID := u.SenderMessageID
+		w.SenderMessageID = &SenderMessageID
+	}
+	if u.SenderSessionID != nil {
+		SenderSessionID := u.SenderSessionID
+		w.SenderSessionID = &SenderSessionID
 	}
 	if u.State != nil {
 		State := u.State
@@ -5063,8 +5494,14 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 		if slices.Contains(u.NullFields, "_meta") {
 			w.Meta = new(Meta)
 		}
+		if slices.Contains(u.NullFields, "additionalDirectories") {
+			w.AdditionalDirectories = new(*[]string)
+		}
 		if slices.Contains(u.NullFields, "capabilities") {
 			w.Capabilities = new(*SubagentSessionCapabilities)
+		}
+		if slices.Contains(u.NullFields, "cwd") {
+			w.Cwd = new(*string)
 		}
 		if slices.Contains(u.NullFields, "description") {
 			w.Description = new(*string)
@@ -5082,6 +5519,18 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 		if slices.Contains(u.NullFields, "content") {
 			w.Content = new(any)
 		}
+		if slices.Contains(u.NullFields, "recipientMessageId") {
+			w.RecipientMessageID = new(*MessageId)
+		}
+		if slices.Contains(u.NullFields, "recipientSessionId") {
+			w.RecipientSessionID = new(*SessionId)
+		}
+		if slices.Contains(u.NullFields, "senderMessageId") {
+			w.SenderMessageID = new(*MessageId)
+		}
+		if slices.Contains(u.NullFields, "senderSessionId") {
+			w.SenderSessionID = new(*SessionId)
+		}
 	}
 	return json.Marshal(w)
 }
@@ -5091,28 +5540,32 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 	type alias SessionUpdate
 	decoded := alias{}
 	raw := struct {
-		Meta               json.RawMessage `json:"_meta"`
-		AvailableCommands  json.RawMessage `json:"availableCommands"`
-		Capabilities       json.RawMessage `json:"capabilities"`
-		ConfigOptions      json.RawMessage `json:"configOptions"`
-		Content            json.RawMessage `json:"content"`
-		Cost               json.RawMessage `json:"cost"`
-		Description        json.RawMessage `json:"description"`
-		Entries            json.RawMessage `json:"entries"`
-		Error              json.RawMessage `json:"error"`
-		Kind               json.RawMessage `json:"kind"`
-		Locations          json.RawMessage `json:"locations"`
-		MessageID          json.RawMessage `json:"messageId"`
-		Name               json.RawMessage `json:"name"`
-		RawInput           json.RawMessage `json:"rawInput"`
-		RawOutput          json.RawMessage `json:"rawOutput"`
-		RecipientSessionID json.RawMessage `json:"recipientSessionId"`
-		SenderSessionID    json.RawMessage `json:"senderSessionId"`
-		State              json.RawMessage `json:"state"`
-		Status             json.RawMessage `json:"status"`
-		Summary            json.RawMessage `json:"summary"`
-		Title              json.RawMessage `json:"title"`
-		UpdatedAt          json.RawMessage `json:"updatedAt"`
+		Meta                  json.RawMessage `json:"_meta"`
+		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
+		AvailableCommands     json.RawMessage `json:"availableCommands"`
+		Capabilities          json.RawMessage `json:"capabilities"`
+		ConfigOptions         json.RawMessage `json:"configOptions"`
+		Content               json.RawMessage `json:"content"`
+		Cost                  json.RawMessage `json:"cost"`
+		Cwd                   json.RawMessage `json:"cwd"`
+		Description           json.RawMessage `json:"description"`
+		Entries               json.RawMessage `json:"entries"`
+		Error                 json.RawMessage `json:"error"`
+		Kind                  json.RawMessage `json:"kind"`
+		Locations             json.RawMessage `json:"locations"`
+		MessageID             json.RawMessage `json:"messageId"`
+		Name                  json.RawMessage `json:"name"`
+		RawInput              json.RawMessage `json:"rawInput"`
+		RawOutput             json.RawMessage `json:"rawOutput"`
+		RecipientMessageID    json.RawMessage `json:"recipientMessageId"`
+		RecipientSessionID    json.RawMessage `json:"recipientSessionId"`
+		SenderMessageID       json.RawMessage `json:"senderMessageId"`
+		SenderSessionID       json.RawMessage `json:"senderSessionId"`
+		State                 json.RawMessage `json:"state"`
+		Status                json.RawMessage `json:"status"`
+		Summary               json.RawMessage `json:"summary"`
+		Title                 json.RawMessage `json:"title"`
+		UpdatedAt             json.RawMessage `json:"updatedAt"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
@@ -5242,6 +5695,20 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 			decoded.Meta = value
 		}
 	}
+	if len(raw.AdditionalDirectories) > 0 {
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeSubagentUpdate:
+			if isJSONNull(raw.AdditionalDirectories) {
+				decoded.NullFields = append(decoded.NullFields, "additionalDirectories")
+			} else {
+				var value *[]string
+				if err := unmarshalJSON(raw.AdditionalDirectories, &value); err != nil {
+					return err
+				}
+				decoded.AdditionalDirectories = value
+			}
+		}
+	}
 	if len(raw.AvailableCommands) > 0 {
 		var values []json.RawMessage
 		if err := unmarshalJSON(raw.AvailableCommands, &values); err == nil {
@@ -5367,6 +5834,20 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 	}
 	if len(raw.Cost) > 0 {
 		_ = unmarshalJSON(raw.Cost, &decoded.Cost)
+	}
+	if len(raw.Cwd) > 0 {
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeSubagentUpdate:
+			if isJSONNull(raw.Cwd) {
+				decoded.NullFields = append(decoded.NullFields, "cwd")
+			} else {
+				var value *string
+				if err := unmarshalJSON(raw.Cwd, &value); err != nil {
+					return err
+				}
+				decoded.Cwd = value
+			}
+		}
 	}
 	if len(raw.Description) > 0 {
 		switch decoded.SessionUpdate {
@@ -5501,11 +5982,57 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 	if len(raw.RawOutput) > 0 {
 		_ = unmarshalJSON(raw.RawOutput, &decoded.RawOutput)
 	}
+	if len(raw.RecipientMessageID) > 0 {
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeSessionMessage:
+			if isJSONNull(raw.RecipientMessageID) {
+				decoded.NullFields = append(decoded.NullFields, "recipientMessageId")
+			} else {
+				var value *MessageId
+				if err := unmarshalJSON(raw.RecipientMessageID, &value); err == nil {
+					decoded.RecipientMessageID = value
+				}
+			}
+		}
+	}
 	if len(raw.RecipientSessionID) > 0 {
-		_ = unmarshalJSON(raw.RecipientSessionID, &decoded.RecipientSessionID)
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeSessionMessage:
+			if isJSONNull(raw.RecipientSessionID) {
+				decoded.NullFields = append(decoded.NullFields, "recipientSessionId")
+			} else {
+				var value *SessionId
+				if err := unmarshalJSON(raw.RecipientSessionID, &value); err == nil {
+					decoded.RecipientSessionID = value
+				}
+			}
+		}
+	}
+	if len(raw.SenderMessageID) > 0 {
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeSessionMessage:
+			if isJSONNull(raw.SenderMessageID) {
+				decoded.NullFields = append(decoded.NullFields, "senderMessageId")
+			} else {
+				var value *MessageId
+				if err := unmarshalJSON(raw.SenderMessageID, &value); err == nil {
+					decoded.SenderMessageID = value
+				}
+			}
+		}
 	}
 	if len(raw.SenderSessionID) > 0 {
-		_ = unmarshalJSON(raw.SenderSessionID, &decoded.SenderSessionID)
+		switch decoded.SessionUpdate {
+		case SessionUpdateTypeSessionMessage:
+			if isJSONNull(raw.SenderSessionID) {
+				decoded.NullFields = append(decoded.NullFields, "senderSessionId")
+			} else {
+				var value *SessionId
+				if err := unmarshalJSON(raw.SenderSessionID, &value); err == nil {
+					decoded.SenderSessionID = value
+				}
+			}
+		}
 	}
 	if len(raw.State) > 0 {
 		switch decoded.SessionUpdate {
@@ -5666,7 +6193,7 @@ func BooleanSetSessionConfigOptionRequest(sessionID SessionId, configID SessionC
 	}
 }
 
-// ValueIdSetSessionConfigOptionRequest creates a [`SessionConfigValueId`] string value.
+// ValueIdSetSessionConfigOptionRequest creates a `SessionConfigValueId` string value.
 //
 // This is the default when `type` is absent on the wire. Unknown `type`
 // values with string payloads also gracefully deserialize into this
@@ -5743,14 +6270,43 @@ type SetSessionModeResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// SetSessionTitleRequest: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Request parameters for setting the title of a session.
+//
+// Only available if the Agent supports the `sessionCapabilities.title` capability.
+//
+// The session does not need to be active on the connection. Any session the Agent would
+// return from `session/list` can be retitled. A session that does not exist gets `-32002`.
+//
+// The Agent responds only after it has stored the title. After a successful response, the
+// Agent SHOULD NOT replace the title with one it generates automatically.
+type SetSessionTitleRequest struct {
+	Meta      Meta      `json:"_meta,omitzero"`
+	SessionID SessionId `json:"sessionId"`
+	Title     string    `json:"title"`
+}
+
+// SetSessionTitleResponse: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Response from setting the title of a session.
+type SetSessionTitleResponse struct {
+	Meta  Meta   `json:"_meta,omitzero"`
+	Title string `json:"title"`
+}
+
 // StateUpdate: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
 //
 // Current foreground-work state of a reusable child session.
 //
-// Each update is a whole-object snapshot. Idle does not terminate the child;
-// the parent can message it again, transitioning it back to running.
+// Each update is a whole-object snapshot. Idle does not terminate the child.
+// The parent can message it again, transitioning it back to running.
 // Background activity may still emit other session updates while idle.
 type StateUpdate struct {
 	State      StateUpdateType `json:"state"`
@@ -5834,7 +6390,7 @@ func (u *StateUpdate) UnmarshalJSON(data []byte) error {
 
 // StopReason: Reasons why an agent stops processing a prompt turn.
 //
-// See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-turn#stop-reasons)
+// See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v1/draft/prompt-turn#stop-reasons)
 type StopReason string
 
 const (
@@ -5951,7 +6507,7 @@ type SubagentCapabilities struct {
 //
 // Client-initiated session mutations permitted for a specific subagent session.
 //
-// A mutation requires an explicit per-child capability; support for the method
+// A mutation requires an explicit per-child capability. Support for the method
 // on ordinary sessions does not grant support on a child.
 type SubagentSessionCapabilities struct {
 	Meta   Meta                       `json:"_meta,omitzero"`
@@ -5985,27 +6541,31 @@ func (c *SubagentSessionCapabilities) UnmarshalJSON(data []byte) error {
 // Later updates modify the existing association's metadata, not its ownership.
 //
 // Sent on the immediate parent session. The first update for an unknown
-// [`SubagentUpdate::session_id`] announces the child and MUST be sent
+// `sessionId` announces the child and MUST be sent
 // before any live child traffic or live message naming the child as sender
 // or recipient. Parents may message and reuse an announced child across
 // multiple operations.
-// Child events are delivered automatically on the same connection; no child
+// Child events are delivered automatically on the same connection. No child
 // load, resume, or subscription is needed.
 //
 // Only the subagent session ID is required. Omitted patch fields keep their
-// previous values; `null` clears them. Clearing capabilities disables child
+// previous values. `null` clears them. Clearing capabilities disables child
 // mutations. Clearing state leaves current activity unset/unconfirmed: it does
 // not imply idle, stop work, or create an `unknown` state snapshot. A concrete
 // state replaces the entire previous state object, not the session.
 // The title and description provide the parent's display metadata for the
 // child. They do not replace the content of individual messages or operations.
+// `cwd` and `additionalDirectories` report where the Agent placed the child.
+// While unset, each inherits the immediate parent's effective value.
 type SubagentUpdate struct {
-	Meta         Meta                         `json:"_meta,omitzero"`
-	Capabilities *SubagentSessionCapabilities `json:"capabilities,omitempty"`
-	Description  *string                      `json:"description,omitempty"`
-	SessionID    SessionId                    `json:"sessionId"`
-	State        *StateUpdate                 `json:"state,omitempty"`
-	Title        *string                      `json:"title,omitempty"`
+	Meta                  Meta                         `json:"_meta,omitzero"`
+	AdditionalDirectories *[]string                    `json:"additionalDirectories,omitempty"`
+	Capabilities          *SubagentSessionCapabilities `json:"capabilities,omitempty"`
+	Cwd                   *string                      `json:"cwd,omitempty"`
+	Description           *string                      `json:"description,omitempty"`
+	SessionID             SessionId                    `json:"sessionId"`
+	State                 *StateUpdate                 `json:"state,omitempty"`
+	Title                 *string                      `json:"title,omitempty"`
 	// NullFields lists JSON field names to send as explicit null, regardless of their values.
 	// Decoding records explicit nulls here, separately from omitted fields.
 	NullFields []string `json:"-"`
@@ -6044,7 +6604,7 @@ func (p SystemPrompt) MarshalJSON() ([]byte, error) {
 //
 // How the Agent combines a client-provided system prompt with its own instructions.
 //
-// Unknown modes parse as [`SystemPromptMode::Other`] so they can be stored,
+// Unknown modes are preserved so they can be stored,
 // proxied, or forwarded. An Agent MUST return an error for a mode it does not
 // support rather than treating it as `append` or `override`.
 type SystemPromptMode string
@@ -6072,7 +6632,7 @@ const (
 //
 // The terminal must be added before calling `terminal/release`.
 //
-// See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)
+// See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/v1/draft/terminals)
 type Terminal struct {
 	Meta       Meta       `json:"_meta,omitzero"`
 	TerminalID TerminalId `json:"terminalId"`
@@ -6215,7 +6775,7 @@ func (i TitledMultiSelectItems) MarshalJSON() ([]byte, error) {
 // Tool calls are actions that the agent executes on behalf of the language model,
 // such as reading files, executing code, or fetching data from external sources.
 //
-// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
+// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v1/draft/tool-calls)
 type ToolCall struct {
 	Meta       Meta               `json:"_meta,omitzero"`
 	Content    []ToolCallContent  `json:"content,omitempty"`
@@ -6309,7 +6869,7 @@ func (c *ToolCall) UnmarshalJSON(data []byte) error {
 // Tool calls can produce different types of content including
 // standard content blocks (text, images) or file diffs.
 //
-// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
+// See protocol docs: [Content](https://agentclientprotocol.com/protocol/v1/draft/tool-calls#content)
 type ToolCallContent struct {
 	Type       ToolCallContentType `json:"type"`
 	Meta       Meta                `json:"_meta,omitzero"`
@@ -6350,7 +6910,7 @@ func DiffToolCallContent(path string, newText string) ToolCallContent {
 //
 // The terminal must be added before calling `terminal/release`.
 //
-// See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)
+// See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/v1/draft/terminals)
 func TerminalToolCallContent(terminalID TerminalId) ToolCallContent {
 	return ToolCallContent{
 		Type:       ToolCallContentTypeTerminal,
@@ -6427,7 +6987,7 @@ type ToolCallId string
 // Enables clients to implement "follow-along" features that track
 // which files the agent is working with in real-time.
 //
-// See protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/tool-calls#following-the-agent)
+// See protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/v1/draft/tool-calls#following-the-agent)
 type ToolCallLocation struct {
 	Meta Meta    `json:"_meta,omitzero"`
 	Line *uint32 `json:"line,omitempty"`
@@ -6456,7 +7016,7 @@ func (l *ToolCallLocation) UnmarshalJSON(data []byte) error {
 //
 // Tool calls progress through different statuses during their lifecycle.
 //
-// See protocol docs: [Status](https://agentclientprotocol.com/protocol/tool-calls#status)
+// See protocol docs: [Status](https://agentclientprotocol.com/protocol/v1/draft/tool-calls#status)
 type ToolCallStatus string
 
 const (
@@ -6476,7 +7036,7 @@ const (
 // Used to report progress and results as tools execute. All fields except
 // the tool call ID are optional - only changed fields need to be included.
 //
-// See protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)
+// See protocol docs: [Updating](https://agentclientprotocol.com/protocol/v1/draft/tool-calls#updating)
 type ToolCallUpdate struct {
 	Meta       Meta                `json:"_meta,omitzero"`
 	Content    *[]ToolCallContent  `json:"content,omitempty"`
@@ -6576,7 +7136,7 @@ func (u *ToolCallUpdate) UnmarshalJSON(data []byte) error {
 // Tool kinds help clients choose appropriate icons and optimize how they
 // display tool execution progress.
 //
-// See protocol docs: [Creating](https://agentclientprotocol.com/protocol/tool-calls#creating)
+// See protocol docs: [Creating](https://agentclientprotocol.com/protocol/v1/draft/tool-calls#creating)
 type ToolKind string
 
 const (
@@ -6602,6 +7162,33 @@ const (
 	ToolKindOther ToolKind = "other"
 )
 
+// UnarchiveSessionRequest: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Request parameters for unarchiving a session.
+//
+// Only available if the Agent supports the `sessionCapabilities.archive` capability.
+//
+// Unarchiving returns the session to default `session/list` results with the same ID and
+// saved history. It never loads or resumes the session. Clients that want to continue an
+// archived session SHOULD unarchive it before calling `session/load` or `session/resume`.
+// Unarchiving a session that is not archived succeeds. A session that does not exist
+// gets `-32002`.
+type UnarchiveSessionRequest struct {
+	Meta      Meta      `json:"_meta,omitzero"`
+	SessionID SessionId `json:"sessionId"`
+}
+
+// UnarchiveSessionResponse: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Response from unarchiving a session.
+type UnarchiveSessionResponse struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
 // UnknownStateUpdate: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -6614,7 +7201,7 @@ const (
 // snapshot normally.
 //
 // This is not a task outcome or session closure. It does not cancel work, resolve
-// pending requests, or revoke capabilities; capabilities are updated separately.
+// pending requests, or revoke capabilities. Capabilities are updated separately.
 type UnknownStateUpdate struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
@@ -6847,8 +7434,12 @@ func (m SessionMessage) MarshalJSON() ([]byte, error) {
 	a := alias(m)
 	type wire struct {
 		*alias
-		Meta    *Meta            `json:"_meta,omitempty"`
-		Content **[]ContentBlock `json:"content,omitempty"`
+		Meta               *Meta            `json:"_meta,omitempty"`
+		Content            **[]ContentBlock `json:"content,omitempty"`
+		RecipientMessageID **MessageId      `json:"recipientMessageId,omitempty"`
+		RecipientSessionID **SessionId      `json:"recipientSessionId,omitempty"`
+		SenderMessageID    **MessageId      `json:"senderMessageId,omitempty"`
+		SenderSessionID    **SessionId      `json:"senderSessionId,omitempty"`
 	}
 	w := wire{alias: &a}
 	if a.Meta != nil {
@@ -6859,11 +7450,39 @@ func (m SessionMessage) MarshalJSON() ([]byte, error) {
 		Content := a.Content
 		w.Content = &Content
 	}
+	if a.RecipientMessageID != nil {
+		RecipientMessageID := a.RecipientMessageID
+		w.RecipientMessageID = &RecipientMessageID
+	}
+	if a.RecipientSessionID != nil {
+		RecipientSessionID := a.RecipientSessionID
+		w.RecipientSessionID = &RecipientSessionID
+	}
+	if a.SenderMessageID != nil {
+		SenderMessageID := a.SenderMessageID
+		w.SenderMessageID = &SenderMessageID
+	}
+	if a.SenderSessionID != nil {
+		SenderSessionID := a.SenderSessionID
+		w.SenderSessionID = &SenderSessionID
+	}
 	if slices.Contains(a.NullFields, "_meta") {
 		w.Meta = new(Meta)
 	}
 	if slices.Contains(a.NullFields, "content") {
 		w.Content = new(*[]ContentBlock)
+	}
+	if slices.Contains(a.NullFields, "recipientMessageId") {
+		w.RecipientMessageID = new(*MessageId)
+	}
+	if slices.Contains(a.NullFields, "recipientSessionId") {
+		w.RecipientSessionID = new(*SessionId)
+	}
+	if slices.Contains(a.NullFields, "senderMessageId") {
+		w.SenderMessageID = new(*MessageId)
+	}
+	if slices.Contains(a.NullFields, "senderSessionId") {
+		w.SenderSessionID = new(*SessionId)
 	}
 	return json.Marshal(w)
 }
@@ -6875,7 +7494,9 @@ func (m *SessionMessage) UnmarshalJSON(data []byte) error {
 	raw := struct {
 		Meta               json.RawMessage `json:"_meta"`
 		Content            json.RawMessage `json:"content"`
+		RecipientMessageID json.RawMessage `json:"recipientMessageId"`
 		RecipientSessionID json.RawMessage `json:"recipientSessionId"`
+		SenderMessageID    json.RawMessage `json:"senderMessageId"`
 		SenderSessionID    json.RawMessage `json:"senderSessionId"`
 		*alias
 	}{alias: &decoded}
@@ -6912,11 +7533,45 @@ func (m *SessionMessage) UnmarshalJSON(data []byte) error {
 			}
 		}
 	}
+	if len(raw.RecipientMessageID) > 0 {
+		if isJSONNull(raw.RecipientMessageID) {
+			decoded.NullFields = append(decoded.NullFields, "recipientMessageId")
+		} else {
+			var value *MessageId
+			if err := unmarshalJSON(raw.RecipientMessageID, &value); err == nil {
+				decoded.RecipientMessageID = value
+			}
+		}
+	}
 	if len(raw.RecipientSessionID) > 0 {
-		_ = unmarshalJSON(raw.RecipientSessionID, &decoded.RecipientSessionID)
+		if isJSONNull(raw.RecipientSessionID) {
+			decoded.NullFields = append(decoded.NullFields, "recipientSessionId")
+		} else {
+			var value *SessionId
+			if err := unmarshalJSON(raw.RecipientSessionID, &value); err == nil {
+				decoded.RecipientSessionID = value
+			}
+		}
+	}
+	if len(raw.SenderMessageID) > 0 {
+		if isJSONNull(raw.SenderMessageID) {
+			decoded.NullFields = append(decoded.NullFields, "senderMessageId")
+		} else {
+			var value *MessageId
+			if err := unmarshalJSON(raw.SenderMessageID, &value); err == nil {
+				decoded.SenderMessageID = value
+			}
+		}
 	}
 	if len(raw.SenderSessionID) > 0 {
-		_ = unmarshalJSON(raw.SenderSessionID, &decoded.SenderSessionID)
+		if isJSONNull(raw.SenderSessionID) {
+			decoded.NullFields = append(decoded.NullFields, "senderSessionId")
+		} else {
+			var value *SessionId
+			if err := unmarshalJSON(raw.SenderSessionID, &value); err == nil {
+				decoded.SenderSessionID = value
+			}
+		}
 	}
 	*m = SessionMessage(decoded)
 	return nil
@@ -6928,20 +7583,30 @@ func (u SubagentUpdate) MarshalJSON() ([]byte, error) {
 	a := alias(u)
 	type wire struct {
 		*alias
-		Meta         *Meta                         `json:"_meta,omitempty"`
-		Capabilities **SubagentSessionCapabilities `json:"capabilities,omitempty"`
-		Description  **string                      `json:"description,omitempty"`
-		State        **StateUpdate                 `json:"state,omitempty"`
-		Title        **string                      `json:"title,omitempty"`
+		Meta                  *Meta                         `json:"_meta,omitempty"`
+		AdditionalDirectories **[]string                    `json:"additionalDirectories,omitempty"`
+		Capabilities          **SubagentSessionCapabilities `json:"capabilities,omitempty"`
+		Cwd                   **string                      `json:"cwd,omitempty"`
+		Description           **string                      `json:"description,omitempty"`
+		State                 **StateUpdate                 `json:"state,omitempty"`
+		Title                 **string                      `json:"title,omitempty"`
 	}
 	w := wire{alias: &a}
 	if a.Meta != nil {
 		Meta := a.Meta
 		w.Meta = &Meta
 	}
+	if a.AdditionalDirectories != nil {
+		AdditionalDirectories := a.AdditionalDirectories
+		w.AdditionalDirectories = &AdditionalDirectories
+	}
 	if a.Capabilities != nil {
 		Capabilities := a.Capabilities
 		w.Capabilities = &Capabilities
+	}
+	if a.Cwd != nil {
+		Cwd := a.Cwd
+		w.Cwd = &Cwd
 	}
 	if a.Description != nil {
 		Description := a.Description
@@ -6958,8 +7623,14 @@ func (u SubagentUpdate) MarshalJSON() ([]byte, error) {
 	if slices.Contains(a.NullFields, "_meta") {
 		w.Meta = new(Meta)
 	}
+	if slices.Contains(a.NullFields, "additionalDirectories") {
+		w.AdditionalDirectories = new(*[]string)
+	}
 	if slices.Contains(a.NullFields, "capabilities") {
 		w.Capabilities = new(*SubagentSessionCapabilities)
+	}
+	if slices.Contains(a.NullFields, "cwd") {
+		w.Cwd = new(*string)
 	}
 	if slices.Contains(a.NullFields, "description") {
 		w.Description = new(*string)
@@ -6978,11 +7649,13 @@ func (u *SubagentUpdate) UnmarshalJSON(data []byte) error {
 	type alias SubagentUpdate
 	decoded := alias{}
 	raw := struct {
-		Meta         json.RawMessage `json:"_meta"`
-		Capabilities json.RawMessage `json:"capabilities"`
-		Description  json.RawMessage `json:"description"`
-		State        json.RawMessage `json:"state"`
-		Title        json.RawMessage `json:"title"`
+		Meta                  json.RawMessage `json:"_meta"`
+		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
+		Capabilities          json.RawMessage `json:"capabilities"`
+		Cwd                   json.RawMessage `json:"cwd"`
+		Description           json.RawMessage `json:"description"`
+		State                 json.RawMessage `json:"state"`
+		Title                 json.RawMessage `json:"title"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
@@ -6998,6 +7671,17 @@ func (u *SubagentUpdate) UnmarshalJSON(data []byte) error {
 			}
 		}
 	}
+	if len(raw.AdditionalDirectories) > 0 {
+		if isJSONNull(raw.AdditionalDirectories) {
+			decoded.NullFields = append(decoded.NullFields, "additionalDirectories")
+		} else {
+			var value *[]string
+			if err := unmarshalJSON(raw.AdditionalDirectories, &value); err != nil {
+				return err
+			}
+			decoded.AdditionalDirectories = value
+		}
+	}
 	if len(raw.Capabilities) > 0 {
 		if isJSONNull(raw.Capabilities) {
 			decoded.NullFields = append(decoded.NullFields, "capabilities")
@@ -7006,6 +7690,17 @@ func (u *SubagentUpdate) UnmarshalJSON(data []byte) error {
 			if err := unmarshalJSON(raw.Capabilities, &value); err == nil {
 				decoded.Capabilities = value
 			}
+		}
+	}
+	if len(raw.Cwd) > 0 {
+		if isJSONNull(raw.Cwd) {
+			decoded.NullFields = append(decoded.NullFields, "cwd")
+		} else {
+			var value *string
+			if err := unmarshalJSON(raw.Cwd, &value); err != nil {
+				return err
+			}
+			decoded.Cwd = value
 		}
 	}
 	if len(raw.Description) > 0 {

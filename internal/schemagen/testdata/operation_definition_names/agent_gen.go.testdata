@@ -1,25 +1,20 @@
 package acp
 
-const (
-	MethodChatSendMessage = "chat/send-message"
+import (
+	"context"
+	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
+	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
-// ChatHandler handles all chat related agent methods.
-type ChatHandler interface {
-	SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
-}
-
-func (c *AgentConnection) SendMessage(ctx context.Context, params *SendMessageRequest) (*SendMessageResponse, error) {
+func (c *AgentConnection) ChatSendMessage(ctx context.Context, params *SendMessageRequest) (*SendMessageResponse, error) {
 	return call[SendMessageResponse](ctx, c.rpc.conn, MethodChatSendMessage, params)
 }
 
-func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (any, error) {
+func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
 	switch req.Method {
 	case MethodChatSendMessage:
-		handler, ok := agent.(interface {
-			SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
-		})
+		h, ok := handler.(ChatSendMessageHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -27,8 +22,8 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.SendMessage(ctx, params))
+		return rpcResult(h.ChatSendMessage(ctx, params))
 	default:
-		return handleExtension(ctx, agent, req)
+		return handleExtension(ctx, handler, req)
 	}
 }

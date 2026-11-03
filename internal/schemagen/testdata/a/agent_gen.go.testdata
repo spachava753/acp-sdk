@@ -1,42 +1,26 @@
 package acp
 
-const (
-	// MethodGroupAgentMethod: Asks the agent to run the test agent method.
-	MethodGroupAgentMethod = "group/agent_method"
-	// MethodGroupAgentNotify: Tells the agent about the test agent notification.
-	MethodGroupAgentNotify = "group/agent_notify"
-	// MethodGroupClientMethod: Asks the client to run the test client method.
-	MethodGroupClientMethod = "group/client_method"
-	// MethodGroupClientNotify: Tells the client about the test client notification.
-	MethodGroupClientNotify = "group/client_notify"
+import (
+	"context"
+	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
+	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
-// GroupHandler handles all group related agent methods.
-type GroupHandler interface {
-	// AgentMethod: Asks the agent to run the test agent method.
-	AgentMethod(context.Context, *AgentMethodRequest) (*AgentMethodResponse, error)
-
-	// AgentNotify: Tells the agent about the test agent notification.
-	AgentNotify(context.Context, *AgentMethodNotification) error
-}
-
-// ClientMethod: Asks the client to run the test client method.
-func (c *AgentConnection) ClientMethod(ctx context.Context, params *ClientMethodRequest) (*ClientMethodResponse, error) {
+// GroupClientMethod: Asks the client to run the test client method.
+func (c *AgentConnection) GroupClientMethod(ctx context.Context, params *ClientMethodRequest) (*ClientMethodResponse, error) {
 	return call[ClientMethodResponse](ctx, c.rpc.conn, MethodGroupClientMethod, params)
 }
 
-// ClientNotify: Tells the client about the test client notification.
-func (c *AgentConnection) ClientNotify(ctx context.Context, params *ClientMethodNotification) error {
+// GroupClientNotify: Tells the client about the test client notification.
+func (c *AgentConnection) GroupClientNotify(ctx context.Context, params *ClientMethodNotification) error {
 	return notify(ctx, c.rpc.conn, MethodGroupClientNotify, params)
 }
 
-func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (any, error) {
+func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
 	jsonrpc2.Async(ctx)
 	switch req.Method {
 	case MethodGroupAgentMethod:
-		handler, ok := agent.(interface {
-			AgentMethod(context.Context, *AgentMethodRequest) (*AgentMethodResponse, error)
-		})
+		h, ok := handler.(GroupAgentMethodHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -44,11 +28,9 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return rpcResult(handler.AgentMethod(ctx, params))
+		return rpcResult(h.GroupAgentMethod(ctx, params))
 	case MethodGroupAgentNotify:
-		handler, ok := agent.(interface {
-			AgentNotify(context.Context, *AgentMethodNotification) error
-		})
+		h, ok := handler.(GroupAgentNotifyHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
@@ -56,8 +38,8 @@ func handleAgentRequest(ctx context.Context, agent any, req *jsonrpc.Request) (a
 		if err != nil {
 			return nil, err
 		}
-		return nil, handler.AgentNotify(ctx, params)
+		return nil, h.GroupAgentNotify(ctx, params)
 	default:
-		return handleExtension(ctx, agent, req)
+		return handleExtension(ctx, handler, req)
 	}
 }
