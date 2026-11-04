@@ -406,11 +406,23 @@ Run the race detector:
 go test -race ./...
 ```
 
-Run only the black-box conformance suite:
+Run all conformance packages:
 
 ```sh
-go test ./conformance
+go test ./conformance/...
 ```
+
+The upstream-derived v1 scenarios are kept separately from the original local
+suite:
+
+```sh
+go test ./conformance/rustv1/...
+```
+
+See [the Rust v1 port inventory](./conformance/rustv1/README.md) for the pinned
+upstream revision, scenario mappings, partial coverage, and Rust-only API
+exclusions. These tests include SDK behavior policies as well as protocol
+requirements; passing them is not an ACP certification.
 
 To refresh and regenerate the protocol surface:
 

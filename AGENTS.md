@@ -13,7 +13,7 @@ The module path is `github.com/spachava753/acp-sdk`.
 - `internal/schemagen/`: JSON Schema to Go generator. The generator input is `schema.json`; `cmd/acpgen` writes generated files; `typegen` generates protocol types and `rpcgen` generates method constants, handler interfaces, connection methods, and dispatch for both sides; `testdata` contains golden fixtures.
 - `internal/jsonrpc2/`: Internal bidirectional JSON-RPC implementation used by the SDK.
 - `internal/json/`: Internal JSON helpers used by JSON-RPC.
-- `conformance/`: Wire-format and lifecycle conformance tests for the public ACP types and client/agent behavior.
+- `conformance/`: Wire-format and lifecycle conformance tests for the public ACP types and client/agent behavior. `conformance/rustv1/` contains semantic ports from a pinned official Rust SDK revision, with source inventories and scenario mappings.
 - `examples/`: Minimal example agent and client programs.
 
 ## Schema And Code Generation
@@ -48,6 +48,7 @@ The project uses the standard Go toolchain.
 ## Testing
 
 - **Unit Tests**: Run `go test ./...` to run all tests.
+- Preserve the upstream scenario and source references when editing `conformance/rustv1/`. Update its domain `mapping.json` when test names or coverage change. The root package checks inventory accounting; `go test ./conformance/rustv1/...` also runs the behavioral ports. Keep additional Go-specific regressions outside that directory rather than attributing them to upstream. Partial/nonportable mappings are not full test coverage or ACP certification.
 - Identify the observable properties worth testing before writing tests. Test SDK behavior and integration boundaries, rather than rechecking the JSON library or trivial helpers.
 - Keep coverage focused. A representative regression case is preferable to a broad matrix of number formats, nulls, and malformed inputs unless those differences exercise SDK-specific behavior.
 - Extend an existing test's data and control flow when related properties fit naturally. Registration order and agent/client construction can establish the conditions needed for later assertions. Do not default to separate tests or `t.Run` subtests for every property; use them when scenarios need independent setup or cannot fit clearly into the existing flow.
