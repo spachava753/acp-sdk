@@ -22,6 +22,14 @@ The tests are intentionally red before fixes. Successful controls keep omission,
 | `TestAnnotatedMetadataKeepsPayload` | Invalid annotated optional metadata defaults locally without losing ordinary content/update payloads. The subagent control recovers invalid metadata without confusing it with an explicit-null patch. | `_meta` annotations inherited from `TextContent` / `ContentChunk`, generator recovery contract, and `SubagentUpdate` null-sensitive semantics. This does not make malformed metadata a valid object or require accepting it without an annotation. |
 | `TestElicitationResponseBranches` | Unknown actions retain opaque fields, including `content` when it belongs to that unknown branch. Known accept retains its own structural rules and cannot use an unknown fallback to hide malformed content. | Checked-in [`CreateElicitationResponse`](https://github.com/spachava753/acp-sdk/blob/09349ff9c8b24d6a8f845b7959dc614406b14a57/internal/schemagen/schema.json#L8130), the unknown branch's `not`/additionalProperties, and [`ElicitationContentValue`](https://github.com/spachava753/acp-sdk/blob/09349ff9c8b24d6a8f845b7959dc614406b14a57/internal/schemagen/schema.json#L8231). |
 
+Post-integration review added `TestNullableRequestIDKeepsItsOtherConstraints` and
+`TestElicitationRetainsNestedScopeRequirements`. They retain legal explicit-null
+request IDs without admitting boolean, fractional or out-of-range IDs, and
+require one valid session/request scope through tagged and untagged containing
+types. These are required/nullable/nested-union contracts from the checked-in
+schema, not application session lookup. They guard against generator validation
+that rejects a valid null while accidentally dropping all other constraints.
+
 Plain schema validation cannot detect a valid clear becoming a valid omission, implement annotated partial recovery, or check Go dynamic type identity. Expected values therefore come from literals and the documented contracts, not from the SDK's current output.
 
 ## External schema-crate provenance
