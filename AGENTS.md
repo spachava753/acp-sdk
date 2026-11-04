@@ -13,7 +13,7 @@ The module path is `github.com/spachava753/acp-sdk`.
 - `internal/schemagen/`: JSON Schema to Go generator. The generator input is `schema.json`; `cmd/acpgen` writes generated files; `typegen` generates protocol types and `rpcgen` generates method constants, handler interfaces, connection methods, and dispatch for both sides; `testdata` contains golden fixtures.
 - `internal/jsonrpc2/`: Internal bidirectional JSON-RPC implementation used by the SDK.
 - `internal/json/`: Internal JSON helpers used by JSON-RPC.
-- `conformance/`: Wire-format and lifecycle conformance tests for the public ACP types and client/agent behavior. `conformance/rustv1/` contains semantic ports from a pinned official Rust SDK revision, with source inventories and scenario mappings.
+- `conformance/`: Wire-format and lifecycle conformance tests for the public ACP types and client/agent behavior. `conformance/rustv1/` contains semantic ports from a pinned official Rust SDK revision, with source inventories and scenario mappings. `conformance/regressions/` keeps additional local tests and their protocol-versus-Go-policy distinctions separate.
 - `examples/`: Minimal example agent and client programs.
 
 ## Schema And Code Generation

@@ -424,6 +424,10 @@ upstream revision, scenario mappings, partial coverage, and Rust-only API
 exclusions. These tests include SDK behavior policies as well as protocol
 requirements; passing them is not an ACP certification.
 
+[Additional local regressions](./conformance/regressions/README.md) cover gaps
+identified after that port. Their source attribution and historical pre-fix
+results are kept separate from the Rust-derived cases.
+
 To refresh and regenerate the protocol surface:
 
 ```sh
