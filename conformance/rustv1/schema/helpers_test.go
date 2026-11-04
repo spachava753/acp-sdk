@@ -57,7 +57,9 @@ func (t openedTransport) Connect(context.Context) (acp.Connection, error) { retu
 
 func endpoints(t *testing.T) (context.Context, acp.Connection, acp.Connection) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	// Testing cancels t.Context before Cleanup. Keep serving alive until the
+	// fixture has closed the streams and joined RunAgent, then cancel it.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	ct, pt := acp.NewInMemoryTransports()
 	sdk, err := ct.Connect(ctx)
 	if err != nil {
@@ -114,7 +116,13 @@ func rawAgent(t *testing.T, handler any) (context.Context, *acp.AgentConnection,
 			return handler
 		})
 	}()
-	t.Cleanup(func() { peer.Close(); sdk.Close(); bounded(t, done, "agent shutdown") })
+	t.Cleanup(func() {
+		// Let the serving side observe peer EOF before closing its local stream;
+		// closing both at once can manufacture ErrClosedPipe instead of clean EOF.
+		peer.Close()
+		bounded(t, done, "agent shutdown")
+		sdk.Close()
+	})
 	select {
 	case conn := <-ready:
 		return ctx, conn, peer

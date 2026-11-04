@@ -100,6 +100,18 @@ func connectConformanceClient(t *testing.T, handler any, newAgent acp.AgentFacto
 	return client, done
 }
 
+func initializeConformanceClient(t *testing.T, client *acp.Client) {
+	t.Helper()
+	if _, err := client.Initialize(t.Context(), &acp.InitializeRequest{
+		ProtocolVersion: 1,
+		ClientCapabilities: &acp.ClientCapabilities{
+			Fs: &acp.FileSystemCapabilities{ReadTextFile: true, WriteTextFile: true}, Terminal: true,
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func closeConformanceClient(t *testing.T, client *acp.Client, done chan error) {
 	t.Helper()
 	if err := client.Close(); err != nil {

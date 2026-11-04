@@ -38,6 +38,12 @@ func TestProviderRequestRoutes(t *testing.T) {
 		// flow's anthropic value. Exercise that exact incoming aggregate case.
 		agent := &providerAgent{operations: make(chan string, 1)}
 		ctx, _, peer = rawAgent(t, agent)
+		// This receiver also supplies Initialize; complete its protocol setup
+		// before checking provider dispatch, rather than testing the init gate.
+		initialized := requestToAgent(t, ctx, peer, "initialize", `{"protocolVersion":1}`)
+		if initialized.Error != nil {
+			t.Fatal(initialized.Error)
+		}
 		reply := requestToAgent(t, ctx, peer, "providers/set", literal)
 		if reply.Error != nil {
 			t.Fatal(reply.Error)
@@ -93,12 +99,12 @@ func connectedClient(t *testing.T, handler any) (context.Context, *acp.Client) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		clientRaw.Close()
-		agentRaw.Close()
 		closed := make(chan error, 1)
 		go func() { closed <- client.Close() }()
 		bounded(t, closed, "paired client shutdown")
+		clientRaw.Close() // Failure fallback; normal Close already closed this side.
 		bounded(t, done, "paired agent shutdown")
+		agentRaw.Close()
 	})
 	return ctx, client
 }

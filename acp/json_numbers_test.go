@@ -13,7 +13,7 @@ func TestUnstructuredNumbers(t *testing.T) {
 
 	// Generated types must preserve unstructured numbers with the standard decoder.
 	var tool ToolCall
-	if err := json.Unmarshal([]byte(`{"rawInput":9007199254740993}`), &tool); err != nil {
+	if err := json.Unmarshal([]byte(`{"toolCallId":"t","title":"","rawInput":9007199254740993}`), &tool); err != nil {
 		t.Fatal(err)
 	}
 	if tool.RawInput != want {

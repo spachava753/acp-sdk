@@ -140,7 +140,7 @@ func TestOptionalAgentMethods(t *testing.T) {
 		t.Fatalf("mode ID = %q, want code", got)
 	}
 	configRequest := recordedCall[SetSessionConfigOptionRequest](t, agent, MethodSessionSetConfigOption)
-	if configRequest.SessionID != "s1" || configRequest.ConfigID != "mode" || configRequest.Value != "code" {
+	if configRequest.SessionID != "s1" || configRequest.ConfigID != "mode" || configRequest.Value != SessionConfigValueId("code") {
 		t.Fatalf("config option request = %#v, want session s1 config mode value code", configRequest)
 	}
 }
@@ -422,10 +422,26 @@ func connectTestClientWithHandler(t *testing.T, handler any, newAgent AgentFacto
 	t.Helper()
 	clientTransport, agentTransport := NewInMemoryTransports()
 	done := make(chan error, 1)
-	go func() { done <- RunAgent(t.Context(), agentTransport, newAgent) }()
+	initializes := make(chan bool, 1)
+	go func() {
+		done <- RunAgent(t.Context(), agentTransport, func(conn *AgentConnection) any {
+			agent := newAgent(conn)
+			_, ok := agent.(InitializeHandler)
+			initializes <- ok
+			return agent
+		})
+	}()
 	client, err := Connect(t.Context(), clientTransport, handler)
 	if err != nil {
 		t.Fatal(err)
+	}
+	// These tests exercise later methods; raw/proxy-only fixtures deliberately
+	// have no Initialize handler and keep their separate setup paths.
+	if <-initializes {
+		if _, err := client.Initialize(t.Context(), &InitializeRequest{ProtocolVersion: 1}); err != nil {
+			_ = client.Close()
+			t.Fatal(err)
+		}
 	}
 	return client, done
 }

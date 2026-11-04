@@ -47,13 +47,16 @@ var (
 
 // Keep the actual streams, not just graceful SDK Close. Raw deadlines also
 // bound a synchronous Write that does not observe its context. Cleanup closes
-// both streams before waiting for SDK shutdown, including on assertion failure.
+// the peer stream before joining SDK shutdown; the local stream and serving
+// context are retained as independent final-cleanup fallbacks.
 func patchEndpoints(t *testing.T) (context.Context, *acp.IOTransport, acp.Connection, func()) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	// Testing cancels t.Context before Cleanup. Keep serving alive until the
+	// fixture has closed the streams and joined RunAgent, then cancel it.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	sdkStream, peerStream := net.Pipe()
-	force := func() { cancel(); sdkStream.Close(); peerStream.Close() }
-	t.Cleanup(force)
+	force := func() { peerStream.Close() }
+	t.Cleanup(func() { sdkStream.Close(); peerStream.Close(); cancel() })
 	deadline, _ := ctx.Deadline()
 	if err := sdkStream.SetDeadline(deadline); err != nil {
 		t.Fatal(err)

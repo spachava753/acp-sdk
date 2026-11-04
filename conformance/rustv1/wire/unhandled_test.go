@@ -3,6 +3,7 @@ package wire_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -140,6 +141,7 @@ func TestLateResponseAfterAbandonment(t *testing.T) {
 	case <-time.After(wait):
 		t.Fatal("abandoned call did not return")
 	}
+	cancellations := 0
 	for _, s := range []string{"release", "after"} {
 		ctx, stop := context.WithTimeout(context.Background(), wait)
 		done := make(chan callResult[json.RawMessage], 1)
@@ -147,7 +149,32 @@ func TestLateResponseAfterAbandonment(t *testing.T) {
 			r, err := c.CallExtension(ctx, "_test/simple", message{s})
 			done <- callResult[json.RawMessage]{r, err}
 		}()
-		r := p.receive(t)
+		var r map[string]json.RawMessage
+		for {
+			r = p.receive(t)
+			if string(r["method"]) != `"$/cancel_request"` {
+				break
+			}
+			// The Rust peer's protocol layer consumes this optional control
+			// notification. Our raw peer must not mistake it for the next call.
+			if _, present := r["id"]; present {
+				t.Fatal("cancellation control unexpectedly has a request ID")
+			}
+			var params struct {
+				RequestID json.RawMessage `json:"requestId"`
+			}
+			check(t, json.Unmarshal(r["params"], &params))
+			equalJSON(t, params.RequestID, string(late["id"]))
+			cancellations++
+			if cancellations > 1 {
+				t.Fatal("abandonment sent duplicate cancellation controls")
+			}
+		}
+		equalJSON(t, r["method"], `"_test/simple"`)
+		equalJSON(t, r["params"], fmt.Sprintf(`{"message":%q}`, s))
+		if _, present := r["id"]; !present {
+			t.Fatal("expected a live request after optional cancellation")
+		}
 		if s == "release" {
 			p.send(t, `{"jsonrpc":"2.0","id":`+string(late["id"])+`,"result":{"result":"late response"}}`)
 		}

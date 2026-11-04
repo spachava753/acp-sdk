@@ -18,6 +18,7 @@ func TestConformanceUnsupportedOptionalMethodsReturnMethodNotFound(t *testing.T)
 		return &basicAgent{conn: conn}
 	})
 	defer closeConformanceClient(t, client, done)
+	initializeConformanceClient(t, client)
 
 	_, err := client.Authenticate(t.Context(), &acp.AuthenticateRequest{MethodID: "agent"})
 	if err == nil {
