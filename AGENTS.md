@@ -44,6 +44,7 @@ The project uses the standard Go toolchain.
 
 - **Build**: `go build ./...`
 - **Test**: `go test ./...`
+- **Lint**: `gopls check -severity=hint $(git ls-files '*.go' | grep -v '^internal/schemagen/testdata/')`. Use hint severity: the default (`warning`) hides modernize suggestions that editors show. Fix issues in `acp/*_gen.go` through the generator. `validateJSONNumber` in `acp/json.go` is reported as unused because the current schema does not need it, but generator fixtures call it, so keep it.
 
 ## Testing
 
