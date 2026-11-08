@@ -2,7 +2,6 @@ package acp
 
 import (
 	"context"
-	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
@@ -15,24 +14,30 @@ func (c *AgentConnection) ChatSendMessage2(ctx context.Context, params *SendMess
 }
 
 func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
-	jsonrpc2.Async(ctx)
+	beginHandler(ctx, req)
 	switch req.Method {
 	case MethodChatSendMessage:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(ChatSendMessageHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[SendMessageRequest](req)
+		params, err := decodeProtocolParams[SendMessageRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.ChatSendMessage(ctx, params))
 	case MethodChatSendMessage2:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(ChatSendMessage2Handler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[SendMessageAltRequest](req)
+		params, err := decodeProtocolParams[SendMessageAltRequest](req)
 		if err != nil {
 			return nil, err
 		}
@@ -40,4 +45,8 @@ func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) 
 	default:
 		return handleExtension(ctx, handler, req)
 	}
+}
+
+func hasAgentInitializeHandler(handler any) bool {
+	return false
 }

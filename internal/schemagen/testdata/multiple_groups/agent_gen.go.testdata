@@ -2,7 +2,6 @@ package acp
 
 import (
 	"context"
-	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
@@ -17,24 +16,30 @@ func (c *AgentConnection) GammaRead(ctx context.Context, params *ReadGammaReques
 }
 
 func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
-	jsonrpc2.Async(ctx)
+	beginHandler(ctx, req)
 	switch req.Method {
 	case MethodAlphaStart:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(AlphaStartHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[StartAlphaRequest](req)
+		params, err := decodeProtocolParams[StartAlphaRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.AlphaStart(ctx, params))
 	case MethodBetaStop:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(BetaStopHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[StopBetaRequest](req)
+		params, err := decodeProtocolParams[StopBetaRequest](req)
 		if err != nil {
 			return nil, err
 		}
@@ -42,4 +47,8 @@ func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) 
 	default:
 		return handleExtension(ctx, handler, req)
 	}
+}
+
+func hasAgentInitializeHandler(handler any) bool {
+	return false
 }

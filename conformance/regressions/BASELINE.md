@@ -49,7 +49,7 @@ The schema additions record their separate `agent-client-protocol-schema` 1.15.1
 
 ## Policy limits retained
 
-- Ordinary request callbacks remain concurrent; prior tool-announcement state and per-session scheduling isolation are not newly imposed universal guarantees.
+- Ordinary request callbacks remain concurrent; prior tool-announcement state and per-session scheduling isolation are not newly imposed universal guarantees. (Later superseded for request start order: requests now wait for preceding update callbacks. See [ordering](ordering/README.md).)
 - A clean input EOF may be a half-close. The added tests do not demand cancellation of all work on every EOF; Rust-derived final-reply/drain tests remain authoritative controls.
 - Queue readiness is observed at public formatting progress, not by inspecting a private mutex. The live-context deadline case complements the deterministic precheck/encoding race case.
 - Private pending-count inspection is narrowly justified for the Go memory-retention property. It is not a conformance assertion about another SDK's registry strategy.

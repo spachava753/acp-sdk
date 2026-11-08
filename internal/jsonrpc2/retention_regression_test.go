@@ -168,6 +168,57 @@ func TestWrittenCallContextCancellationReleasesPendingState(t *testing.T) {
 	})
 }
 
+// Interrupting a canceled call's partial write closes the stream, so the reader
+// can retire that call with EOF before the writer returns. The caller must still
+// see its own cancellation rather than the teardown it caused. With both outcomes
+// ready, select chooses at random; repeat so a wrong choice cannot pass by chance.
+func TestCanceledCallReportsContextOverStreamTeardown(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		for range 32 {
+			boundary := &interruptedWriteBoundary{
+				retentionBoundary: retentionBoundary{closed: make(chan struct{})},
+				entered:           make(chan struct{}),
+			}
+			connection := NewConnection(context.Background(), ConnectionConfig{
+				Reader: boundary,
+				Writer: boundary,
+				Closer: boundary,
+				Bind: func(*Connection) Handler {
+					return HandlerFunc(func(context.Context, *Request) (any, error) {
+						return nil, ErrNotHandled
+					})
+				},
+			})
+			ctx, cancel := context.WithCancel(context.Background())
+			result := make(chan error, 1)
+			go func() { result <- connection.Call(ctx, "test", nil).Await(ctx, nil) }()
+			<-boundary.entered
+			cancel()
+			if err := <-result; !errors.Is(err, context.Canceled) {
+				t.Fatalf("canceled call returned %v, want context.Canceled", err)
+			}
+			if err := connection.Close(); err != nil {
+				t.Fatalf("Close: %v", err)
+			}
+		}
+	})
+}
+
+// interruptedWriteBoundary reproduces a write that is interrupted by its context
+// and lets the reader finish handling the resulting EOF before returning.
+type interruptedWriteBoundary struct {
+	retentionBoundary
+	entered chan struct{}
+}
+
+func (b *interruptedWriteBoundary) Write(ctx context.Context, _ Message) error {
+	close(b.entered)
+	<-ctx.Done()
+	_ = b.Close()
+	synctest.Wait()
+	return errors.Join(ctx.Err(), io.ErrClosedPipe)
+}
+
 // Only the transport boundary is controlled; the real Connection performs all
 // request publication, cancellation observation, response routing and cleanup.
 type retentionBoundary struct {

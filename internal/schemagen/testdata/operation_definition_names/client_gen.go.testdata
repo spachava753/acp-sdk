@@ -2,7 +2,6 @@ package acp
 
 import (
 	"context"
-	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
@@ -11,14 +10,17 @@ func (c *Client) ChatSendMessage(ctx context.Context, params *SendMessageRequest
 }
 
 func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
-	jsonrpc2.Async(ctx)
+	beginHandler(ctx, req)
 	switch req.Method {
 	case MethodChatSendMessage:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(ChatSendMessageHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[SendMessageRequest](req)
+		params, err := decodeProtocolParams[SendMessageRequest](req)
 		if err != nil {
 			return nil, err
 		}

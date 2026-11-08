@@ -37,8 +37,9 @@ type Preempter interface {
 
 // Handler handles messages on a connection.
 type Handler interface {
-	// Handle is invoked sequentially for each incoming request that has not
-	// already been handled by a Preempter.
+	// Handle runs calls independently so reverse requests can make progress.
+	// Notifications not handled by a Preempter start in receive order and hold
+	// their serialization boundary until Handle returns or calls Async.
 	//
 	// If the Request has a nil ID, Handle must return a nil result,
 	// and any error may be logged but will not be reported to the caller.

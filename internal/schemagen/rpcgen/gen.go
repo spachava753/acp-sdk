@@ -11,10 +11,7 @@ import (
 	"github.com/spachava753/acp-sdk/internal/schemagen/typegen"
 )
 
-const (
-	jsonrpcPath  = "github.com/spachava753/acp-sdk/jsonrpc"
-	jsonrpc2Path = "github.com/spachava753/acp-sdk/internal/jsonrpc2"
-)
+const jsonrpcPath = "github.com/spachava753/acp-sdk/jsonrpc"
 
 // File is a generated Go source file.
 type File struct {
@@ -41,7 +38,6 @@ func Generate(schema *jsonschema.Schema) []File {
 func newFile() *jen.File {
 	file := jen.NewFile("acp")
 	file.ImportName(jsonrpcPath, "jsonrpc")
-	file.ImportName(jsonrpc2Path, "jsonrpc2")
 	return file
 }
 
@@ -93,6 +89,10 @@ func endpointFile(e endpoint, ops []operation) *jen.File {
 	}
 
 	file.Add(dispatchFunc(e, ops))
+	if e == agentEndpoint {
+		file.Line()
+		file.Add(initializeHandlerCheck(ops))
+	}
 	return file
 }
 
@@ -129,7 +129,17 @@ func dispatchFunc(e endpoint, ops []operation) jen.Code {
 			body = append(body, jen.If(jen.Id("req").Dot("IsCall").Call()).Block(dispatchBody(handled[0])...))
 			body = append(body, dispatchBody(handled[1])...)
 		} else {
-			body = dispatchBody(handled[0])
+			op := handled[0]
+			if op.kind == request {
+				body = append(body, jen.If(jen.Op("!").Id("req").Dot("IsCall").Call()).Block(
+					jen.Return(jen.Nil(), jen.Nil()),
+				))
+			} else {
+				body = append(body, jen.If(jen.Id("req").Dot("IsCall").Call()).Block(
+					jen.Return(jen.Nil(), jen.Id("methodNotFound").Call(jen.Id("req").Dot("Method"))),
+				))
+			}
+			body = append(body, dispatchBody(op)...)
 		}
 		cases = append(cases, jen.Case(jen.Id(constName)).Block(body...))
 	}
@@ -141,16 +151,33 @@ func dispatchFunc(e endpoint, ops []operation) jen.Code {
 		jen.Id("handler").Any(),
 		jen.Id("req").Op("*").Qual(jsonrpcPath, "Request"),
 	).Params(jen.Any(), jen.Error()).Block(
-		jen.Qual(jsonrpc2Path, "Async").Call(jen.Id("ctx")),
+		jen.Id("beginHandler").Call(jen.Id("ctx"), jen.Id("req")),
 		jen.Switch(jen.Id("req").Dot("Method")).Block(cases...),
 	)
+}
+
+// The runtime cannot refer to a schema-specific InitializeHandler when a small
+// fixture (or another schema) does not generate that interface. Keep the exact
+// interface check next to the glue that declares the supported agent methods.
+func initializeHandlerCheck(ops []operation) jen.Code {
+	body := []jen.Code{jen.Return(jen.False())}
+	for _, op := range ops {
+		if op.method == "initialize" && op.kind == request && op.handledBy(agentEndpoint) {
+			body = []jen.Code{
+				jen.List(jen.Id("_"), jen.Id("ok")).Op(":=").Id("handler").Assert(jen.Id(op.handlerInterface())),
+				jen.Return(jen.Id("ok")),
+			}
+			break
+		}
+	}
+	return jen.Func().Id("hasAgentInitializeHandler").Params(jen.Id("handler").Any()).Bool().Block(body...)
 }
 
 func dispatchBody(op operation) []jen.Code {
 	body := []jen.Code{
 		jen.List(jen.Id("h"), jen.Id("ok")).Op(":=").Id("handler").Assert(jen.Id(op.handlerInterface())),
 		jen.If(jen.Op("!").Id("ok")).Block(jen.Return(jen.Nil(), jen.Id("methodNotFound").Call(jen.Id("req").Dot("Method")))),
-		jen.List(jen.Id("params"), jen.Err()).Op(":=").Id("decodeParams").Index(jen.Id(op.params)).Call(jen.Id("req")),
+		jen.List(jen.Id("params"), jen.Err()).Op(":=").Id("decodeProtocolParams").Index(jen.Id(op.params)).Call(jen.Id("req")),
 		jen.If(jen.Err().Op("!=").Nil()).Block(jen.Return(jen.Nil(), jen.Err())),
 	}
 	invoke := jen.Id("h").Dot(op.name).Call(jen.Id("ctx"), jen.Id("params"))

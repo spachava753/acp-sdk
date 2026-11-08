@@ -2,7 +2,6 @@ package acp
 
 import (
 	"context"
-	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
@@ -17,24 +16,30 @@ func (c *Client) GroupAgentNotify(ctx context.Context, params *AgentMethodNotifi
 }
 
 func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
-	jsonrpc2.Async(ctx)
+	beginHandler(ctx, req)
 	switch req.Method {
 	case MethodGroupClientMethod:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(GroupClientMethodHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[ClientMethodRequest](req)
+		params, err := decodeProtocolParams[ClientMethodRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.GroupClientMethod(ctx, params))
 	case MethodGroupClientNotify:
+		if req.IsCall() {
+			return nil, methodNotFound(req.Method)
+		}
 		h, ok := handler.(GroupClientNotifyHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[ClientMethodNotification](req)
+		params, err := decodeProtocolParams[ClientMethodNotification](req)
 		if err != nil {
 			return nil, err
 		}

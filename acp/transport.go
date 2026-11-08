@@ -14,6 +14,7 @@ import (
 	"net"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
@@ -45,7 +46,22 @@ type nopCloserWriter struct{ io.Writer }
 
 func (nopCloserWriter) Close() error { return nil }
 
+func (w nopCloserWriter) SetWriteDeadline(deadline time.Time) error {
+	if writer, ok := w.Writer.(writeDeadliner); ok {
+		return writer.SetWriteDeadline(deadline)
+	}
+	return os.ErrNoDeadline
+}
+
 // IOTransport speaks ACP over caller-provided reader and writer streams.
+//
+// Interrupting an active write can leave a partial JSON frame, so doing so closes
+// the connection. A complete frame that wins the race with cancellation is a
+// successful send and leaves the connection open, unless the stream had to be
+// closed to attempt the interruption. To interrupt blocked I/O, the streams must
+// support write deadlines or have Close methods that unblock concurrent I/O. An
+// arbitrary io.Writer cannot otherwise be interrupted safely. Cancellation while
+// waiting to write does not close the connection or interrupt another writer.
 type IOTransport struct {
 	Reader io.ReadCloser
 	Writer io.WriteCloser
@@ -86,14 +102,25 @@ type rwc struct {
 func (r rwc) Read(p []byte) (int, error)  { return r.rc.Read(p) }
 func (r rwc) Write(p []byte) (int, error) { return r.wc.Write(p) }
 
+type writeDeadliner interface {
+	SetWriteDeadline(time.Time) error
+}
+
+func (r rwc) SetWriteDeadline(deadline time.Time) error {
+	if writer, ok := r.wc.(writeDeadliner); ok {
+		return writer.SetWriteDeadline(deadline)
+	}
+	return os.ErrNoDeadline
+}
+
 func (r rwc) Close() error {
 	return errors.Join(r.rc.Close(), r.wc.Close())
 }
 
 type ioConn struct {
-	writeMu sync.Mutex
-	rwc     io.ReadWriteCloser
-	readCh  <-chan msgOrErr
+	writeGate chan struct{}
+	rwc       io.ReadWriteCloser
+	readCh    <-chan msgOrErr
 
 	closeOnce sync.Once
 	closed    chan struct{}
@@ -122,6 +149,13 @@ func newIOConn(rwc io.ReadWriteCloser) *ioConn {
 				}
 			}
 			if err != nil {
+				// A read failing after local Close began is an expected result of
+				// closing the stream, not a transport fault. Read reports EOF.
+				select {
+				case <-closed:
+					return
+				default:
+				}
 				select {
 				case readCh <- msgOrErr{err: err}:
 				case <-closed:
@@ -130,7 +164,7 @@ func newIOConn(rwc io.ReadWriteCloser) *ioConn {
 			}
 		}
 	}()
-	return &ioConn{rwc: rwc, readCh: readCh, closed: closed}
+	return &ioConn{rwc: rwc, readCh: readCh, closed: closed, writeGate: make(chan struct{}, 1)}
 }
 
 func (c *ioConn) Read(ctx context.Context) (jsonrpc.Message, error) {
@@ -145,10 +179,8 @@ func (c *ioConn) Read(ctx context.Context) (jsonrpc.Message, error) {
 }
 
 func (c *ioConn) Write(ctx context.Context, msg jsonrpc.Message) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	data, err := jsonrpc.EncodeMessage(msg)
@@ -156,17 +188,108 @@ func (c *ioConn) Write(ctx context.Context, msg jsonrpc.Message) error {
 		return fmt.Errorf("marshaling message: %w", err)
 	}
 	data = append(data, '\n')
+	// Encoding may invoke caller code. Do not enqueue work it canceled.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-c.closed:
+		return io.EOF
+	case c.writeGate <- struct{}{}:
+	}
+	defer func() { <-c.writeGate }()
+	// A ready gate and cancellation can win the select together. Only the
+	// active writer may install the interruption callback below.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	select {
+	case <-c.closed:
+		return io.EOF
+	default:
+	}
 
-	c.writeMu.Lock()
-	defer c.writeMu.Unlock()
-	_, err = c.rwc.Write(data)
+	var stop func() bool
+	var interrupted chan struct{}
+	var deadlineInterrupted writeDeadliner // Read only after callback completion.
+	if ctx.Done() != nil {
+		interrupted = make(chan struct{})
+		defer func() {
+			// Also unregister interruption if a caller-supplied Writer panics.
+			if stop != nil && !stop() {
+				<-interrupted
+			}
+		}()
+		stop = context.AfterFunc(ctx, func() {
+			defer close(interrupted)
+			// Deadlines also interrupt borrowed stdio writers whose Close is
+			// intentionally a no-op. No other writer can own the gate yet.
+			if writer, ok := c.rwc.(writeDeadliner); ok {
+				if writer.SetWriteDeadline(time.Now()) == nil {
+					deadlineInterrupted = writer
+					return
+				}
+			}
+			_ = c.Close()
+		})
+	}
+	// Keep Write on the caller's goroutine: returning on ctx.Done while a
+	// detached writer still holds the stream would leak work and permit a
+	// canceled frame to appear later.
+	n, err := c.rwc.Write(data)
+	interruptionStopped := true
+	if stop != nil {
+		interruptionStopped = stop()
+		stop = nil
+		if !interruptionStopped {
+			<-interrupted
+		}
+	}
+	if err == nil && n == len(data) {
+		if interruptionStopped {
+			// The complete frame won the race. Once interruption is disarmed,
+			// later cancellation must not close an unrelated healthy connection.
+			return nil
+		}
+		if deadlineInterrupted != nil {
+			// Publication can finish before Write returns. A deadline-only
+			// interruption did not damage this complete frame; reset it while
+			// still holding the gate, before another writer can use the stream.
+			if resetErr := deadlineInterrupted.SetWriteDeadline(time.Time{}); resetErr != nil {
+				closeErr := c.Close()
+				return errors.Join(ctx.Err(), io.ErrClosedPipe, resetErr, closeErr)
+			}
+			return nil
+		}
+	}
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		// A partial frame is not reusable. Join interruption before closing
+		// and releasing serialization, even when Write itself returned nil.
+		closeErr := c.Close()
+		return errors.Join(ctxErr, io.ErrClosedPipe, closeErr)
+	}
+	if err == nil && n != len(data) {
+		return io.ErrShortWrite
+	}
 	return err
 }
 
 func (c *ioConn) Close() error {
 	c.closeOnce.Do(func() {
-		c.closeErr = c.rwc.Close()
+		// Publish first. A completing writer may clear the deadline set below,
+		// so queued writers must already see closed when it releases the gate.
+		// The reader also relies on this to recognize failures caused by Close.
 		close(c.closed)
+		// Raw Close is an abort seam and must not wait for the write gate.
+		// Borrowed writers can have no-op Close methods but still support
+		// deadline interruption, including noncancelable response writes.
+		// Graceful RPC shutdown drains accepted writes before calling us.
+		if writer, ok := c.rwc.(writeDeadliner); ok {
+			_ = writer.SetWriteDeadline(time.Now())
+		}
+		c.closeErr = c.rwc.Close()
 	})
 	return c.closeErr
 }

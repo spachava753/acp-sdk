@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Dispatch kind guards and initialization handler detection",
+  "$defs": {
+    "InitializeRequest": {
+      "type": "object",
+      "properties": {"protocolVersion": {"type": "integer", "format": "uint16"}},
+      "required": ["protocolVersion"],
+      "x-method": "initialize",
+      "x-side": "agent"
+    },
+    "InitializeResponse": {
+      "type": "object",
+      "properties": {"protocolVersion": {"type": "integer", "format": "uint16"}},
+      "required": ["protocolVersion"],
+      "x-method": "initialize",
+      "x-side": "agent"
+    },
+    "BothMessageRequest": {
+      "type": "object",
+      "properties": {"value": {"type": "string"}},
+      "required": ["value"],
+      "x-method": "both/message",
+      "x-side": "both"
+    },
+    "BothMessageResponse": {
+      "type": "object",
+      "properties": {"value": {"type": "string"}},
+      "required": ["value"],
+      "x-method": "both/message",
+      "x-side": "both"
+    },
+    "BothMessageNotification": {
+      "type": "object",
+      "properties": {"value": {"type": "string"}},
+      "required": ["value"],
+      "x-method": "both/message",
+      "x-side": "both"
+    },
+    "FetchRequest": {
+      "type": "object",
+      "properties": {"path": {"type": "string"}},
+      "required": ["path"],
+      "x-method": "fs/fetch",
+      "x-side": "client"
+    },
+    "FetchResponse": {
+      "type": "object",
+      "properties": {"content": {"type": "string"}},
+      "required": ["content"],
+      "x-method": "fs/fetch",
+      "x-side": "client"
+    },
+    "StopNotification": {
+      "type": "object",
+      "x-method": "session/stop",
+      "x-side": "agent"
+    },
+    "SessionNotification": {
+      "type": "object",
+      "properties": {"text": {"type": "string"}},
+      "required": ["text"],
+      "x-method": "session/update",
+      "x-side": "client"
+    }
+  }
+}

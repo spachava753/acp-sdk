@@ -16,7 +16,8 @@ type Client struct {
 	handler any
 }
 
-// Connect opens an ACP client connection over transport.
+// Connect opens an ACP client connection over transport. Its context controls
+// establishment; use per-call contexts and Close for the connection's lifetime.
 func Connect(ctx context.Context, transport Transport, handler any) (*Client, error) {
 	client := &Client{handler: handler}
 	rpc, err := connectRPC(ctx, transport, func(ctx context.Context, req *jsonrpc.Request) (any, error) {
@@ -29,7 +30,10 @@ func Connect(ctx context.Context, transport Transport, handler any) (*Client, er
 	return client, nil
 }
 
-// Close closes the client ACP connection.
+// Close stops admitting work, cancels pending requests, and drains accepted
+// writes and notification handlers before closing the transport. Handlers must
+// cooperate with their contexts; a notification handler must not synchronously
+// call Close on the connection whose drain includes that handler.
 func (c *Client) Close() error {
 	return c.rpc.conn.Close()
 }

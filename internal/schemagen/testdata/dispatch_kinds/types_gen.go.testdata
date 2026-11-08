@@ -1,0 +1,177 @@
+package acp
+
+type BothMessageNotification struct {
+	Value string `json:"value"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (n *BothMessageNotification) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"value"}, []string{"value"}); err != nil {
+		return err
+	}
+	type alias BothMessageNotification
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*n = BothMessageNotification(decoded)
+	return nil
+}
+
+type BothMessageRequest struct {
+	Value string `json:"value"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *BothMessageRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"value"}, []string{"value"}); err != nil {
+		return err
+	}
+	type alias BothMessageRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = BothMessageRequest(decoded)
+	return nil
+}
+
+type BothMessageResponse struct {
+	Value string `json:"value"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *BothMessageResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"value"}, []string{"value"}); err != nil {
+		return err
+	}
+	type alias BothMessageResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = BothMessageResponse(decoded)
+	return nil
+}
+
+type FetchRequest struct {
+	Path string `json:"path"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *FetchRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"path"}, []string{"path"}); err != nil {
+		return err
+	}
+	type alias FetchRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = FetchRequest(decoded)
+	return nil
+}
+
+type FetchResponse struct {
+	Content string `json:"content"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *FetchResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"content"}, []string{"content"}); err != nil {
+		return err
+	}
+	type alias FetchResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = FetchResponse(decoded)
+	return nil
+}
+
+type InitializeRequest struct {
+	ProtocolVersion uint16 `json:"protocolVersion"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *InitializeRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"protocolVersion"}, []string{"protocolVersion"}); err != nil {
+		return err
+	}
+	type alias InitializeRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = InitializeRequest(decoded)
+	return nil
+}
+
+type InitializeResponse struct {
+	ProtocolVersion uint16 `json:"protocolVersion"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *InitializeResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"protocolVersion"}, []string{"protocolVersion"}); err != nil {
+		return err
+	}
+	type alias InitializeResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = InitializeResponse(decoded)
+	return nil
+}
+
+type SessionNotification struct {
+	Text string `json:"text"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (n *SessionNotification) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"text"}, []string{"text"}); err != nil {
+		return err
+	}
+	type alias SessionNotification
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*n = SessionNotification(decoded)
+	return nil
+}
+
+type StopNotification map[string]any
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (n *StopNotification) UnmarshalJSON(data []byte) error {
+	type plain StopNotification
+	return unmarshalJSON(data, (*plain)(n))
+}

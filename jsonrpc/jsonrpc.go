@@ -20,10 +20,13 @@ type (
 	Error = jsonrpc2.WireError
 )
 
-// MakeID coerces the given Go value to an ID. The value should be the
-// default JSON marshaling of a Request identifier: nil, float64, or string.
+// MakeID constructs a present request ID from a string, int, int64, json.Number,
+// or finite integral float64 in the int64 range. A nil value is an explicit
+// JSON null ID, valid for a call; a zero ID value represents no ID/notification.
 //
-// Returns an error if the value type was not a valid Request ID type.
+// Decode IDs using json.Number to avoid precision loss before calling MakeID.
+// Already-rounded float64 inputs cannot recover the original integer value.
+// Unsupported types, fractional values and out-of-range numbers return errors.
 func MakeID(v any) (ID, error) {
 	return jsonrpc2.MakeID(v)
 }
@@ -33,8 +36,13 @@ func EncodeMessage(msg Message) ([]byte, error) {
 	return jsonrpc2.EncodeMessage(msg)
 }
 
-// DecodeMessage deserializes JSON-RPC wire format data into a Message.
-// It returns either a Request or Response based on the message content.
+// DecodeMessage deserializes exactly one complete JSON-RPC wire message.
+// It distinguishes requests from notifications by ID-member presence, including
+// explicit null, and validates envelope/error shapes. Errors expose a structured
+// *Error through errors.As and implement interface{ Response() *Response }.
+// Custom transports can use that method's non-nil response for an error reply;
+// nil means no reply should be sent. SDK connections handle these frame errors
+// internally without treating them as transport failures.
 func DecodeMessage(data []byte) (Message, error) {
 	return jsonrpc2.DecodeMessage(data)
 }
@@ -43,13 +51,13 @@ func DecodeMessage(data []byte) (Message, error) {
 // See https://www.jsonrpc.org/specification#error_object
 const (
 	// CodeParseError indicates invalid JSON was received by the server.
-	CodeParseError = -32700
+	CodeParseError = jsonrpc2.CodeParseError
 	// CodeInvalidRequest indicates the JSON sent is not a valid Request object.
-	CodeInvalidRequest = -32600
+	CodeInvalidRequest = jsonrpc2.CodeInvalidRequest
 	// CodeMethodNotFound indicates the method does not exist or is not available.
-	CodeMethodNotFound = -32601
+	CodeMethodNotFound = jsonrpc2.CodeMethodNotFound
 	// CodeInvalidParams indicates invalid method parameter(s).
-	CodeInvalidParams = -32602
+	CodeInvalidParams = jsonrpc2.CodeInvalidParams
 	// CodeInternalError indicates an internal JSON-RPC error.
-	CodeInternalError = -32603
+	CodeInternalError = jsonrpc2.CodeInternalError
 )

@@ -11,13 +11,13 @@ The second command covers a deliberately narrow Go-private resource assertion. P
 
 | Package | Added properties |
 | --- | --- |
-| [`ordering`](ordering/README.md) | Deterministic session-update order; prompt/load success/error completion barriers for the received prefix; later state updates do not extend that prefix; nested requests and reverse callbacks stay live. |
+| [`ordering`](ordering/README.md) | Deterministic session-update order; prompt/load success/error completion barriers for the received prefix; later state updates do not extend that prefix; requests start after preceding updates; nested requests stay live. |
 | [`lifecycle`](lifecycle/README.md) | Public Close after abandonment with no late response; active/queued built-in stream write cancellation; serving-context cancellation; genuine non-EOF failure cleanup. |
 | [`schema`](schema/README.md) | Omitted/null/value patch meaning, transactional recovery, variant filtering, Go named-ID consistency, metadata recovery and opaque unknown-action payloads. Separate schema-crate attribution is recorded there. |
 | [`wire`](wire/README.md) | Ordinary method-kind inversion, complete-frame parsing, simultaneous adjacent large-ID correlation and generated-result encoding containment. |
 
 These tests distinguish protocol requirements, schema/generator recovery rules, Go API policies and conditional caller-error robustness. Per-request cancellation remains an optional profile in the Rust-derived suite. Session identity, capability policy and user permission decisions remain application responsibilities; a fixture is not a substitute implementation of those features.
 
-Clean input EOF can be a half-close and must preserve the Rust-derived final-response/drain behavior. The local lifecycle tests do not replace that with an unconditional cancel-everything-on-EOF rule. Similarly, ordering tests do not impose a generic permission-callback state barrier or promise per-session scheduling isolation.
+Clean input EOF can be a half-close and must preserve the Rust-derived final-response/drain behavior. The local lifecycle tests do not replace that with an unconditional cancel-everything-on-EOF rule. Similarly, ordering tests order request starts behind preceding updates but do not promise per-session scheduling isolation.
 
 The desired assertions are intentionally RED against unchanged v0.6.0. They do not pass by expecting a bug or skip known failures. See [the recorded pre-fix baseline](BASELINE.md). Production repairs must follow this separate test commit, not be hidden inside the port or these additions.

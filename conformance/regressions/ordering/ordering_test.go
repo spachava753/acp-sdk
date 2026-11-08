@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 	"sync"
 	"testing"
 	"testing/synctest"
@@ -354,17 +353,15 @@ func (h *reentrantClient) SessionUpdate(ctx context.Context, _ *acp.SessionNotif
 	h.applied <- operationResult{value: value, err: err}
 	return err
 }
-func (*reentrantClient) FsReadTextFile(context.Context, *acp.ReadTextFileRequest) (*acp.ReadTextFileResponse, error) {
-	return &acp.ReadTextFileResponse{Content: "nested content"}, nil
-}
 
-// A global reader lock or one serial queue for every incoming message would
-// deadlock this existing valid API use. Handler-initiated calls propagate their
-// supplied context, so a completion barrier can recognize reentrant work.
-func TestUpdateCallbackCanAwaitNestedRequestAndReverseCallback(t *testing.T) {
+// Replies bypass the incoming queue, so an update callback can await an answer
+// to its own request while the outer prompt stays behind that update. A peer
+// that needs a client callback before answering would wait behind the update,
+// as in the Rust SDK; such callbacks should do that work in a goroutine.
+func TestUpdateCallbackCanAwaitNestedRequest(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		h := &reentrantClient{applied: make(chan operationResult, 1), cancelNested: make(chan context.CancelFunc, 1)}
-		client, peer := connect(t, h, &acp.ClientCapabilities{Fs: &acp.FileSystemCapabilities{ReadTextFile: true}})
+		client, peer := connect(t, h, nil)
 		h.client = client
 		createSession(t, client, peer)
 		done := operation(client, acp.MethodSessionPrompt, "s")
@@ -382,15 +379,6 @@ func TestUpdateCallbackCanAwaitNestedRequestAndReverseCallback(t *testing.T) {
 			t.Error("outer prompt returned while its update callback awaited nested work")
 		default:
 		}
-		id, err := jsonrpc.MakeID("reverse-read")
-		if err != nil {
-			t.Fatal(err)
-		}
-		peer.incoming <- &jsonrpc.Request{ID: id, Method: acp.MethodFsReadTextFile, Params: json.RawMessage(`{"sessionId":"s","path":"/workspace/file"}`)}
-		response, ok := take(t, peer.outgoing).(*jsonrpc.Response)
-		if !ok || response.ID != id || response.Error != nil || strings.TrimSpace(string(response.Result)) != `{"content":"nested content"}` {
-			t.Fatalf("reverse callback failed while update was pending: %#v", response)
-		}
 		peer.reply(nested, `{"value":"nested content"}`)
 		applied := take(t, h.applied)
 		if applied.err != nil {
@@ -405,6 +393,71 @@ func TestUpdateCallbackCanAwaitNestedRequestAndReverseCallback(t *testing.T) {
 		}
 		if early.err != nil {
 			t.Error(early.err)
+		}
+	})
+}
+
+type announcedTools struct {
+	started chan struct{}
+	release chan struct{}
+	mu      sync.Mutex
+	known   map[acp.ToolCallId]bool
+	asked   chan bool
+}
+
+func (h *announcedTools) SessionUpdate(ctx context.Context, notification *acp.SessionNotification) error {
+	close(h.started)
+	select {
+	case <-h.release:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	h.mu.Lock()
+	h.known[notification.Update.ToolCallID] = true
+	h.mu.Unlock()
+	return nil
+}
+
+func (h *announcedTools) SessionRequestPermission(_ context.Context, request *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
+	h.mu.Lock()
+	known := h.known[request.ToolCall.ToolCallID]
+	h.mu.Unlock()
+	h.asked <- known // Buffered so observation never blocks the SDK handler.
+	return &acp.RequestPermissionResponse{Outcome: acp.SelectedRequestPermissionOutcome("allow_once")}, nil
+}
+
+// Agents commonly announce a tool call and then ask permission to run it. A
+// request must not start until the updates received before it have been
+// applied, so the permission callback can find the announced tool call. This
+// matches the Rust SDK, whose dispatch loop finishes each message in turn.
+func TestRequestStartsAfterPrecedingUpdates(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		h := &announcedTools{started: make(chan struct{}), release: make(chan struct{}), known: map[acp.ToolCallId]bool{}, asked: make(chan bool, 1)}
+		var once sync.Once
+		release := func() { once.Do(func() { close(h.release) }) }
+		defer release()
+		client, peer := connect(t, h, nil)
+		createSession(t, client, peer)
+		peer.incoming <- &jsonrpc.Request{Method: acp.MethodSessionUpdate, Params: json.RawMessage(`{"sessionId":"s","update":{"sessionUpdate":"tool_call","toolCallId":"call_1","title":"Write file"}}`)}
+		take(t, h.started)
+		id, err := jsonrpc.MakeID("permission")
+		if err != nil {
+			t.Fatal(err)
+		}
+		peer.incoming <- &jsonrpc.Request{ID: id, Method: acp.MethodSessionRequestPermission, Params: json.RawMessage(`{"sessionId":"s","toolCall":{"toolCallId":"call_1"},"options":[{"optionId":"allow_once","name":"Allow once","kind":"allow_once"}]}`)}
+		synctest.Wait()
+		select {
+		case known := <-h.asked:
+			t.Fatalf("permission callback started while its tool announcement was still being applied (tool known: %v)", known)
+		default:
+		}
+		release()
+		if !take(t, h.asked) {
+			t.Error("permission callback did not see the announced tool call")
+		}
+		response, ok := take(t, peer.outgoing).(*jsonrpc.Response)
+		if !ok || response.ID != id || response.Error != nil {
+			t.Fatalf("permission response = %#v", response)
 		}
 	})
 }

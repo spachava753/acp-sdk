@@ -2,7 +2,6 @@ package acp
 
 import (
 	"context"
-	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
@@ -17,24 +16,30 @@ func (c *AgentConnection) GroupClientNotify(ctx context.Context, params *ClientM
 }
 
 func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
-	jsonrpc2.Async(ctx)
+	beginHandler(ctx, req)
 	switch req.Method {
 	case MethodGroupAgentMethod:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(GroupAgentMethodHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[AgentMethodRequest](req)
+		params, err := decodeProtocolParams[AgentMethodRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.GroupAgentMethod(ctx, params))
 	case MethodGroupAgentNotify:
+		if req.IsCall() {
+			return nil, methodNotFound(req.Method)
+		}
 		h, ok := handler.(GroupAgentNotifyHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[AgentMethodNotification](req)
+		params, err := decodeProtocolParams[AgentMethodNotification](req)
 		if err != nil {
 			return nil, err
 		}
@@ -42,4 +47,8 @@ func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) 
 	default:
 		return handleExtension(ctx, handler, req)
 	}
+}
+
+func hasAgentInitializeHandler(handler any) bool {
+	return false
 }

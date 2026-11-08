@@ -2,7 +2,6 @@ package acp
 
 import (
 	"context"
-	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
@@ -17,7 +16,7 @@ func (c *AgentConnection) McpMessageNotification(ctx context.Context, params *Me
 }
 
 func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
-	jsonrpc2.Async(ctx)
+	beginHandler(ctx, req)
 	switch req.Method {
 	case MethodMcpMessage:
 		if req.IsCall() {
@@ -25,7 +24,7 @@ func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) 
 			if !ok {
 				return nil, methodNotFound(req.Method)
 			}
-			params, err := decodeParams[MessageMcpRequest](req)
+			params, err := decodeProtocolParams[MessageMcpRequest](req)
 			if err != nil {
 				return nil, err
 			}
@@ -35,7 +34,7 @@ func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) 
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[MessageMcpNotification](req)
+		params, err := decodeProtocolParams[MessageMcpNotification](req)
 		if err != nil {
 			return nil, err
 		}
@@ -43,4 +42,8 @@ func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) 
 	default:
 		return handleExtension(ctx, handler, req)
 	}
+}
+
+func hasAgentInitializeHandler(handler any) bool {
+	return false
 }
