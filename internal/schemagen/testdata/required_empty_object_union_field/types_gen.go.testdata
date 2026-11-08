@@ -10,7 +10,7 @@ import (
 type Choice struct {
 	Mode    ChoiceType  `json:"mode"`
 	Message string      `json:"message"`
-	Schema  EmptySchema `json:"schema,omitempty,omitzero"`
+	Schema  EmptySchema `json:"schema,omitzero"`
 	Text    string      `json:"text,omitempty"`
 }
 

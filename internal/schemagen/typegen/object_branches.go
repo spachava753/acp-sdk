@@ -1,6 +1,10 @@
 package typegen
 
-import "github.com/google/jsonschema-go/jsonschema"
+import (
+	"slices"
+
+	"github.com/google/jsonschema-go/jsonschema"
+)
 
 // objectBranches expands object-level alternatives without flattening their
 // required keys into an intersection. Each result is one complete candidate,
@@ -60,7 +64,7 @@ func nestedRequiredFields(defs map[string]*jsonschema.Schema, schema *jsonschema
 		for _, alternative := range selectedObjectBranches(defs, schema, branch) {
 			for _, name := range alternative.Required {
 				field, ok := fields[name]
-				if !ok || contains(common, name) {
+				if !ok || slices.Contains(common, name) {
 					continue
 				}
 				switch schemaKind(defs, field.schema) {

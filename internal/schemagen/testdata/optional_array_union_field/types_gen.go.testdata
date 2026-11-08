@@ -11,7 +11,7 @@ type ConfigOption struct {
 	Type    ConfigOptionType `json:"type"`
 	Enabled bool             `json:"enabled,omitempty"`
 	ID      string           `json:"id"`
-	Options SelectOptions    `json:"options,omitempty,omitzero"`
+	Options SelectOptions    `json:"options,omitzero"`
 }
 
 // ConfigOptionType is the discriminator for ConfigOption variants.

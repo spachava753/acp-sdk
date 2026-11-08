@@ -33,33 +33,33 @@ func TestTypedExtensionCallbacks(t *testing.T) {
 		Message string `json:"message"`
 	}
 	mux := acp.NewExtensionMux()
-	if err := acp.AddExtensionRequest[validateRequest, validateResponse](mux, "_rust/validate", func(_ context.Context, request *validateRequest) (*validateResponse, error) {
+	if err := acp.AddExtensionRequest(mux, "_rust/validate", func(_ context.Context, request *validateRequest) (*validateResponse, error) {
 		return &validateResponse{IsValid: len(request.Data) > 0}, nil
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := acp.AddExtensionRequest[validateRequest, validateResponse](mux, "_rust/validate_always", func(context.Context, *validateRequest) (*validateResponse, error) {
+	if err := acp.AddExtensionRequest(mux, "_rust/validate_always", func(context.Context, *validateRequest) (*validateResponse, error) {
 		return &validateResponse{IsValid: true}, nil
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := acp.AddExtensionRequest[struct{}, executeResponse](mux, "_rust/execute", func(context.Context, *struct{}) (*executeResponse, error) {
+	if err := acp.AddExtensionRequest(mux, "_rust/execute", func(context.Context, *struct{}) (*executeResponse, error) {
 		return &executeResponse{Result: "done"}, nil
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := acp.AddExtensionRequest[struct{}, statusResponse](mux, "_rust/success", func(context.Context, *struct{}) (*statusResponse, error) {
+	if err := acp.AddExtensionRequest(mux, "_rust/success", func(context.Context, *struct{}) (*statusResponse, error) {
 		return &statusResponse{Status: "ok"}, nil
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := acp.AddExtensionRequest[struct{}, statusResponse](mux, "_rust/error", func(context.Context, *struct{}) (*statusResponse, error) {
+	if err := acp.AddExtensionRequest(mux, "_rust/error", func(context.Context, *struct{}) (*statusResponse, error) {
 		return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "Invalid params"}
 	}); err != nil {
 		t.Fatal(err)
 	}
 	notifications := make(chan string, 1)
-	if err := acp.AddExtensionNotification[statusNotification](mux, "_rust/status", func(_ context.Context, notification *statusNotification) error {
+	if err := acp.AddExtensionNotification(mux, "_rust/status", func(_ context.Context, notification *statusNotification) error {
 		notifications <- notification.Message
 		return nil
 	}); err != nil {

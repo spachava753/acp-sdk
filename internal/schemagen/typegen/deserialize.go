@@ -6,6 +6,7 @@ package typegen
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/dave/jennifer/jen"
@@ -253,7 +254,7 @@ func mergeDeserializeRules(existing, field deserializeField) deserializeField {
 	existing.skipInvalidItems = existing.skipInvalidItems || field.skipInvalidItems
 	existing.preserveNull = existing.preserveNull || field.preserveNull
 	for _, value := range field.enumValues {
-		if !contains(existing.enumValues, value) {
+		if !slices.Contains(existing.enumValues, value) {
 			existing.enumValues = append(existing.enumValues, value)
 		}
 	}

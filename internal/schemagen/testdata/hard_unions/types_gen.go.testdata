@@ -394,7 +394,7 @@ func (o *NestedObject) UnmarshalJSON(data []byte) error {
 type ObjectFieldUnion struct {
 	Type   ObjectFieldUnionType `json:"type"`
 	Items  []string             `json:"items,omitempty"`
-	Nested NestedObject         `json:"nested,omitempty,omitzero"`
+	Nested NestedObject         `json:"nested,omitzero"`
 	Text   string               `json:"text,omitempty"`
 }
 

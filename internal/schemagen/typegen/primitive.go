@@ -6,6 +6,7 @@ package typegen
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/dave/jennifer/jen"
@@ -108,7 +109,7 @@ func refType(defs map[string]*jsonschema.Schema, ref string, optional bool) (jen
 }
 
 func nullableSchema(schema *jsonschema.Schema) (*jsonschema.Schema, bool) {
-	if len(schema.Types) == 2 && contains(schema.Types, "null") {
+	if len(schema.Types) == 2 && slices.Contains(schema.Types, "null") {
 		clone := *schema
 		clone.Types = nil
 		for _, typ := range schema.Types {

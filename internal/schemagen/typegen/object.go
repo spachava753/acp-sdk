@@ -5,6 +5,7 @@
 package typegen
 
 import (
+	"slices"
 	"strings"
 	"unicode"
 
@@ -66,7 +67,7 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 		structFields = append(structFields, jen.Id(f.goName).Add(f.typeCode).Tag(map[string]string{"json": f.tag}))
 	}
 
-	if contains(reserved, "NullFields") {
+	if slices.Contains(reserved, "NullFields") {
 		structFields = append(structFields, nullFieldsDeclaration())
 	}
 	if retainExtra {

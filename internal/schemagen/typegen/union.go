@@ -6,6 +6,7 @@ package typegen
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"sort"
 	"strings"
@@ -85,7 +86,7 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 			field.variants = append(field.variants, unionFieldVariant{discriminatorValue: discriminatorValue, field: source})
 		}
 		fieldsByJSON[jsonName] = field
-		if !contains(fieldOrder, jsonName) {
+		if !slices.Contains(fieldOrder, jsonName) {
 			fieldOrder = append(fieldOrder, jsonName)
 		}
 	}
@@ -105,7 +106,7 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 		properties := variantProperties(defs, branch)
 		for _, jsonName := range sortedPropertyNames(properties) {
 			prop := properties[jsonName]
-			if contains(branchRequired, jsonName) && prop.Const == nil && jsonName != discriminator {
+			if slices.Contains(branchRequired, jsonName) && prop.Const == nil && jsonName != discriminator {
 				typ, text := schemaType(defs, prop, false)
 				field := unionField{deserializeField: newDeserializeField(defs, jsonName, prop, typ, text), schema: prop}
 				switch {
@@ -205,6 +206,10 @@ func discriminatorUnionCode(defs map[string]*jsonschema.Schema, name string, sch
 		requiredInAllVariants := isRequiredInAllVariants(parentRequired, requiredCount, jsonName, len(branches))
 		omitempty := !requiredInAllVariants
 		omitzero := omitempty && needsOmitZero(defs, field.schema)
+		if omitzero && field.typeText != "any" && !strings.HasPrefix(field.typeText, "*") {
+			// The field is a struct, where omitempty has no effect; omitzero omits it.
+			omitempty = false
+		}
 		if jsonName == "_meta" && field.typeText == "Meta" {
 			omitempty = false
 			omitzero = true
@@ -635,7 +640,7 @@ func unionConstructorCode(defs map[string]*jsonschema.Schema, unionName, discrim
 	}
 	for _, jsonName := range sortedPropertyNames(properties) {
 		prop := properties[jsonName]
-		if prop.Const != nil || !contains(required, jsonName) {
+		if prop.Const != nil || !slices.Contains(required, jsonName) {
 			continue
 		}
 		field := fieldsByJSON[jsonName]
@@ -784,12 +789,8 @@ func unionConstructorName(defs map[string]*jsonschema.Schema, unionName, discrim
 
 func mergedProperties(parent, variant map[string]*jsonschema.Schema) map[string]*jsonschema.Schema {
 	properties := make(map[string]*jsonschema.Schema, len(parent)+len(variant))
-	for name, prop := range parent {
-		properties[name] = prop
-	}
-	for name, prop := range variant {
-		properties[name] = prop
-	}
+	maps.Copy(properties, parent)
+	maps.Copy(properties, variant)
 	return properties
 }
 
@@ -797,7 +798,7 @@ func mergedRequired(parent, variant []string) []string {
 	required := make([]string, 0, len(parent)+len(variant))
 	required = append(required, parent...)
 	for _, name := range variant {
-		if !contains(required, name) {
+		if !slices.Contains(required, name) {
 			required = append(required, name)
 		}
 	}
@@ -1011,9 +1012,7 @@ func unionBranches(schema *jsonschema.Schema) []*jsonschema.Schema {
 func variantProperties(defs map[string]*jsonschema.Schema, branch *jsonschema.Schema) map[string]*jsonschema.Schema {
 	properties := map[string]*jsonschema.Schema{}
 	for _, alternative := range objectBranches(defs, branch) {
-		for name, prop := range alternative.Properties {
-			properties[name] = prop
-		}
+		maps.Copy(properties, alternative.Properties)
 	}
 	return properties
 }
@@ -1030,7 +1029,7 @@ func variantRequired(defs map[string]*jsonschema.Schema, branch *jsonschema.Sche
 func intersectStrings(a, b []string) []string {
 	var common []string
 	for _, value := range a {
-		if contains(b, value) {
+		if slices.Contains(b, value) {
 			common = append(common, value)
 		}
 	}

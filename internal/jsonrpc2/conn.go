@@ -24,7 +24,7 @@ import (
 // The jsonrpc2.Connection layers RPC logic on top of a stream, dispatching RPC
 // handlers and correlating requests with responses from the peer.
 type Connection struct {
-	seq int64 // must only be accessed using atomic operations
+	seq atomic.Int64
 
 	stateMu sync.Mutex
 	state   inFlightState // accessed only in updateInFlight
@@ -288,7 +288,7 @@ func (c *Connection) Notify(ctx context.Context, method string, params any) (err
 // If sending the call failed, the response will be ready and have the error in it.
 func (c *Connection) Call(ctx context.Context, method string, params any) *AsyncCall {
 	// Generate a new request identifier.
-	id := Int64ID(atomic.AddInt64(&c.seq, 1))
+	id := Int64ID(c.seq.Add(1))
 
 	ac := &AsyncCall{
 		id:    id,
@@ -684,7 +684,7 @@ func (c *Connection) acceptRequest(ctx context.Context, msg *Request, preempter 
 		}
 	})
 	if err != nil {
-		c.processResult("acceptRequest", req, nil, err)
+		c.processResult(req, nil, err)
 		return
 	}
 
@@ -692,7 +692,7 @@ func (c *Connection) acceptRequest(ctx context.Context, msg *Request, preempter 
 		result, err := preempter.Preempt(req.ctx, req.Request)
 
 		if !errors.Is(err, ErrNotHandled) {
-			c.processResult("Preempt", req, result, err)
+			c.processResult(req, result, err)
 			return
 		}
 	}
@@ -720,7 +720,7 @@ func (c *Connection) acceptRequest(ctx context.Context, msg *Request, preempter 
 		}
 	})
 	if err != nil {
-		c.processResult("acceptRequest", req, nil, err)
+		c.processResult(req, nil, err)
 	}
 }
 
@@ -750,16 +750,16 @@ func (c *Connection) handleAsync() {
 
 func (c *Connection) handleRequest(req *incomingRequest) {
 	if req.ctx.Err() != nil {
-		c.processResult(c.handler, req, nil, ErrRequestCancelled)
+		c.processResult(req, nil, ErrRequestCancelled)
 		return
 	}
 	ctx := context.WithValue(req.ctx, asyncKey, req.release)
 	result, err := c.handler.Handle(ctx, req.Request)
-	c.processResult(c.handler, req, result, err)
+	c.processResult(req, result, err)
 }
 
 // processResult processes the result of a request and, if appropriate, sends a response.
-func (c *Connection) processResult(from any, req *incomingRequest, result any, err error) error {
+func (c *Connection) processResult(req *incomingRequest, result any, err error) error {
 	defer req.release.release(true)
 	switch err {
 	case ErrNotHandled, ErrMethodNotFound:

@@ -248,12 +248,3 @@ func collectRefs(schema *jsonschema.Schema, defs map[string]*jsonschema.Schema, 
 	collectRefs(schema.Items, defs, refs, seen)
 	collectRefs(schema.AdditionalProperties, defs, refs, seen)
 }
-
-func contains[S ~[]E, E comparable](slice S, value E) bool {
-	for _, v := range slice {
-		if v == value {
-			return true
-		}
-	}
-	return false
-}

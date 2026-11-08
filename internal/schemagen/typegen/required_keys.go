@@ -1,6 +1,7 @@
 package typegen
 
 import (
+	"slices"
 	"sort"
 	"strings"
 
@@ -133,7 +134,7 @@ func allowsJSONNull(defs map[string]*jsonschema.Schema, schema *jsonschema.Schem
 	if schema == nil {
 		return true
 	}
-	if schema.Type != "" && schema.Type != "null" || len(schema.Types) > 0 && !contains(schema.Types, "null") {
+	if schema.Type != "" && schema.Type != "null" || len(schema.Types) > 0 && !slices.Contains(schema.Types, "null") {
 		return false
 	}
 	if schema.Const != nil && *schema.Const != nil {

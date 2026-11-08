@@ -1656,7 +1656,7 @@ type ContentBlock struct {
 	Description *string                  `json:"description,omitempty"`
 	MimeType    *string                  `json:"mimeType,omitempty"`
 	Name        string                   `json:"name,omitempty"`
-	Resource    EmbeddedResourceResource `json:"resource,omitempty,omitzero"`
+	Resource    EmbeddedResourceResource `json:"resource,omitzero"`
 	Size        *int64                   `json:"size,omitempty"`
 	Text        string                   `json:"text,omitempty"`
 	Title       *string                  `json:"title,omitempty"`
@@ -2128,7 +2128,7 @@ type CreateElicitationRequest struct {
 	ElicitationID   ElicitationId                `json:"elicitationId,omitempty"`
 	Message         string                       `json:"message"`
 	RequestID       RequestId                    `json:"requestId,omitempty"`
-	RequestedSchema ElicitationSchema            `json:"requestedSchema,omitempty,omitzero"`
+	RequestedSchema ElicitationSchema            `json:"requestedSchema,omitzero"`
 	SessionID       SessionId                    `json:"sessionId,omitempty"`
 	ToolCallID      *ToolCallId                  `json:"toolCallId,omitempty"`
 	Url             string                       `json:"url,omitempty"`
@@ -3257,7 +3257,7 @@ type ElicitationPropertySchema struct {
 	Description *string                       `json:"description,omitempty"`
 	Enum        *[]string                     `json:"enum,omitempty"`
 	Format      *StringFormat                 `json:"format,omitempty"`
-	Items       MultiSelectItems              `json:"items,omitempty,omitzero"`
+	Items       MultiSelectItems              `json:"items,omitzero"`
 	MaxItems    *uint64                       `json:"maxItems,omitempty"`
 	MaxLength   *uint32                       `json:"maxLength,omitempty"`
 	Maximum     any                           `json:"maximum,omitempty"`
@@ -8971,7 +8971,7 @@ type SessionConfigOption struct {
 	Description  *string                      `json:"description,omitempty"`
 	ID           SessionConfigId              `json:"id"`
 	Name         string                       `json:"name"`
-	Options      SessionConfigSelectOptions   `json:"options,omitempty,omitzero"`
+	Options      SessionConfigSelectOptions   `json:"options,omitzero"`
 }
 
 // SessionConfigOptionType is the discriminator for SessionConfigOption variants.
@@ -10118,7 +10118,7 @@ type SessionUpdate struct {
 	Locations             *[]ToolCallLocation          `json:"locations,omitempty"`
 	MessageID             *MessageId                   `json:"messageId,omitempty"`
 	Name                  *string                      `json:"name,omitempty"`
-	Plan                  PlanUpdateContent            `json:"plan,omitempty,omitzero"`
+	Plan                  PlanUpdateContent            `json:"plan,omitzero"`
 	PlanID                PlanId                       `json:"planId,omitempty"`
 	RawInput              any                          `json:"rawInput,omitempty"`
 	RawOutput             any                          `json:"rawOutput,omitempty"`
@@ -13224,7 +13224,7 @@ func (c *ToolCall) UnmarshalJSON(data []byte) error {
 type ToolCallContent struct {
 	Type       ToolCallContentType `json:"type"`
 	Meta       Meta                `json:"_meta,omitzero"`
-	Content    ContentBlock        `json:"content,omitempty,omitzero"`
+	Content    ContentBlock        `json:"content,omitzero"`
 	NewText    string              `json:"newText,omitempty"`
 	OldText    *string             `json:"oldText,omitempty"`
 	Path       string              `json:"path,omitempty"`

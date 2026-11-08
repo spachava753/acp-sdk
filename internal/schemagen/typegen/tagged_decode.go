@@ -3,6 +3,7 @@ package typegen
 import (
 	"github.com/dave/jennifer/jen"
 	"github.com/google/jsonschema-go/jsonschema"
+	"slices"
 )
 
 func fallbackUnionBranches(defs map[string]*jsonschema.Schema, branches []*jsonschema.Schema, discriminator string) []*jsonschema.Schema {
@@ -24,15 +25,10 @@ func fallbackExcludesTag(schema *jsonschema.Schema, discriminator, tag string) b
 		if s == nil {
 			return false
 		}
-		if value, ok := constString(s.Properties[discriminator]); ok && value == tag && contains(s.Required, discriminator) {
+		if value, ok := constString(s.Properties[discriminator]); ok && value == tag && slices.Contains(s.Required, discriminator) {
 			return true
 		}
-		for _, branch := range unionBranches(s) {
-			if excludes(branch) {
-				return true
-			}
-		}
-		return false
+		return slices.ContainsFunc(unionBranches(s), excludes)
 	}
 	return excludes(schema.Not)
 }

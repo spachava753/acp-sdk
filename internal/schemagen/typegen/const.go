@@ -233,8 +233,8 @@ func fieldName(jsonName string) string {
 		return "URI"
 	}
 	name := PascalIdentifier(jsonName)
-	if strings.HasSuffix(name, "Id") {
-		name = strings.TrimSuffix(name, "Id") + "ID"
+	if base, ok := strings.CutSuffix(name, "Id"); ok {
+		name = base + "ID"
 	}
 	return name
 }

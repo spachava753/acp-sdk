@@ -89,7 +89,7 @@ func TestPeerErrorKnownFields(t *testing.T) {
 				var expected struct {
 					Data json.RawMessage `json:"data"`
 				}
-				check(t, json.Unmarshal([]byte(fmt.Sprintf(`{"code":%d,"message":"peer error"%s}`, n, data)), &expected))
+				check(t, json.Unmarshal(fmt.Appendf(nil, `{"code":%d,"message":"peer error"%s}`, n, data), &expected))
 				if len(expected.Data) == 0 {
 					if len(e.Data) != 0 {
 						t.Errorf("omitted error data became %s", e.Data)

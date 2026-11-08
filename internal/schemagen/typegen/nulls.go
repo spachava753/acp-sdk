@@ -3,6 +3,7 @@ package typegen
 import (
 	"github.com/dave/jennifer/jen"
 	"github.com/google/jsonschema-go/jsonschema"
+	"slices"
 )
 
 // These upstream fields distinguish null from omission in prose, but do not
@@ -22,7 +23,7 @@ func preservesJSONNull(defs map[string]*jsonschema.Schema, jsonName string, prop
 		return true
 	}
 	for name, fields := range nullSensitiveFields {
-		if def := defs[name]; def != nil && def.Properties[jsonName] == prop && contains(fields, jsonName) {
+		if def := defs[name]; def != nil && def.Properties[jsonName] == prop && slices.Contains(fields, jsonName) {
 			return true
 		}
 	}

@@ -11,7 +11,7 @@ type Choice struct {
 	Type    ChoiceType `json:"type"`
 	Count   int64      `json:"count,omitempty"`
 	Enabled bool       `json:"enabled,omitempty"`
-	Payload Payload    `json:"payload,omitempty,omitzero"`
+	Payload Payload    `json:"payload,omitzero"`
 	Text    string     `json:"text,omitempty"`
 }
 

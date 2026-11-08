@@ -108,7 +108,7 @@ func TestOutOfOrderResponses(t *testing.T) {
 func TestUnconsumedResultDoesNotBlockFollowingNotification(t *testing.T) {
 	mux := acp.NewExtensionMux()
 	notifications := make(chan uint32, 1)
-	if err := acp.AddExtensionNotification[pong](mux, "_rust/after_response", func(_ context.Context, params *pong) error {
+	if err := acp.AddExtensionNotification(mux, "_rust/after_response", func(_ context.Context, params *pong) error {
 		notifications <- params.Value
 		return nil
 	}); err != nil {
