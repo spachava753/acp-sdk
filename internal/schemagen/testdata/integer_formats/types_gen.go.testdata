@@ -10,6 +10,23 @@ type Counters struct {
 	Tokens    uint64    `json:"tokens"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *Counters) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"errorCode", "line", "plain", "port", "sequence", "tokens"}, []string{"errorCode", "line", "plain", "port", "sequence", "tokens"}); err != nil {
+		return err
+	}
+	type alias Counters
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*c = Counters(decoded)
+	return nil
+}
+
 // ErrorCode: Known int32 error codes with room for custom values.
 type ErrorCode int32
 

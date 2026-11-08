@@ -1,0 +1,382 @@
+package acp
+
+import (
+	"encoding/json"
+	"slices"
+)
+
+// Meta: Reserved metadata for protocol extensions. Decoded numbers are json.Number values.
+type Meta map[string]any
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (m *Meta) UnmarshalJSON(data []byte) error {
+	type plain Meta
+	return unmarshalJSON(data, (*plain)(m))
+}
+
+type Action struct {
+	Action  ActionType                `json:"action"`
+	Meta    Meta                      `json:"_meta,omitzero"`
+	Content map[string]PrimitiveValue `json:"content,omitempty"`
+	// ExtraFields retains extension properties explicitly permitted by the schema.
+	// Known properties take precedence when encoding.
+	ExtraFields map[string]json.RawMessage `json:"-"`
+}
+
+// ActionType is the discriminator for Action variants.
+type ActionType string
+
+const (
+	ActionTypeAccept ActionType = "accept"
+)
+
+// AcceptAction creates .
+func AcceptAction() Action {
+	return Action{
+		Action: ActionTypeAccept,
+	}
+}
+
+// OtherAction creates .
+func OtherAction(action string) Action {
+	return Action{
+		Action: ActionType(action),
+	}
+}
+
+// MarshalJSON retains explicit extension fields for open variants.
+func (a Action) MarshalJSON() ([]byte, error) {
+	type alias Action
+	switch a.Action {
+	case "accept":
+		return json.Marshal(alias(a))
+	default:
+		return marshalJSONWithExtraFields(alias(a), a.ExtraFields, []string{"_meta", "action"})
+	}
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (a *Action) UnmarshalJSON(data []byte) error {
+	type alias Action
+	var decoded alias
+	var raw struct {
+		Action  json.RawMessage `json:"action"`
+		Meta    json.RawMessage `json:"_meta"`
+		Content json.RawMessage `json:"content"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag ActionType
+	var tagErr error
+	if len(raw.Action) > 0 {
+		tagErr = unmarshalJSON(raw.Action, &tag)
+	}
+	var err error
+	switch tag {
+	case "accept":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Action = tag
+			if err := requireJSONProperties(data, []string{"action"}, []string{"action", "content"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Content) > 0 {
+				var value map[string]PrimitiveValue
+				if err := func() error {
+					if err := func(data []byte) error {
+						return validateJSONMapValues(data, func(data []byte) error {
+							return validateJSONUnion(data, validateJSONType[string], validateJSONNumber, validateJSONType[int64], validateJSONType[bool], func(data []byte) error {
+								return validateJSONArrayValues(data, validateJSONType[string])
+							})
+						})
+					}(raw.Content); err != nil {
+						return err
+					}
+					return unmarshalJSON(raw.Content, &value)
+				}(); err != nil {
+					return err
+				}
+				decoded.Content = value
+			}
+			return nil
+		}()
+	default:
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Action = tag
+			if err := requireJSONProperties(data, []string{"action"}, []string{"action"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			extra, err := captureJSONExtraFields(data, []string{"_meta", "action"})
+			if err != nil {
+				return err
+			}
+			decoded.ExtraFields = extra
+			return nil
+		}()
+	}
+	if err != nil {
+		return err
+	}
+	*a = Action(decoded)
+	return nil
+}
+
+type ExtensibleError struct {
+	Code         int32  `json:"code"`
+	Data         any    `json:"data,omitempty"`
+	ExtraFields2 string `json:"extraFields,omitempty"`
+	Message      string `json:"message"`
+	// NullFields lists JSON field names to send as explicit null, regardless of their values.
+	// Decoding records explicit nulls here, separately from omitted fields.
+	NullFields []string `json:"-"`
+	// ExtraFields retains extension properties explicitly permitted by the schema.
+	// Known properties take precedence when encoding.
+	ExtraFields map[string]json.RawMessage `json:"-"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (e ExtensibleError) MarshalJSON() ([]byte, error) {
+	type alias ExtensibleError
+	a := alias(e)
+	type wire struct {
+		*alias
+		Data *any `json:"data,omitempty"`
+	}
+	w := wire{alias: &a}
+	if a.Data != nil {
+		Data := a.Data
+		w.Data = &Data
+	}
+	if slices.Contains(a.NullFields, "data") {
+		w.Data = new(any)
+	}
+	return marshalJSONWithExtraFields(w, a.ExtraFields, []string{"code", "data", "extraFields", "message"})
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (e *ExtensibleError) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"code", "message"}, []string{"code", "extraFields", "message"}); err != nil {
+		return err
+	}
+	type alias ExtensibleError
+	decoded := alias{}
+	raw := struct {
+		Data json.RawMessage `json:"data"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Data) > 0 {
+		if isJSONNull(raw.Data) {
+			decoded.NullFields = append(decoded.NullFields, "data")
+		} else {
+			var value any
+			if err := unmarshalJSON(raw.Data, &value); err != nil {
+				return err
+			}
+			decoded.Data = value
+		}
+	}
+	extra, err := captureJSONExtraFields(data, []string{"code", "data", "extraFields", "message"})
+	if err != nil {
+		return err
+	}
+	decoded.ExtraFields = extra
+	*e = ExtensibleError(decoded)
+	return nil
+}
+
+type Items struct {
+	Kind   ItemsType `json:"kind,omitempty"`
+	AnyOf  []string  `json:"anyOf,omitempty"`
+	Values []string  `json:"values,omitempty"`
+	// ExtraFields retains extension properties explicitly permitted by the schema.
+	// Known properties take precedence when encoding.
+	ExtraFields map[string]json.RawMessage `json:"-"`
+}
+
+// ItemsType is the discriminator for Items variants.
+type ItemsType string
+
+const (
+	ItemsTypeString ItemsType = "string"
+)
+
+// StringItems creates .
+func StringItems(values []string) Items {
+	return Items{
+		Kind:   ItemsTypeString,
+		Values: values,
+	}
+}
+
+// OtherItems creates .
+func OtherItems(kind string) Items {
+	return Items{
+		Kind: ItemsType(kind),
+	}
+}
+
+// TitledItems creates .
+func TitledItems(anyOf []string) Items {
+	return Items{
+		AnyOf: anyOf,
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (i Items) MarshalJSON() ([]byte, error) {
+	type alias Items
+	type wire struct {
+		*alias
+		Values *[]string `json:"values,omitempty"`
+		AnyOf  *[]string `json:"anyOf,omitempty"`
+	}
+	w := wire{alias: (*alias)(&i)}
+	if len(i.Values) > 0 {
+		Values := i.Values
+		w.Values = &Values
+	}
+	if len(i.AnyOf) > 0 {
+		AnyOf := i.AnyOf
+		w.AnyOf = &AnyOf
+	}
+	switch i.Kind {
+	case ItemsTypeString:
+		Values := i.Values
+		if Values == nil {
+			Values = []string{}
+		}
+		w.Values = &Values
+	case "":
+		AnyOf := i.AnyOf
+		if AnyOf == nil {
+			AnyOf = []string{}
+		}
+		w.AnyOf = &AnyOf
+	}
+	switch i.Kind {
+	case "string":
+		return json.Marshal(w)
+	default:
+		return marshalJSONWithExtraFields(w, i.ExtraFields, []string{"kind"})
+	}
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (i *Items) UnmarshalJSON(data []byte) error {
+	type alias Items
+	var decoded alias
+	var raw struct {
+		Kind   json.RawMessage `json:"kind"`
+		AnyOf  json.RawMessage `json:"anyOf"`
+		Values json.RawMessage `json:"values"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag ItemsType
+	var tagErr error
+	if len(raw.Kind) > 0 {
+		tagErr = unmarshalJSON(raw.Kind, &tag)
+	}
+	var err error
+	switch tag {
+	case "string":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "values"}, []string{"kind", "values"}); err != nil {
+				return err
+			}
+			if len(raw.Values) > 0 {
+				var value []string
+				if err := unmarshalJSON(raw.Values, &value); err != nil {
+					return err
+				}
+				decoded.Values = value
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"anyOf"}, []string{"anyOf"}); err != nil {
+					return err
+				}
+				if len(raw.AnyOf) > 0 {
+					var value []string
+					if err := unmarshalJSON(raw.AnyOf, &value); err != nil {
+						return err
+					}
+					decoded.AnyOf = value
+				}
+				return nil
+			}()
+		}
+	default:
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind"}, []string{"kind"}); err != nil {
+				return err
+			}
+			extra, err := captureJSONExtraFields(data, []string{"kind"})
+			if err != nil {
+				return err
+			}
+			decoded.ExtraFields = extra
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"anyOf"}, []string{"anyOf"}); err != nil {
+					return err
+				}
+				if len(raw.AnyOf) > 0 {
+					var value []string
+					if err := unmarshalJSON(raw.AnyOf, &value); err != nil {
+						return err
+					}
+					decoded.AnyOf = value
+				}
+				return nil
+			}()
+		}
+	}
+	if err != nil {
+		return err
+	}
+	*i = Items(decoded)
+	return nil
+}
+
+type PrimitiveValue = json.RawMessage

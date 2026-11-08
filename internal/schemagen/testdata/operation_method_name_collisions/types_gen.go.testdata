@@ -4,14 +4,82 @@ type SendMessageAltRequest struct {
 	Text string `json:"text"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *SendMessageAltRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"text"}, []string{"text"}); err != nil {
+		return err
+	}
+	type alias SendMessageAltRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = SendMessageAltRequest(decoded)
+	return nil
+}
+
 type SendMessageAltResponse struct {
 	Ok bool `json:"ok"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *SendMessageAltResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"ok"}, []string{"ok"}); err != nil {
+		return err
+	}
+	type alias SendMessageAltResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = SendMessageAltResponse(decoded)
+	return nil
 }
 
 type SendMessageRequest struct {
 	Text string `json:"text"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *SendMessageRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"text"}, []string{"text"}); err != nil {
+		return err
+	}
+	type alias SendMessageRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = SendMessageRequest(decoded)
+	return nil
+}
+
 type SendMessageResponse struct {
 	Ok bool `json:"ok"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *SendMessageResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"ok"}, []string{"ok"}); err != nil {
+		return err
+	}
+	type alias SendMessageResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = SendMessageResponse(decoded)
+	return nil
 }

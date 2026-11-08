@@ -6,3 +6,20 @@ type EnvVar struct {
 	Optional bool   `json:"optional,omitempty"`
 	Secret   *bool  `json:"secret,omitempty"`
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (v *EnvVar) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name"}, []string{"name", "optional", "secret"}); err != nil {
+		return err
+	}
+	type alias EnvVar
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*v = EnvVar(decoded)
+	return nil
+}

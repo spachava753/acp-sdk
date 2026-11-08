@@ -2,6 +2,7 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -75,6 +76,88 @@ func (o ConfigOption) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
+// UnmarshalJSON decodes the selected schema variant.
+func (o *ConfigOption) UnmarshalJSON(data []byte) error {
+	type alias ConfigOption
+	var decoded alias
+	var raw struct {
+		Type    json.RawMessage `json:"type"`
+		Enabled json.RawMessage `json:"enabled"`
+		ID      json.RawMessage `json:"id"`
+		Options json.RawMessage `json:"options"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag ConfigOptionType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "toggle":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"id", "type", "enabled"}, []string{"enabled", "id", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Enabled) > 0 {
+				var value bool
+				if err := unmarshalJSON(raw.Enabled, &value); err != nil {
+					return err
+				}
+				decoded.Enabled = value
+			}
+			if len(raw.ID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.ID, &value); err != nil {
+					return err
+				}
+				decoded.ID = value
+			}
+			return nil
+		}()
+	case "select":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"id", "type", "options"}, []string{"id", "options", "type"}); err != nil {
+				return err
+			}
+			if len(raw.ID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.ID, &value); err != nil {
+					return err
+				}
+				decoded.ID = value
+			}
+			if len(raw.Options) > 0 {
+				var value SelectOptions
+				if err := unmarshalJSON(raw.Options, &value); err != nil {
+					return err
+				}
+				decoded.Options = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("ConfigOption: unknown type %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*o = ConfigOption(decoded)
+	return nil
+}
+
 type SelectGroup struct {
 	Name    string         `json:"name"`
 	Options []SelectOption `json:"options"`
@@ -90,8 +173,42 @@ func (g SelectGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (g *SelectGroup) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "options"}, []string{"name", "options"}); err != nil {
+		return err
+	}
+	type alias SelectGroup
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*g = SelectGroup(decoded)
+	return nil
+}
+
 type SelectOption struct {
 	Value string `json:"value"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *SelectOption) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"value"}, []string{"value"}); err != nil {
+		return err
+	}
+	type alias SelectOption
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*o = SelectOption(decoded)
+	return nil
 }
 
 // SelectOptions: Grouped or ungrouped select options.

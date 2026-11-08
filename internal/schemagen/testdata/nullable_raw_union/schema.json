@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "RawId": {
+      "anyOf": [
+        { "type": "null" },
+        { "type": "integer", "format": "int64" },
+        { "type": "string" }
+      ]
+    },
+    "RawNumberValue": {
+      "anyOf": [
+        { "type": "null" },
+        { "type": "number" },
+        { "type": "boolean" }
+      ]
+    },
+    "NestedId": {
+      "oneOf": [
+        {
+          "anyOf": [
+            { "type": "null" },
+            { "type": "integer", "format": "int64" }
+          ]
+        },
+        { "type": "string" }
+      ]
+    },
+    "Scope": {
+      "type": "object",
+      "properties": {
+        "id": { "allOf": [{ "$ref": "#/$defs/RawId" }] },
+        "label": { "type": "string" },
+        "number": { "$ref": "#/$defs/RawNumberValue" }
+      },
+      "required": ["id", "label"]
+    },
+    "TaggedScope": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "type": "string", "const": "request" },
+            "id": { "$ref": "#/$defs/NestedId" }
+          },
+          "required": ["kind", "id"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "type": "string", "const": "session" },
+            "session": { "type": "string" }
+          },
+          "required": ["kind", "session"]
+        }
+      ]
+    }
+  }
+}

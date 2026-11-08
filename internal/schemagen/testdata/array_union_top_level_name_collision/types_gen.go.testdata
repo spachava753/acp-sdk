@@ -19,10 +19,44 @@ func (g CollisionGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (g *CollisionGroup) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "options", "group"}, []string{"group", "name", "options"}); err != nil {
+		return err
+	}
+	type alias CollisionGroup
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*g = CollisionGroup(decoded)
+	return nil
+}
+
 // CollisionOption: A selectable option.
 type CollisionOption struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *CollisionOption) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "value"}, []string{"name", "value"}); err != nil {
+		return err
+	}
+	type alias CollisionOption
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*o = CollisionOption(decoded)
+	return nil
 }
 
 // CollisionOptions: Array union whose generated variant type collides with a top-level type.
@@ -88,4 +122,21 @@ func (o *CollisionOptions) UnmarshalJSON(data []byte) error {
 // FlatCollisionOptions: A normal public type whose name collides with the flat variant helper.
 type FlatCollisionOptions struct {
 	Marker string `json:"marker"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *FlatCollisionOptions) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"marker"}, []string{"marker"}); err != nil {
+		return err
+	}
+	type alias FlatCollisionOptions
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*o = FlatCollisionOptions(decoded)
+	return nil
 }

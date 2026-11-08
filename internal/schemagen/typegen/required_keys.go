@@ -133,16 +133,50 @@ func allowsJSONNull(defs map[string]*jsonschema.Schema, schema *jsonschema.Schem
 	if schema == nil {
 		return true
 	}
-	if schema.Ref != "" {
-		return allowsJSONNull(defs, defs[refName(schema.Ref)])
+	if schema.Type != "" && schema.Type != "null" || len(schema.Types) > 0 && !contains(schema.Types, "null") {
+		return false
 	}
-	if len(schema.AllOf) == 1 {
-		return allowsJSONNull(defs, schema.AllOf[0])
+	if schema.Const != nil && *schema.Const != nil {
+		return false
 	}
-	if _, nullable := nullableSchema(schema); nullable {
-		return true
+	if len(schema.Enum) > 0 {
+		hasNull := false
+		for _, value := range schema.Enum {
+			hasNull = hasNull || value == nil
+		}
+		if !hasNull {
+			return false
+		}
 	}
-	return schemaTypeName(schema) == "null" || (schemaTypeName(schema) == "" && len(unionBranches(schema)) == 0)
+	if schema.Ref != "" && !allowsJSONNull(defs, defs[refName(schema.Ref)]) {
+		return false
+	}
+	for _, branch := range schema.AllOf {
+		if !allowsJSONNull(defs, branch) {
+			return false
+		}
+	}
+	if len(schema.AnyOf) > 0 {
+		hasNull := false
+		for _, branch := range schema.AnyOf {
+			hasNull = hasNull || allowsJSONNull(defs, branch)
+		}
+		if !hasNull {
+			return false
+		}
+	}
+	if len(schema.OneOf) > 0 {
+		matches := 0
+		for _, branch := range schema.OneOf {
+			if allowsJSONNull(defs, branch) {
+				matches++
+			}
+		}
+		if matches != 1 {
+			return false
+		}
+	}
+	return schema.Not == nil || !allowsJSONNull(defs, schema.Not)
 }
 
 func resolvedObjectSchema(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) *jsonschema.Schema {

@@ -5,8 +5,42 @@ type HiddenPayload struct {
 	ID string `json:"id"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *HiddenPayload) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"id"}, []string{"id"}); err != nil {
+		return err
+	}
+	type alias HiddenPayload
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*p = HiddenPayload(decoded)
+	return nil
+}
+
 // VisiblePayload: Public payload that depends on a docs-ignored helper.
 type VisiblePayload struct {
 	Hidden HiddenPayload `json:"hidden"`
 	Name   string        `json:"name"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *VisiblePayload) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"hidden", "name"}, []string{"hidden", "name"}); err != nil {
+		return err
+	}
+	type alias VisiblePayload
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*p = VisiblePayload(decoded)
+	return nil
 }

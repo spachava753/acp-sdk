@@ -1,0 +1,258 @@
+package acp
+
+import (
+	"encoding/json"
+	"fmt"
+)
+
+type List struct {
+	Options []Option `json:"options,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (l *List) UnmarshalJSON(data []byte) error {
+	type alias List
+	decoded := alias{}
+	raw := struct {
+		Options json.RawMessage `json:"options"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Options) > 0 {
+		var values []json.RawMessage
+		if err := unmarshalJSON(raw.Options, &values); err == nil {
+			decoded.Options = []Option{}
+			for _, value := range values {
+				var item Option
+				if err := unmarshalJSON(value, &item); err == nil {
+					switch item.Type {
+					case OptionTypeBoolean, OptionTypeSelect:
+						decoded.Options = append(decoded.Options, item)
+					}
+				}
+			}
+		}
+	}
+	*l = List(decoded)
+	return nil
+}
+
+type Option struct {
+	Type         OptionType `json:"type"`
+	CurrentValue any        `json:"currentValue"`
+	ID           string     `json:"id"`
+}
+
+// OptionType is the discriminator for Option variants.
+type OptionType string
+
+const (
+	OptionTypeBoolean OptionType = "boolean"
+	OptionTypeSelect  OptionType = "select"
+)
+
+// BooleanOption creates .
+func BooleanOption(id string, currentValue bool) Option {
+	return Option{
+		Type:         OptionTypeBoolean,
+		CurrentValue: currentValue,
+		ID:           id,
+	}
+}
+
+// SelectOption creates .
+func SelectOption(id string, currentValue ValueId) Option {
+	return Option{
+		Type:         OptionTypeSelect,
+		CurrentValue: currentValue,
+		ID:           id,
+	}
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (o *Option) UnmarshalJSON(data []byte) error {
+	type alias Option
+	var decoded alias
+	var raw struct {
+		Type         json.RawMessage `json:"type"`
+		CurrentValue json.RawMessage `json:"currentValue"`
+		ID           json.RawMessage `json:"id"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag OptionType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "boolean":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "id", "currentValue"}, []string{"currentValue", "id", "type"}); err != nil {
+				return err
+			}
+			if len(raw.CurrentValue) > 0 {
+				var value bool
+				if err := unmarshalJSON(raw.CurrentValue, &value); err != nil {
+					return err
+				}
+				decoded.CurrentValue = value
+			}
+			if len(raw.ID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.ID, &value); err != nil {
+					return err
+				}
+				decoded.ID = value
+			}
+			return nil
+		}()
+	case "select":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "id", "currentValue"}, []string{"currentValue", "id", "type"}); err != nil {
+				return err
+			}
+			if len(raw.CurrentValue) > 0 {
+				var value ValueId
+				if err := unmarshalJSON(raw.CurrentValue, &value); err != nil {
+					return err
+				}
+				decoded.CurrentValue = value
+			}
+			if len(raw.ID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.ID, &value); err != nil {
+					return err
+				}
+				decoded.ID = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("Option: unknown type %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*o = Option(decoded)
+	return nil
+}
+
+type Setter struct {
+	Type  SetterType `json:"type,omitempty"`
+	Value any        `json:"value"`
+}
+
+// SetterType is the discriminator for Setter variants.
+type SetterType string
+
+const (
+	SetterTypeBoolean SetterType = "boolean"
+)
+
+// BooleanSetter creates .
+func BooleanSetter(value bool) Setter {
+	return Setter{
+		Type:  SetterTypeBoolean,
+		Value: value,
+	}
+}
+
+// ValueIdSetter creates .
+func ValueIdSetter(value ValueId) Setter {
+	return Setter{
+		Value: value,
+	}
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (s *Setter) UnmarshalJSON(data []byte) error {
+	type alias Setter
+	var decoded alias
+	var raw struct {
+		Type  json.RawMessage `json:"type"`
+		Value json.RawMessage `json:"value"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag SetterType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "boolean":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "value"}, []string{"type", "value"}); err != nil {
+				return err
+			}
+			if len(raw.Value) > 0 {
+				var value bool
+				if err := unmarshalJSON(raw.Value, &value); err != nil {
+					return err
+				}
+				decoded.Value = value
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"value"}, []string{"value"}); err != nil {
+					return err
+				}
+				if len(raw.Value) > 0 {
+					var value ValueId
+					if err := unmarshalJSON(raw.Value, &value); err != nil {
+						return err
+					}
+					decoded.Value = value
+				}
+				return nil
+			}()
+		}
+	default:
+		err = func() error {
+			decoded = alias{}
+			if err := requireJSONProperties(data, []string{"value"}, []string{"value"}); err != nil {
+				return err
+			}
+			if len(raw.Value) > 0 {
+				var value ValueId
+				if err := unmarshalJSON(raw.Value, &value); err != nil {
+					return err
+				}
+				decoded.Value = value
+			}
+			return nil
+		}()
+	}
+	if err != nil {
+		return err
+	}
+	*s = Setter(decoded)
+	return nil
+}
+
+type ValueId string

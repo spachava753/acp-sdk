@@ -1,0 +1,444 @@
+package acp
+
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"slices"
+)
+
+type ClosedNullTag struct {
+	NullFields2 ClosedNullTagType `json:"nullFields"`
+	Count       int64             `json:"count,omitempty"`
+	Title       *string           `json:"title,omitempty"`
+	// NullFields lists JSON field names to send as explicit null, regardless of their values.
+	// Decoding records explicit nulls here, separately from omitted fields.
+	NullFields []string `json:"-"`
+}
+
+// ClosedNullTagType is the discriminator for ClosedNullTag variants.
+type ClosedNullTagType string
+
+const (
+	ClosedNullTagTypeKnown ClosedNullTagType = "known"
+	ClosedNullTagTypeOther ClosedNullTagType = "other"
+)
+
+// KnownClosedNullTag creates .
+func KnownClosedNullTag(title *string) ClosedNullTag {
+	return ClosedNullTag{
+		NullFields2: ClosedNullTagTypeKnown,
+		Title:       title,
+	}
+}
+
+// OtherClosedNullTag creates .
+func OtherClosedNullTag(count int64) ClosedNullTag {
+	return ClosedNullTag{
+		NullFields2: ClosedNullTagTypeOther,
+		Count:       count,
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (t ClosedNullTag) MarshalJSON() ([]byte, error) {
+	type alias ClosedNullTag
+	type wire struct {
+		*alias
+		Title **string `json:"title,omitempty"`
+		Count *int64   `json:"count,omitempty"`
+	}
+	w := wire{alias: (*alias)(&t)}
+	if t.Title != nil {
+		Title := t.Title
+		w.Title = &Title
+	}
+	if !reflect.ValueOf(t.Count).IsZero() {
+		Count := t.Count
+		w.Count = &Count
+	}
+	switch t.NullFields2 {
+	case ClosedNullTagTypeKnown:
+		Title := t.Title
+		w.Title = &Title
+	case ClosedNullTagTypeOther:
+		Count := t.Count
+		w.Count = &Count
+	}
+	switch t.NullFields2 {
+	case ClosedNullTagTypeKnown:
+		if slices.Contains(t.NullFields, "title") {
+			w.Title = new(*string)
+		}
+	}
+	return json.Marshal(w)
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (t *ClosedNullTag) UnmarshalJSON(data []byte) error {
+	type alias ClosedNullTag
+	var decoded alias
+	var raw struct {
+		NullFields2 json.RawMessage `json:"nullFields"`
+		Count       json.RawMessage `json:"count"`
+		Title       json.RawMessage `json:"title"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag ClosedNullTagType
+	var tagErr error
+	if len(raw.NullFields2) > 0 {
+		tagErr = unmarshalJSON(raw.NullFields2, &tag)
+	}
+	var err error
+	switch tag {
+	case "known":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.NullFields2 = tag
+			if err := requireJSONProperties(data, []string{"nullFields", "title"}, []string{"nullFields"}); err != nil {
+				return err
+			}
+			if len(raw.Title) > 0 {
+				if isJSONNull(raw.Title) {
+					decoded.NullFields = append(decoded.NullFields, "title")
+				} else {
+					var value *string
+					if err := unmarshalJSON(raw.Title, &value); err != nil {
+						return err
+					}
+					decoded.Title = value
+				}
+			}
+			return nil
+		}()
+	case "other":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.NullFields2 = tag
+			if err := requireJSONProperties(data, []string{"nullFields", "count"}, []string{"count", "nullFields"}); err != nil {
+				return err
+			}
+			if len(raw.Count) > 0 {
+				var value int64
+				if err := unmarshalJSON(raw.Count, &value); err != nil {
+					return err
+				}
+				decoded.Count = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("ClosedNullTag: unknown nullFields %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*t = ClosedNullTag(decoded)
+	return nil
+}
+
+type ExtraTag struct {
+	ExtraFields2 ExtraTagType `json:"extraFields"`
+	Items        []string     `json:"items,omitempty"`
+	// ExtraFields retains extension properties explicitly permitted by the schema.
+	// Known properties take precedence when encoding.
+	ExtraFields map[string]json.RawMessage `json:"-"`
+}
+
+// ExtraTagType is the discriminator for ExtraTag variants.
+type ExtraTagType string
+
+const (
+	ExtraTagTypeKnown ExtraTagType = "known"
+)
+
+// KnownExtraTag creates .
+func KnownExtraTag(items []string) ExtraTag {
+	return ExtraTag{
+		ExtraFields2: ExtraTagTypeKnown,
+		Items:        items,
+	}
+}
+
+// OtherExtraTag creates .
+func OtherExtraTag(extraFields string) ExtraTag {
+	return ExtraTag{
+		ExtraFields2: ExtraTagType(extraFields),
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (t ExtraTag) MarshalJSON() ([]byte, error) {
+	type alias ExtraTag
+	type wire struct {
+		*alias
+		Items *[]string `json:"items,omitempty"`
+	}
+	w := wire{alias: (*alias)(&t)}
+	if len(t.Items) > 0 {
+		Items := t.Items
+		w.Items = &Items
+	}
+	switch t.ExtraFields2 {
+	case ExtraTagTypeKnown:
+		Items := t.Items
+		if Items == nil {
+			Items = []string{}
+		}
+		w.Items = &Items
+	}
+	switch t.ExtraFields2 {
+	case "known":
+		return json.Marshal(w)
+	default:
+		return marshalJSONWithExtraFields(w, t.ExtraFields, []string{"extraFields"})
+	}
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (t *ExtraTag) UnmarshalJSON(data []byte) error {
+	type alias ExtraTag
+	var decoded alias
+	var raw struct {
+		ExtraFields2 json.RawMessage `json:"extraFields"`
+		Items        json.RawMessage `json:"items"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag ExtraTagType
+	var tagErr error
+	if len(raw.ExtraFields2) > 0 {
+		tagErr = unmarshalJSON(raw.ExtraFields2, &tag)
+	}
+	var err error
+	switch tag {
+	case "known":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.ExtraFields2 = tag
+			if err := requireJSONProperties(data, []string{"extraFields", "items"}, []string{"extraFields", "items"}); err != nil {
+				return err
+			}
+			if len(raw.Items) > 0 {
+				var value []string
+				if err := unmarshalJSON(raw.Items, &value); err != nil {
+					return err
+				}
+				decoded.Items = value
+			}
+			return nil
+		}()
+	default:
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.ExtraFields2 = tag
+			if err := requireJSONProperties(data, []string{"extraFields"}, []string{"extraFields"}); err != nil {
+				return err
+			}
+			extra, err := captureJSONExtraFields(data, []string{"extraFields"})
+			if err != nil {
+				return err
+			}
+			decoded.ExtraFields = extra
+			return nil
+		}()
+	}
+	if err != nil {
+		return err
+	}
+	*t = ExtraTag(decoded)
+	return nil
+}
+
+type List struct {
+	Closed []ClosedNullTag `json:"closed,omitempty"`
+	Open   []ExtraTag      `json:"open,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (l *List) UnmarshalJSON(data []byte) error {
+	type alias List
+	decoded := alias{}
+	raw := struct {
+		Closed json.RawMessage `json:"closed"`
+		Open   json.RawMessage `json:"open"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Closed) > 0 {
+		var values []json.RawMessage
+		if err := unmarshalJSON(raw.Closed, &values); err == nil {
+			decoded.Closed = []ClosedNullTag{}
+			for _, value := range values {
+				var item ClosedNullTag
+				if err := unmarshalJSON(value, &item); err == nil {
+					switch item.NullFields2 {
+					case ClosedNullTagTypeKnown, ClosedNullTagTypeOther:
+						decoded.Closed = append(decoded.Closed, item)
+					}
+				}
+			}
+		}
+	}
+	if len(raw.Open) > 0 {
+		var values []json.RawMessage
+		if err := unmarshalJSON(raw.Open, &values); err == nil {
+			decoded.Open = []ExtraTag{}
+			for _, value := range values {
+				var item ExtraTag
+				if err := unmarshalJSON(value, &item); err == nil {
+					decoded.Open = append(decoded.Open, item)
+				}
+			}
+		}
+	}
+	*l = List(decoded)
+	return nil
+}
+
+type NullTag struct {
+	NullFields2 NullTagType `json:"nullFields"`
+	Title       *string     `json:"title,omitempty"`
+	// NullFields lists JSON field names to send as explicit null, regardless of their values.
+	// Decoding records explicit nulls here, separately from omitted fields.
+	NullFields []string `json:"-"`
+	// ExtraFields retains extension properties explicitly permitted by the schema.
+	// Known properties take precedence when encoding.
+	ExtraFields map[string]json.RawMessage `json:"-"`
+}
+
+// NullTagType is the discriminator for NullTag variants.
+type NullTagType string
+
+const (
+	NullTagTypeKnown NullTagType = "known"
+)
+
+// KnownNullTag creates .
+func KnownNullTag(title *string) NullTag {
+	return NullTag{
+		NullFields2: NullTagTypeKnown,
+		Title:       title,
+	}
+}
+
+// OtherNullTag creates .
+func OtherNullTag(nullFields string) NullTag {
+	return NullTag{
+		NullFields2: NullTagType(nullFields),
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (t NullTag) MarshalJSON() ([]byte, error) {
+	type alias NullTag
+	type wire struct {
+		*alias
+		Title **string `json:"title,omitempty"`
+	}
+	w := wire{alias: (*alias)(&t)}
+	if t.Title != nil {
+		Title := t.Title
+		w.Title = &Title
+	}
+	switch t.NullFields2 {
+	case NullTagTypeKnown:
+		Title := t.Title
+		w.Title = &Title
+	}
+	switch t.NullFields2 {
+	case NullTagTypeKnown:
+		if slices.Contains(t.NullFields, "title") {
+			w.Title = new(*string)
+		}
+	}
+	switch t.NullFields2 {
+	case "known":
+		return json.Marshal(w)
+	default:
+		return marshalJSONWithExtraFields(w, t.ExtraFields, []string{"nullFields"})
+	}
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (t *NullTag) UnmarshalJSON(data []byte) error {
+	type alias NullTag
+	var decoded alias
+	var raw struct {
+		NullFields2 json.RawMessage `json:"nullFields"`
+		Title       json.RawMessage `json:"title"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag NullTagType
+	var tagErr error
+	if len(raw.NullFields2) > 0 {
+		tagErr = unmarshalJSON(raw.NullFields2, &tag)
+	}
+	var err error
+	switch tag {
+	case "known":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.NullFields2 = tag
+			if err := requireJSONProperties(data, []string{"nullFields", "title"}, []string{"nullFields"}); err != nil {
+				return err
+			}
+			if len(raw.Title) > 0 {
+				if isJSONNull(raw.Title) {
+					decoded.NullFields = append(decoded.NullFields, "title")
+				} else {
+					var value *string
+					if err := unmarshalJSON(raw.Title, &value); err != nil {
+						return err
+					}
+					decoded.Title = value
+				}
+			}
+			return nil
+		}()
+	default:
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.NullFields2 = tag
+			if err := requireJSONProperties(data, []string{"nullFields"}, []string{"nullFields"}); err != nil {
+				return err
+			}
+			extra, err := captureJSONExtraFields(data, []string{"nullFields"})
+			if err != nil {
+				return err
+			}
+			decoded.ExtraFields = extra
+			return nil
+		}()
+	}
+	if err != nil {
+		return err
+	}
+	*t = NullTag(decoded)
+	return nil
+}

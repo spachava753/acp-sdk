@@ -9,9 +9,12 @@ import (
 // expose a schema keyword for that distinction. Keep those semantic overrides
 // here rather than changing the downloaded schema or all optional field types.
 var nullSensitiveFields = map[string][]string{
-	"SubagentUpdate": {"title", "description", "capabilities", "state", "cwd", "additionalDirectories", "_meta"},
-	"SessionMessage": {"content", "senderSessionId", "recipientSessionId", "senderMessageId", "recipientMessageId", "_meta"},
-	"McpError":       {"data"},
+	"SubagentUpdate":    {"title", "description", "capabilities", "state", "cwd", "additionalDirectories", "_meta"},
+	"SessionMessage":    {"content", "senderSessionId", "recipientSessionId", "senderMessageId", "recipientMessageId", "_meta"},
+	"McpError":          {"data"},
+	"Error":             {"data"},
+	"SessionInfoUpdate": {"title", "updatedAt"},
+	"CompactionUpdate":  {"summary", "error", "_meta"},
 }
 
 func preservesJSONNull(defs map[string]*jsonschema.Schema, jsonName string, prop *jsonschema.Schema) bool {

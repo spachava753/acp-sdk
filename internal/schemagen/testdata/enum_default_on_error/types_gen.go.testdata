@@ -1,6 +1,9 @@
 package acp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // Payload: Object with tolerant enum fields.
 type Payload struct {
@@ -11,6 +14,9 @@ type Payload struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (p *Payload) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"strictStatus"}, []string{"strictStatus"}); err != nil {
+		return err
+	}
 	type alias Payload
 	decoded := alias{}
 	raw := struct {
@@ -51,6 +57,23 @@ const (
 	RoleUser      Role = "user"
 )
 
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *Role) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("Role must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "assistant", "user":
+		*v = Role(value)
+		return nil
+	}
+	return fmt.Errorf("invalid Role value %q", value)
+}
+
 // Status: Known status values.
 type Status string
 
@@ -60,3 +83,20 @@ const (
 	// StatusRunning: The item is running.
 	StatusRunning Status = "running"
 )
+
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *Status) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("Status must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "queued", "running":
+		*v = Status(value)
+		return nil
+	}
+	return fmt.Errorf("invalid Status value %q", value)
+}

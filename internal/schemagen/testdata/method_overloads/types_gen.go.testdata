@@ -6,10 +6,44 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (e *Error) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"code", "message"}, []string{"code", "message"}); err != nil {
+		return err
+	}
+	type alias Error
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*e = Error(decoded)
+	return nil
+}
+
 // MessageMcpNotification: Notification parameters for an MCP message.
 type MessageMcpNotification struct {
 	ConnectionID string `json:"connectionId"`
 	Method       string `json:"method"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (n *MessageMcpNotification) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"connectionId", "method"}, []string{"connectionId", "method"}); err != nil {
+		return err
+	}
+	type alias MessageMcpNotification
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*n = MessageMcpNotification(decoded)
+	return nil
 }
 
 // MessageMcpRequest: Request parameters for an MCP message.
@@ -18,9 +52,43 @@ type MessageMcpRequest struct {
 	Method       string `json:"method"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *MessageMcpRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"connectionId", "method"}, []string{"connectionId", "method"}); err != nil {
+		return err
+	}
+	type alias MessageMcpRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = MessageMcpRequest(decoded)
+	return nil
+}
+
 // MessageMcpResponse: Response for an MCP message request.
 type MessageMcpResponse struct {
 	Ok bool `json:"ok"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *MessageMcpResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"ok"}, []string{"ok"}); err != nil {
+		return err
+	}
+	type alias MessageMcpResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = MessageMcpResponse(decoded)
+	return nil
 }
 
 // RequestId: A JSON-RPC request identifier.

@@ -1,0 +1,170 @@
+{
+  "$defs": {
+    "ExtraTag": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "extraFields": {
+              "type": "string",
+              "const": "known"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "extraFields",
+            "items"
+          ]
+        },
+        {
+          "title": "other",
+          "type": "object",
+          "properties": {
+            "extraFields": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "extraFields"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "extraFields": {
+                    "type": "string",
+                    "const": "known"
+                  }
+                },
+                "required": [
+                  "extraFields"
+                ]
+              }
+            ]
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "NullTag": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "nullFields": {
+              "type": "string",
+              "const": "known"
+            },
+            "title": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "x-go-preserve-null": true
+            }
+          },
+          "required": [
+            "nullFields",
+            "title"
+          ]
+        },
+        {
+          "title": "other",
+          "type": "object",
+          "properties": {
+            "nullFields": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "nullFields"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "nullFields": {
+                    "type": "string",
+                    "const": "known"
+                  }
+                },
+                "required": [
+                  "nullFields"
+                ]
+              }
+            ]
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "ClosedNullTag": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "nullFields": {
+              "type": "string",
+              "const": "known"
+            },
+            "title": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "x-go-preserve-null": true
+            }
+          },
+          "required": [
+            "nullFields",
+            "title"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "nullFields": {
+              "type": "string",
+              "const": "other"
+            },
+            "count": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "nullFields",
+            "count"
+          ]
+        }
+      ]
+    },
+    "List": {
+      "type": "object",
+      "properties": {
+        "closed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ClosedNullTag"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "open": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ExtraTag"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        }
+      }
+    }
+  }
+}

@@ -2,6 +2,7 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -91,7 +92,119 @@ func (c Choice) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
+// UnmarshalJSON decodes the selected schema variant.
+func (c *Choice) UnmarshalJSON(data []byte) error {
+	type alias Choice
+	var decoded alias
+	var raw struct {
+		Type    json.RawMessage `json:"type"`
+		Count   json.RawMessage `json:"count"`
+		Enabled json.RawMessage `json:"enabled"`
+		Payload json.RawMessage `json:"payload"`
+		Text    json.RawMessage `json:"text"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag ChoiceType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "text":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "enabled", "text"}, []string{"enabled", "text", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Enabled) > 0 {
+				var value bool
+				if err := unmarshalJSON(raw.Enabled, &value); err != nil {
+					return err
+				}
+				decoded.Enabled = value
+			}
+			if len(raw.Text) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Text, &value); err != nil {
+					return err
+				}
+				decoded.Text = value
+			}
+			return nil
+		}()
+	case "count":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "count"}, []string{"count", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Count) > 0 {
+				var value int64
+				if err := unmarshalJSON(raw.Count, &value); err != nil {
+					return err
+				}
+				decoded.Count = value
+			}
+			return nil
+		}()
+	case "payload":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "payload"}, []string{"payload", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Payload) > 0 {
+				var value Payload
+				if err := unmarshalJSON(raw.Payload, &value); err != nil {
+					return err
+				}
+				decoded.Payload = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("Choice: unknown type %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*c = Choice(decoded)
+	return nil
+}
+
 // Payload: Payload object.
 type Payload struct {
 	ID string `json:"id"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *Payload) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"id"}, []string{"id"}); err != nil {
+		return err
+	}
+	type alias Payload
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*p = Payload(decoded)
+	return nil
 }

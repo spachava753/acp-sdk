@@ -2,6 +2,7 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -74,14 +75,130 @@ func (u BranchMetaUnion) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
+// UnmarshalJSON decodes the selected schema variant.
+func (u *BranchMetaUnion) UnmarshalJSON(data []byte) error {
+	type alias BranchMetaUnion
+	var decoded alias
+	var raw struct {
+		Kind json.RawMessage `json:"kind"`
+		Meta json.RawMessage `json:"_meta"`
+		Text json.RawMessage `json:"text"`
+		URI  json.RawMessage `json:"uri"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag BranchMetaUnionType
+	var tagErr error
+	if len(raw.Kind) > 0 {
+		tagErr = unmarshalJSON(raw.Kind, &tag)
+	}
+	var err error
+	switch tag {
+	case "text":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "text"}, []string{"kind", "text"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err != nil {
+					return err
+				}
+				decoded.Meta = value
+			}
+			if len(raw.Text) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Text, &value); err != nil {
+					return err
+				}
+				decoded.Text = value
+			}
+			return nil
+		}()
+	case "link":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "uri"}, []string{"kind", "uri"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err != nil {
+					return err
+				}
+				decoded.Meta = value
+			}
+			if len(raw.URI) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.URI, &value); err != nil {
+					return err
+				}
+				decoded.URI = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("BranchMetaUnion: unknown kind %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*u = BranchMetaUnion(decoded)
+	return nil
+}
+
 // LinkBranch: Link branch payload.
 type LinkBranch struct {
 	Meta Meta   `json:"_meta,omitzero"`
 	URI  string `json:"uri"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (b *LinkBranch) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"uri"}, []string{"uri"}); err != nil {
+		return err
+	}
+	type alias LinkBranch
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*b = LinkBranch(decoded)
+	return nil
+}
+
 // TextBranch: Text branch payload.
 type TextBranch struct {
 	Meta Meta   `json:"_meta,omitzero"`
 	Text string `json:"text"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (b *TextBranch) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"text"}, []string{"text"}); err != nil {
+		return err
+	}
+	type alias TextBranch
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*b = TextBranch(decoded)
+	return nil
 }

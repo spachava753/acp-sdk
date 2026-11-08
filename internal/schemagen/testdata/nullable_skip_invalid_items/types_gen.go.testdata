@@ -2,6 +2,7 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -14,6 +15,9 @@ type AnnotationSet struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AnnotationSet) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"strict"}, []string{"strict"}); err != nil {
+		return err
+	}
 	type alias AnnotationSet
 	decoded := alias{}
 	raw := struct {
@@ -65,6 +69,23 @@ const (
 	RoleUser      Role = "user"
 )
 
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *Role) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("Role must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "assistant", "user":
+		*v = Role(value)
+		return nil
+	}
+	return fmt.Errorf("invalid Role value %q", value)
+}
+
 // TaggedAnnotation: Flattened union with a nullable array that skips invalid entries.
 type TaggedAnnotation struct {
 	Kind     TaggedAnnotationType `json:"kind"`
@@ -115,32 +136,77 @@ func (a TaggedAnnotation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the selected schema variant.
 func (a *TaggedAnnotation) UnmarshalJSON(data []byte) error {
 	type alias TaggedAnnotation
-	decoded := alias{}
-	raw := struct {
+	var decoded alias
+	var raw struct {
+		Kind     json.RawMessage `json:"kind"`
 		Audience json.RawMessage `json:"audience"`
-		*alias
-	}{alias: &decoded}
+		Title    json.RawMessage `json:"title"`
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Audience) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.Audience, &values); err == nil && values != nil {
-			items := []Role{}
-			for _, value := range values {
-				var item Role
-				if err := unmarshalJSON(value, &item); err == nil {
-					switch item {
-					case "assistant", "user":
-						items = append(items, item)
+	var tag TaggedAnnotationType
+	var tagErr error
+	if len(raw.Kind) > 0 {
+		tagErr = unmarshalJSON(raw.Kind, &tag)
+	}
+	var err error
+	switch tag {
+	case "known":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind"}, []string{"kind"}); err != nil {
+				return err
+			}
+			if len(raw.Audience) > 0 {
+				var values []json.RawMessage
+				if err := unmarshalJSON(raw.Audience, &values); err == nil && values != nil {
+					items := []Role{}
+					for _, rawItem := range values {
+						var item Role
+						if err := unmarshalJSON(rawItem, &item); err == nil {
+							switch item {
+							case "assistant", "user":
+								items = append(items, item)
+							}
+						}
 					}
+					decoded.Audience = &items
 				}
 			}
-			decoded.Audience = &items
-		}
+			return nil
+		}()
+	case "other":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "title"}, []string{"kind", "title"}); err != nil {
+				return err
+			}
+			if len(raw.Title) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Title, &value); err != nil {
+					return err
+				}
+				decoded.Title = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("TaggedAnnotation: unknown kind %q", tag)
+	}
+	if err != nil {
+		return err
 	}
 	*a = TaggedAnnotation(decoded)
 	return nil

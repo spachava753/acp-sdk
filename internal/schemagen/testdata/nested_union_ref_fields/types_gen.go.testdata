@@ -2,18 +2,22 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
+	"slices"
 )
 
 // CreatePromptRequest: Request with branches that reference modes containing nested scope unions.
 type CreatePromptRequest struct {
-	Mode       CreatePromptRequestType `json:"mode"`
-	Message    string                  `json:"message"`
-	RequestID  string                  `json:"requestId,omitempty"`
-	Schema     string                  `json:"schema,omitempty"`
-	SessionID  string                  `json:"sessionId,omitempty"`
-	ToolCallID *string                 `json:"toolCallId,omitempty"`
-	Url        string                  `json:"url,omitempty"`
+	// requiredFields retains selected nested scalar fields even when they are zero.
+	requiredFields []string
+	Mode           CreatePromptRequestType `json:"mode"`
+	Message        string                  `json:"message"`
+	RequestID      string                  `json:"requestId,omitempty"`
+	Schema         string                  `json:"schema,omitempty"`
+	SessionID      string                  `json:"sessionId,omitempty"`
+	ToolCallID     *string                 `json:"toolCallId,omitempty"`
+	Url            string                  `json:"url,omitempty"`
 }
 
 // CreatePromptRequestType is the discriminator for CreatePromptRequest variants.
@@ -47,8 +51,10 @@ func (r CreatePromptRequest) MarshalJSON() ([]byte, error) {
 	type alias CreatePromptRequest
 	type wire struct {
 		*alias
-		Schema *string `json:"schema,omitempty"`
-		Url    *string `json:"url,omitempty"`
+		Schema    *string `json:"schema,omitempty"`
+		Url       *string `json:"url,omitempty"`
+		RequestID *string `json:"requestId,omitempty"`
+		SessionID *string `json:"sessionId,omitempty"`
 	}
 	w := wire{alias: (*alias)(&r)}
 	if !reflect.ValueOf(r.Schema).IsZero() {
@@ -59,6 +65,22 @@ func (r CreatePromptRequest) MarshalJSON() ([]byte, error) {
 		Url := r.Url
 		w.Url = &Url
 	}
+	if !reflect.ValueOf(r.RequestID).IsZero() {
+		RequestID := r.RequestID
+		w.RequestID = &RequestID
+	}
+	if !reflect.ValueOf(r.SessionID).IsZero() {
+		SessionID := r.SessionID
+		w.SessionID = &SessionID
+	}
+	if slices.Contains(r.requiredFields, "requestId") {
+		RequestID := r.RequestID
+		w.RequestID = &RequestID
+	}
+	if slices.Contains(r.requiredFields, "sessionId") {
+		SessionID := r.SessionID
+		w.SessionID = &SessionID
+	}
 	switch r.Mode {
 	case CreatePromptRequestTypeForm:
 		Schema := r.Schema
@@ -68,6 +90,191 @@ func (r CreatePromptRequest) MarshalJSON() ([]byte, error) {
 		w.Url = &Url
 	}
 	return json.Marshal(w)
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (r *CreatePromptRequest) UnmarshalJSON(data []byte) error {
+	type alias CreatePromptRequest
+	var decoded alias
+	var raw struct {
+		Mode       json.RawMessage `json:"mode"`
+		Message    json.RawMessage `json:"message"`
+		RequestID  json.RawMessage `json:"requestId"`
+		Schema     json.RawMessage `json:"schema"`
+		SessionID  json.RawMessage `json:"sessionId"`
+		ToolCallID json.RawMessage `json:"toolCallId"`
+		Url        json.RawMessage `json:"url"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag CreatePromptRequestType
+	var tagErr error
+	if len(raw.Mode) > 0 {
+		tagErr = unmarshalJSON(raw.Mode, &tag)
+	}
+	var err error
+	switch tag {
+	case "form":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Mode = tag
+			if err := requireJSONProperties(data, []string{"message", "mode", "schema", "sessionId"}, []string{"message", "mode", "schema", "sessionId"}); err != nil {
+				return err
+			}
+			if len(raw.Message) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Message, &value); err != nil {
+					return err
+				}
+				decoded.Message = value
+			}
+			if len(raw.Schema) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Schema, &value); err != nil {
+					return err
+				}
+				decoded.Schema = value
+			}
+			if len(raw.SessionID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+					return err
+				}
+				decoded.SessionID = value
+			}
+			if len(raw.ToolCallID) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.ToolCallID, &value); err != nil {
+					return err
+				}
+				decoded.ToolCallID = value
+			}
+			decoded.requiredFields = []string{"message", "mode", "schema", "sessionId"}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.Mode = tag
+				if err := requireJSONProperties(data, []string{"message", "mode", "schema", "requestId"}, []string{"message", "mode", "requestId", "schema"}); err != nil {
+					return err
+				}
+				if len(raw.Message) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Message, &value); err != nil {
+						return err
+					}
+					decoded.Message = value
+				}
+				if len(raw.RequestID) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.RequestID, &value); err != nil {
+						return err
+					}
+					decoded.RequestID = value
+				}
+				if len(raw.Schema) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Schema, &value); err != nil {
+						return err
+					}
+					decoded.Schema = value
+				}
+				decoded.requiredFields = []string{"message", "mode", "schema", "requestId"}
+				return nil
+			}()
+		}
+	case "url":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Mode = tag
+			if err := requireJSONProperties(data, []string{"message", "mode", "url", "sessionId"}, []string{"message", "mode", "sessionId", "url"}); err != nil {
+				return err
+			}
+			if len(raw.Message) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Message, &value); err != nil {
+					return err
+				}
+				decoded.Message = value
+			}
+			if len(raw.SessionID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+					return err
+				}
+				decoded.SessionID = value
+			}
+			if len(raw.ToolCallID) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.ToolCallID, &value); err != nil {
+					return err
+				}
+				decoded.ToolCallID = value
+			}
+			if len(raw.Url) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Url, &value); err != nil {
+					return err
+				}
+				decoded.Url = value
+			}
+			decoded.requiredFields = []string{"message", "mode", "url", "sessionId"}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.Mode = tag
+				if err := requireJSONProperties(data, []string{"message", "mode", "url", "requestId"}, []string{"message", "mode", "requestId", "url"}); err != nil {
+					return err
+				}
+				if len(raw.Message) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Message, &value); err != nil {
+						return err
+					}
+					decoded.Message = value
+				}
+				if len(raw.RequestID) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.RequestID, &value); err != nil {
+						return err
+					}
+					decoded.RequestID = value
+				}
+				if len(raw.Url) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Url, &value); err != nil {
+						return err
+					}
+					decoded.Url = value
+				}
+				decoded.requiredFields = []string{"message", "mode", "url", "requestId"}
+				return nil
+			}()
+		}
+	default:
+		return fmt.Errorf("CreatePromptRequest: unknown mode %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*r = CreatePromptRequest(decoded)
+	return nil
 }
 
 // FormMode: Form mode with a nested session-or-request scope.
@@ -94,15 +301,129 @@ func RequestFormMode(schema string, requestID string) FormMode {
 	}
 }
 
+// UnmarshalJSON decodes the first valid schema alternative.
+func (m *FormMode) UnmarshalJSON(data []byte) error {
+	type alias FormMode
+	var decoded alias
+	var raw struct {
+		RequestID  json.RawMessage `json:"requestId"`
+		Schema     json.RawMessage `json:"schema"`
+		SessionID  json.RawMessage `json:"sessionId"`
+		ToolCallID json.RawMessage `json:"toolCallId"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var err error
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"schema", "sessionId"}, []string{"schema", "sessionId"}); err != nil {
+			return err
+		}
+		if len(raw.Schema) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.Schema, &value); err != nil {
+				return err
+			}
+			decoded.Schema = value
+		}
+		if len(raw.SessionID) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+				return err
+			}
+			decoded.SessionID = func(v string) *string {
+				converted := string(v)
+				return &converted
+			}(value)
+		}
+		if len(raw.ToolCallID) > 0 {
+			var value *string
+			if err := unmarshalJSON(raw.ToolCallID, &value); err != nil {
+				return err
+			}
+			decoded.ToolCallID = value
+		}
+		return nil
+	}()
+	if err == nil {
+		*m = FormMode(decoded)
+		return nil
+	}
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"schema", "requestId"}, []string{"requestId", "schema"}); err != nil {
+			return err
+		}
+		if len(raw.RequestID) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.RequestID, &value); err != nil {
+				return err
+			}
+			decoded.RequestID = func(v string) *string {
+				converted := string(v)
+				return &converted
+			}(value)
+		}
+		if len(raw.Schema) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.Schema, &value); err != nil {
+				return err
+			}
+			decoded.Schema = value
+		}
+		return nil
+	}()
+	if err == nil {
+		*m = FormMode(decoded)
+		return nil
+	}
+	return err
+}
+
 // RequestScope: A request-scoped operation.
 type RequestScope struct {
 	RequestID string `json:"requestId"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *RequestScope) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"requestId"}, []string{"requestId"}); err != nil {
+		return err
+	}
+	type alias RequestScope
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*s = RequestScope(decoded)
+	return nil
 }
 
 // SessionScope: A session-scoped operation.
 type SessionScope struct {
 	SessionID  string  `json:"sessionId"`
 	ToolCallID *string `json:"toolCallId,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *SessionScope) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId"}, []string{"sessionId"}); err != nil {
+		return err
+	}
+	type alias SessionScope
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*s = SessionScope(decoded)
+	return nil
 }
 
 // UrlMode: URL mode with a nested session-or-request scope.
@@ -127,4 +448,84 @@ func RequestUrlMode(url string, requestID string) UrlMode {
 		RequestID: &requestID,
 		Url:       url,
 	}
+}
+
+// UnmarshalJSON decodes the first valid schema alternative.
+func (m *UrlMode) UnmarshalJSON(data []byte) error {
+	type alias UrlMode
+	var decoded alias
+	var raw struct {
+		RequestID  json.RawMessage `json:"requestId"`
+		SessionID  json.RawMessage `json:"sessionId"`
+		ToolCallID json.RawMessage `json:"toolCallId"`
+		Url        json.RawMessage `json:"url"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var err error
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"url", "sessionId"}, []string{"sessionId", "url"}); err != nil {
+			return err
+		}
+		if len(raw.SessionID) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+				return err
+			}
+			decoded.SessionID = func(v string) *string {
+				converted := string(v)
+				return &converted
+			}(value)
+		}
+		if len(raw.ToolCallID) > 0 {
+			var value *string
+			if err := unmarshalJSON(raw.ToolCallID, &value); err != nil {
+				return err
+			}
+			decoded.ToolCallID = value
+		}
+		if len(raw.Url) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.Url, &value); err != nil {
+				return err
+			}
+			decoded.Url = value
+		}
+		return nil
+	}()
+	if err == nil {
+		*m = UrlMode(decoded)
+		return nil
+	}
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"url", "requestId"}, []string{"requestId", "url"}); err != nil {
+			return err
+		}
+		if len(raw.RequestID) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.RequestID, &value); err != nil {
+				return err
+			}
+			decoded.RequestID = func(v string) *string {
+				converted := string(v)
+				return &converted
+			}(value)
+		}
+		if len(raw.Url) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.Url, &value); err != nil {
+				return err
+			}
+			decoded.Url = value
+		}
+		return nil
+	}()
+	if err == nil {
+		*m = UrlMode(decoded)
+		return nil
+	}
+	return err
 }

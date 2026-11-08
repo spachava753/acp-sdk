@@ -2,6 +2,7 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -62,4 +63,71 @@ func (t ExplicitThing) MarshalJSON() ([]byte, error) {
 		w.Count = &Count
 	}
 	return json.Marshal(w)
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (t *ExplicitThing) UnmarshalJSON(data []byte) error {
+	type alias ExplicitThing
+	var decoded alias
+	var raw struct {
+		Type  json.RawMessage `json:"type"`
+		Count json.RawMessage `json:"count"`
+		Value json.RawMessage `json:"value"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag ExplicitThingType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "alpha":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "value"}, []string{"kind", "type", "value"}); err != nil {
+				return err
+			}
+			if len(raw.Value) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Value, &value); err != nil {
+					return err
+				}
+				decoded.Value = value
+			}
+			return nil
+		}()
+	case "beta":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "count"}, []string{"count", "kind", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Count) > 0 {
+				var value int32
+				if err := unmarshalJSON(raw.Count, &value); err != nil {
+					return err
+				}
+				decoded.Count = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("ExplicitThing: unknown type %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*t = ExplicitThing(decoded)
+	return nil
 }

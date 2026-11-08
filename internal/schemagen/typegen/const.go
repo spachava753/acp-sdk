@@ -30,6 +30,8 @@ func stringConstEnumCode(name string, schema *jsonschema.Schema) []jen.Code {
 		jen.Line(),
 		jen.Const().Defs(values...),
 		jen.Line(),
+		closedStringUnmarshalCode(name, stringEnumValues(nil, schema)),
+		jen.Line(),
 	}
 }
 

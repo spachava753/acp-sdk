@@ -25,3 +25,20 @@ type ProviderConfig struct {
 	LastError ErrorCode `json:"lastError"`
 	Protocol  Protocol  `json:"protocol"`
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *ProviderConfig) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"protocol", "lastError"}, []string{"lastError", "protocol"}); err != nil {
+		return err
+	}
+	type alias ProviderConfig
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*c = ProviderConfig(decoded)
+	return nil
+}

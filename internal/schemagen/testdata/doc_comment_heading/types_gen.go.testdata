@@ -8,3 +8,20 @@ package acp
 type HeadingThing struct {
 	Value string `json:"value"`
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (t *HeadingThing) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"value"}, []string{"value"}); err != nil {
+		return err
+	}
+	type alias HeadingThing
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*t = HeadingThing(decoded)
+	return nil
+}

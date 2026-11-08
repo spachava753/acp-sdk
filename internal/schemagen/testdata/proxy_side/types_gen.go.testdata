@@ -5,9 +5,43 @@ type InitializeProxyRequest struct {
 	ProtocolVersion int64 `json:"protocolVersion"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *InitializeProxyRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"protocolVersion"}, []string{"protocolVersion"}); err != nil {
+		return err
+	}
+	type alias InitializeProxyRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = InitializeProxyRequest(decoded)
+	return nil
+}
+
 // InitializeProxyResponse: Result of proxy/initialize.
 type InitializeProxyResponse struct {
 	ProtocolVersion int64 `json:"protocolVersion"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *InitializeProxyResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"protocolVersion"}, []string{"protocolVersion"}); err != nil {
+		return err
+	}
+	type alias InitializeProxyResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = InitializeProxyResponse(decoded)
+	return nil
 }
 
 // ProxySuccessorNotification: Parameters of a proxy/successor notification.
@@ -15,9 +49,43 @@ type ProxySuccessorNotification struct {
 	Method string `json:"method"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (n *ProxySuccessorNotification) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"method"}, []string{"method"}); err != nil {
+		return err
+	}
+	type alias ProxySuccessorNotification
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*n = ProxySuccessorNotification(decoded)
+	return nil
+}
+
 // ProxySuccessorRequest: Parameters of a proxy/successor request.
 type ProxySuccessorRequest struct {
 	Method string `json:"method"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ProxySuccessorRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"method"}, []string{"method"}); err != nil {
+		return err
+	}
+	type alias ProxySuccessorRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = ProxySuccessorRequest(decoded)
+	return nil
 }
 
 // ProxySuccessorResponse: Result of the wrapped request.

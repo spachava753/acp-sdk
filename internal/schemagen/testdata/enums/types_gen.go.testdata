@@ -1,9 +1,28 @@
 package acp
 
+import "fmt"
+
 // PromptOutcome: A simple object that uses enum definitions.
 type PromptOutcome struct {
 	Role       Role       `json:"role"`
 	StopReason StopReason `json:"stopReason"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *PromptOutcome) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"role", "stopReason"}, []string{"role", "stopReason"}); err != nil {
+		return err
+	}
+	type alias PromptOutcome
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*o = PromptOutcome(decoded)
+	return nil
 }
 
 // Role: The sender or recipient of messages and data in a conversation.
@@ -13,6 +32,23 @@ const (
 	RoleAssistant Role = "assistant"
 	RoleUser      Role = "user"
 )
+
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *Role) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("Role must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "assistant", "user":
+		*v = Role(value)
+		return nil
+	}
+	return fmt.Errorf("invalid Role value %q", value)
+}
 
 // StopReason: Reasons why an agent stops processing a prompt turn.
 type StopReason string
@@ -29,3 +65,20 @@ const (
 	// StopReasonCancelled: The turn was cancelled by the client.
 	StopReasonCancelled StopReason = "cancelled"
 )
+
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *StopReason) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("StopReason must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "end_turn", "max_tokens", "max_turn_requests", "refusal", "cancelled":
+		*v = StopReason(value)
+		return nil
+	}
+	return fmt.Errorf("invalid StopReason value %q", value)
+}

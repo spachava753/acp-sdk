@@ -130,3 +130,20 @@ func (c *Choice) UnmarshalJSON(data []byte) error {
 type Payload struct {
 	ID string `json:"id"`
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *Payload) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"id"}, []string{"id"}); err != nil {
+		return err
+	}
+	type alias Payload
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*p = Payload(decoded)
+	return nil
+}

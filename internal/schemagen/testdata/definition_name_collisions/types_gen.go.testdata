@@ -6,12 +6,63 @@ type VisiblePayload struct {
 	Second ChildPayload2 `json:"second"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *VisiblePayload) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"first", "second"}, []string{"first", "second"}); err != nil {
+		return err
+	}
+	type alias VisiblePayload
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*p = VisiblePayload(decoded)
+	return nil
+}
+
 // ChildPayload: A hyphenated definition name.
 type ChildPayload struct {
 	Value string `json:"value"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *ChildPayload) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"value"}, []string{"value"}); err != nil {
+		return err
+	}
+	type alias ChildPayload
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*p = ChildPayload(decoded)
+	return nil
+}
+
 // ChildPayload2: An underscored definition name that collides after normalization.
 type ChildPayload2 struct {
 	Count int32 `json:"count"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *ChildPayload2) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"count"}, []string{"count"}); err != nil {
+		return err
+	}
+	type alias ChildPayload2
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*p = ChildPayload2(decoded)
+	return nil
 }

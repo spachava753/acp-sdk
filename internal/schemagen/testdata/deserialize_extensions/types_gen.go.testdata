@@ -2,12 +2,30 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
 // Item: A referenced item.
 type Item struct {
 	ID string `json:"id"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (i *Item) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"id"}, []string{"id"}); err != nil {
+		return err
+	}
+	type alias Item
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*i = Item(decoded)
+	return nil
 }
 
 // Payload: Object with tolerant deserialize fields.
@@ -30,6 +48,9 @@ func (p Payload) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (p *Payload) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"requiredItems", "strict"}, []string{"strict"}); err != nil {
+		return err
+	}
 	type alias Payload
 	decoded := alias{}
 	raw := struct {
@@ -54,7 +75,10 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.Name) > 0 {
-		_ = unmarshalJSON(raw.Name, &decoded.Name)
+		var value string
+		if err := unmarshalJSON(raw.Name, &value); err == nil {
+			decoded.Name = value
+		}
 	}
 	if len(raw.RequiredItems) > 0 {
 		var values []json.RawMessage
@@ -122,32 +146,73 @@ func (t Tagged) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the selected schema variant.
 func (t *Tagged) UnmarshalJSON(data []byte) error {
 	type alias Tagged
-	decoded := alias{}
-	raw := struct {
+	var decoded alias
+	var raw struct {
+		Kind   json.RawMessage `json:"kind"`
 		Labels json.RawMessage `json:"labels"`
 		Title  json.RawMessage `json:"title"`
-		*alias
-	}{alias: &decoded}
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Labels) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.Labels, &values); err == nil {
-			decoded.Labels = []string{}
-			for _, value := range values {
-				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.Labels = append(decoded.Labels, item)
+	var tag TaggedType
+	var tagErr error
+	if len(raw.Kind) > 0 {
+		tagErr = unmarshalJSON(raw.Kind, &tag)
+	}
+	var err error
+	switch tag {
+	case "known":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind"}, []string{"kind"}); err != nil {
+				return err
+			}
+			if len(raw.Labels) > 0 {
+				var values []json.RawMessage
+				if err := unmarshalJSON(raw.Labels, &values); err == nil {
+					items := []string{}
+					for _, rawItem := range values {
+						var item string
+						if err := unmarshalJSON(rawItem, &item); err == nil {
+							items = append(items, item)
+						}
+					}
+					decoded.Labels = items
 				}
 			}
-		}
+			return nil
+		}()
+	case "other":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "title"}, []string{"kind"}); err != nil {
+				return err
+			}
+			if len(raw.Title) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Title, &value); err == nil {
+					decoded.Title = value
+				}
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("Tagged: unknown kind %q", tag)
 	}
-	if len(raw.Title) > 0 {
-		_ = unmarshalJSON(raw.Title, &decoded.Title)
+	if err != nil {
+		return err
 	}
 	*t = Tagged(decoded)
 	return nil

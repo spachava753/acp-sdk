@@ -1,0 +1,200 @@
+package acp
+
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+)
+
+type NestedId = json.RawMessage
+
+type RawId = json.RawMessage
+
+type RawNumberValue = json.RawMessage
+
+type Scope struct {
+	ID     RawId          `json:"id"`
+	Label  string         `json:"label"`
+	Number RawNumberValue `json:"number,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *Scope) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"id", "label"}, []string{"label"}); err != nil {
+		return err
+	}
+	type alias Scope
+	decoded := alias{}
+	raw := struct {
+		ID     json.RawMessage `json:"id"`
+		Number json.RawMessage `json:"number"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.ID) > 0 {
+		var value RawId
+		if err := func() error {
+			if err := func(data []byte) error {
+				return validateJSONUnion(data, validateJSONNull, validateJSONType[int64], validateJSONType[string])
+			}(raw.ID); err != nil {
+				return err
+			}
+			return unmarshalJSON(raw.ID, &value)
+		}(); err != nil {
+			return err
+		}
+		decoded.ID = value
+	}
+	if len(raw.Number) > 0 {
+		var value RawNumberValue
+		if err := func() error {
+			if err := func(data []byte) error {
+				return validateJSONUnion(data, validateJSONNull, validateJSONNumber, validateJSONType[bool])
+			}(raw.Number); err != nil {
+				return err
+			}
+			return unmarshalJSON(raw.Number, &value)
+		}(); err != nil {
+			return err
+		}
+		decoded.Number = value
+	}
+	*s = Scope(decoded)
+	return nil
+}
+
+type TaggedScope struct {
+	Kind    TaggedScopeType `json:"kind"`
+	ID      NestedId        `json:"id,omitempty"`
+	Session string          `json:"session,omitempty"`
+}
+
+// TaggedScopeType is the discriminator for TaggedScope variants.
+type TaggedScopeType string
+
+const (
+	TaggedScopeTypeRequest TaggedScopeType = "request"
+	TaggedScopeTypeSession TaggedScopeType = "session"
+)
+
+// RequestTaggedScope creates .
+func RequestTaggedScope(id NestedId) TaggedScope {
+	return TaggedScope{
+		Kind: TaggedScopeTypeRequest,
+		ID:   id,
+	}
+}
+
+// SessionTaggedScope creates .
+func SessionTaggedScope(session string) TaggedScope {
+	return TaggedScope{
+		Kind:    TaggedScopeTypeSession,
+		Session: session,
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (s TaggedScope) MarshalJSON() ([]byte, error) {
+	type alias TaggedScope
+	type wire struct {
+		*alias
+		ID      *NestedId `json:"id,omitempty"`
+		Session *string   `json:"session,omitempty"`
+	}
+	w := wire{alias: (*alias)(&s)}
+	if !reflect.ValueOf(s.ID).IsZero() {
+		ID := s.ID
+		w.ID = &ID
+	}
+	if !reflect.ValueOf(s.Session).IsZero() {
+		Session := s.Session
+		w.Session = &Session
+	}
+	switch s.Kind {
+	case TaggedScopeTypeRequest:
+		ID := s.ID
+		w.ID = &ID
+	case TaggedScopeTypeSession:
+		Session := s.Session
+		w.Session = &Session
+	}
+	return json.Marshal(w)
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (s *TaggedScope) UnmarshalJSON(data []byte) error {
+	type alias TaggedScope
+	var decoded alias
+	var raw struct {
+		Kind    json.RawMessage `json:"kind"`
+		ID      json.RawMessage `json:"id"`
+		Session json.RawMessage `json:"session"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag TaggedScopeType
+	var tagErr error
+	if len(raw.Kind) > 0 {
+		tagErr = unmarshalJSON(raw.Kind, &tag)
+	}
+	var err error
+	switch tag {
+	case "request":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "id"}, []string{"kind"}); err != nil {
+				return err
+			}
+			if len(raw.ID) > 0 {
+				var value NestedId
+				if err := func() error {
+					if err := func(data []byte) error {
+						return validateJSONUnion(data, func(data []byte) error {
+							return validateJSONUnion(data, validateJSONNull, validateJSONType[int64])
+						}, validateJSONType[string])
+					}(raw.ID); err != nil {
+						return err
+					}
+					return unmarshalJSON(raw.ID, &value)
+				}(); err != nil {
+					return err
+				}
+				decoded.ID = value
+			}
+			return nil
+		}()
+	case "session":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "session"}, []string{"kind", "session"}); err != nil {
+				return err
+			}
+			if len(raw.Session) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Session, &value); err != nil {
+					return err
+				}
+				decoded.Session = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("TaggedScope: unknown kind %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*s = TaggedScope(decoded)
+	return nil
+}

@@ -21,9 +21,43 @@ type Item struct {
 	ID string `json:"id"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (i *Item) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"id"}, []string{"id"}); err != nil {
+		return err
+	}
+	type alias Item
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*i = Item(decoded)
+	return nil
+}
+
 // Metadata: Metadata for the field shape.
 type Metadata struct {
 	Note string `json:"note,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (m *Metadata) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{}, []string{"note"}); err != nil {
+		return err
+	}
+	type alias Metadata
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*m = Metadata(decoded)
+	return nil
 }
 
 // MarshalJSON implements json.Marshaler.
@@ -37,4 +71,21 @@ func (s FieldShape) MarshalJSON() ([]byte, error) {
 		a.Tags = []string{}
 	}
 	return json.Marshal(a)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *FieldShape) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "tags", "items"}, []string{"enabled", "items", "label", "metadata", "mode", "name", "retries", "tags"}); err != nil {
+		return err
+	}
+	type alias FieldShape
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*s = FieldShape(decoded)
+	return nil
 }

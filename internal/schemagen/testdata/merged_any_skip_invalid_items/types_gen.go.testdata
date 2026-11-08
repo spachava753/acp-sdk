@@ -2,12 +2,30 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
 // TextPayload: Message payload.
 type TextPayload struct {
 	Text string `json:"text"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *TextPayload) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"text"}, []string{"text"}); err != nil {
+		return err
+	}
+	type alias TextPayload
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*p = TextPayload(decoded)
+	return nil
 }
 
 // ToolContent: Tool content item.
@@ -69,6 +87,73 @@ func (c ToolContent) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
+// UnmarshalJSON decodes the selected schema variant.
+func (c *ToolContent) UnmarshalJSON(data []byte) error {
+	type alias ToolContent
+	var decoded alias
+	var raw struct {
+		Type       json.RawMessage `json:"type"`
+		TerminalID json.RawMessage `json:"terminalId"`
+		Text       json.RawMessage `json:"text"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag ToolContentType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "text":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "text"}, []string{"text", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Text) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Text, &value); err != nil {
+					return err
+				}
+				decoded.Text = value
+			}
+			return nil
+		}()
+	case "terminal":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "terminalId"}, []string{"terminalId", "type"}); err != nil {
+				return err
+			}
+			if len(raw.TerminalID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.TerminalID, &value); err != nil {
+					return err
+				}
+				decoded.TerminalID = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("ToolContent: unknown type %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*c = ToolContent(decoded)
+	return nil
+}
+
 // Update: Update union with a shared field that merges to any.
 type Update struct {
 	Kind    UpdateType `json:"kind"`
@@ -118,41 +203,76 @@ func (u Update) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the selected schema variant.
 func (u *Update) UnmarshalJSON(data []byte) error {
 	type alias Update
-	decoded := alias{}
-	raw := struct {
+	var decoded alias
+	var raw struct {
+		Kind    json.RawMessage `json:"kind"`
 		Payload json.RawMessage `json:"payload"`
-		*alias
-	}{alias: &decoded}
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Payload) > 0 {
-		switch decoded.Kind {
-		case UpdateTypeMessage:
-			var value TextPayload
-			if err := unmarshalJSON(raw.Payload, &value); err != nil {
+	var tag UpdateType
+	var tagErr error
+	if len(raw.Kind) > 0 {
+		tagErr = unmarshalJSON(raw.Kind, &tag)
+	}
+	var err error
+	switch tag {
+	case "message":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "payload"}, []string{"kind", "payload"}); err != nil {
 				return err
 			}
-			decoded.Payload = value
-		case UpdateTypeTool:
-			var values []json.RawMessage
-			if err := unmarshalJSON(raw.Payload, &values); err == nil {
-				items := []ToolContent{}
-				for _, rawItem := range values {
-					var item ToolContent
-					if err := unmarshalJSON(rawItem, &item); err == nil {
-						switch item.Type {
-						case ToolContentTypeText, ToolContentTypeTerminal:
-							items = append(items, item)
+			if len(raw.Payload) > 0 {
+				var value TextPayload
+				if err := unmarshalJSON(raw.Payload, &value); err != nil {
+					return err
+				}
+				decoded.Payload = value
+			}
+			return nil
+		}()
+	case "tool":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind"}, []string{"kind"}); err != nil {
+				return err
+			}
+			if len(raw.Payload) > 0 {
+				var values []json.RawMessage
+				if err := unmarshalJSON(raw.Payload, &values); err == nil {
+					items := []ToolContent{}
+					for _, rawItem := range values {
+						var item ToolContent
+						if err := unmarshalJSON(rawItem, &item); err == nil {
+							switch item.Type {
+							case ToolContentTypeText, ToolContentTypeTerminal:
+								items = append(items, item)
+							}
 						}
 					}
+					decoded.Payload = items
 				}
-				decoded.Payload = items
 			}
-		}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("Update: unknown kind %q", tag)
+	}
+	if err != nil {
+		return err
 	}
 	*u = Update(decoded)
 	return nil

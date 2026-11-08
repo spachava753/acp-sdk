@@ -2,6 +2,7 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -67,9 +68,108 @@ func (c Choice) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
+// UnmarshalJSON decodes the selected schema variant.
+func (c *Choice) UnmarshalJSON(data []byte) error {
+	type alias Choice
+	var decoded alias
+	var raw struct {
+		Mode    json.RawMessage `json:"mode"`
+		Message json.RawMessage `json:"message"`
+		Schema  json.RawMessage `json:"schema"`
+		Text    json.RawMessage `json:"text"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag ChoiceType
+	var tagErr error
+	if len(raw.Mode) > 0 {
+		tagErr = unmarshalJSON(raw.Mode, &tag)
+	}
+	var err error
+	switch tag {
+	case "form":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Mode = tag
+			if err := requireJSONProperties(data, []string{"message", "mode", "schema"}, []string{"message", "mode", "schema"}); err != nil {
+				return err
+			}
+			if len(raw.Message) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Message, &value); err != nil {
+					return err
+				}
+				decoded.Message = value
+			}
+			if len(raw.Schema) > 0 {
+				var value EmptySchema
+				if err := unmarshalJSON(raw.Schema, &value); err != nil {
+					return err
+				}
+				decoded.Schema = value
+			}
+			return nil
+		}()
+	case "text":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Mode = tag
+			if err := requireJSONProperties(data, []string{"message", "mode", "text"}, []string{"message", "mode", "text"}); err != nil {
+				return err
+			}
+			if len(raw.Message) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Message, &value); err != nil {
+					return err
+				}
+				decoded.Message = value
+			}
+			if len(raw.Text) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Text, &value); err != nil {
+					return err
+				}
+				decoded.Text = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("Choice: unknown mode %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*c = Choice(decoded)
+	return nil
+}
+
 // EmptySchema: Object payload with no required fields.
 type EmptySchema struct {
 	Title string `json:"title,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EmptySchema) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{}, []string{"title"}); err != nil {
+		return err
+	}
+	type alias EmptySchema
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*s = EmptySchema(decoded)
+	return nil
 }
 
 // FormMode: Form branch data.
@@ -77,7 +177,41 @@ type FormMode struct {
 	Schema EmptySchema `json:"schema"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (m *FormMode) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"schema"}, []string{"schema"}); err != nil {
+		return err
+	}
+	type alias FormMode
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*m = FormMode(decoded)
+	return nil
+}
+
 // TextMode: Text branch data.
 type TextMode struct {
 	Text string `json:"text"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (m *TextMode) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"text"}, []string{"text"}); err != nil {
+		return err
+	}
+	type alias TextMode
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*m = TextMode(decoded)
+	return nil
 }

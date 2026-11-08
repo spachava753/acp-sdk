@@ -2,6 +2,7 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -84,6 +85,148 @@ func (o HybridOption) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
+// UnmarshalJSON decodes the selected schema variant.
+func (o *HybridOption) UnmarshalJSON(data []byte) error {
+	type alias HybridOption
+	var decoded alias
+	var raw struct {
+		Kind        json.RawMessage `json:"kind"`
+		Meta        json.RawMessage `json:"_meta"`
+		Category    json.RawMessage `json:"category"`
+		Description json.RawMessage `json:"description"`
+		Enabled     json.RawMessage `json:"enabled"`
+		ID          json.RawMessage `json:"id"`
+		Name        json.RawMessage `json:"name"`
+		Text        json.RawMessage `json:"text"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag HybridOptionType
+	var tagErr error
+	if len(raw.Kind) > 0 {
+		tagErr = unmarshalJSON(raw.Kind, &tag)
+	}
+	var err error
+	switch tag {
+	case "text":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"id", "name", "kind", "text"}, []string{"category", "id", "kind", "name", "text"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err != nil {
+					return err
+				}
+				decoded.Meta = value
+			}
+			if len(raw.Category) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Category, &value); err != nil {
+					return err
+				}
+				decoded.Category = value
+			}
+			if len(raw.Description) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Description, &value); err != nil {
+					return err
+				}
+				decoded.Description = value
+			}
+			if len(raw.ID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.ID, &value); err != nil {
+					return err
+				}
+				decoded.ID = value
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			if len(raw.Text) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Text, &value); err != nil {
+					return err
+				}
+				decoded.Text = value
+			}
+			return nil
+		}()
+	case "toggle":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"id", "name", "kind", "enabled"}, []string{"category", "enabled", "id", "kind", "name"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err != nil {
+					return err
+				}
+				decoded.Meta = value
+			}
+			if len(raw.Category) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Category, &value); err != nil {
+					return err
+				}
+				decoded.Category = value
+			}
+			if len(raw.Description) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Description, &value); err != nil {
+					return err
+				}
+				decoded.Description = value
+			}
+			if len(raw.Enabled) > 0 {
+				var value bool
+				if err := unmarshalJSON(raw.Enabled, &value); err != nil {
+					return err
+				}
+				decoded.Enabled = value
+			}
+			if len(raw.ID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.ID, &value); err != nil {
+					return err
+				}
+				decoded.ID = value
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("HybridOption: unknown kind %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*o = HybridOption(decoded)
+	return nil
+}
+
 // HybridRequest: Flattened anyOf with common request identifiers.
 type HybridRequest struct {
 	Type      HybridRequestType `json:"type,omitempty"`
@@ -119,8 +262,122 @@ func ValueIdHybridRequest(sessionID string, configID string, value string) Hybri
 	}
 }
 
-// UnmarshalJSON preserves unstructured numbers as json.Number.
+// UnmarshalJSON decodes the selected schema variant.
 func (r *HybridRequest) UnmarshalJSON(data []byte) error {
-	type plain HybridRequest
-	return unmarshalJSON(data, (*plain)(r))
+	type alias HybridRequest
+	var decoded alias
+	var raw struct {
+		Type      json.RawMessage `json:"type"`
+		ConfigID  json.RawMessage `json:"configId"`
+		SessionID json.RawMessage `json:"sessionId"`
+		Value     json.RawMessage `json:"value"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag HybridRequestType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "boolean":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"sessionId", "configId", "type", "value"}, []string{"configId", "sessionId", "type", "value"}); err != nil {
+				return err
+			}
+			if len(raw.ConfigID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.ConfigID, &value); err != nil {
+					return err
+				}
+				decoded.ConfigID = value
+			}
+			if len(raw.SessionID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+					return err
+				}
+				decoded.SessionID = value
+			}
+			if len(raw.Value) > 0 {
+				var value bool
+				if err := unmarshalJSON(raw.Value, &value); err != nil {
+					return err
+				}
+				decoded.Value = value
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"sessionId", "configId", "value"}, []string{"configId", "sessionId", "value"}); err != nil {
+					return err
+				}
+				if len(raw.ConfigID) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.ConfigID, &value); err != nil {
+						return err
+					}
+					decoded.ConfigID = value
+				}
+				if len(raw.SessionID) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+						return err
+					}
+					decoded.SessionID = value
+				}
+				if len(raw.Value) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Value, &value); err != nil {
+						return err
+					}
+					decoded.Value = value
+				}
+				return nil
+			}()
+		}
+	default:
+		err = func() error {
+			decoded = alias{}
+			if err := requireJSONProperties(data, []string{"sessionId", "configId", "value"}, []string{"configId", "sessionId", "value"}); err != nil {
+				return err
+			}
+			if len(raw.ConfigID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.ConfigID, &value); err != nil {
+					return err
+				}
+				decoded.ConfigID = value
+			}
+			if len(raw.SessionID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+					return err
+				}
+				decoded.SessionID = value
+			}
+			if len(raw.Value) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Value, &value); err != nil {
+					return err
+				}
+				decoded.Value = value
+			}
+			return nil
+		}()
+	}
+	if err != nil {
+		return err
+	}
+	*r = HybridRequest(decoded)
+	return nil
 }

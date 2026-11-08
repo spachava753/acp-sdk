@@ -1,5 +1,10 @@
 package acp
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 // MixedDefault: Flattened union with a shared nullable field whose kind differs by variant.
 type MixedDefault struct {
 	Kind    MixedDefaultType `json:"kind"`
@@ -28,8 +33,68 @@ func ToggleMixedDefault() MixedDefault {
 	}
 }
 
-// UnmarshalJSON preserves unstructured numbers as json.Number.
+// UnmarshalJSON decodes the selected schema variant.
 func (d *MixedDefault) UnmarshalJSON(data []byte) error {
-	type plain MixedDefault
-	return unmarshalJSON(data, (*plain)(d))
+	type alias MixedDefault
+	var decoded alias
+	var raw struct {
+		Kind    json.RawMessage `json:"kind"`
+		Default json.RawMessage `json:"default"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag MixedDefaultType
+	var tagErr error
+	if len(raw.Kind) > 0 {
+		tagErr = unmarshalJSON(raw.Kind, &tag)
+	}
+	var err error
+	switch tag {
+	case "text":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind"}, []string{"kind"}); err != nil {
+				return err
+			}
+			if len(raw.Default) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Default, &value); err != nil {
+					return err
+				}
+				decoded.Default = value
+			}
+			return nil
+		}()
+	case "toggle":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind"}, []string{"kind"}); err != nil {
+				return err
+			}
+			if len(raw.Default) > 0 {
+				var value *bool
+				if err := unmarshalJSON(raw.Default, &value); err != nil {
+					return err
+				}
+				decoded.Default = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("MixedDefault: unknown kind %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*d = MixedDefault(decoded)
+	return nil
 }

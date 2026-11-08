@@ -46,6 +46,9 @@ func (f Failure) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (f *Failure) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"code", "message"}, []string{"code", "message"}); err != nil {
+		return err
+	}
 	type alias Failure
 	decoded := alias{}
 	raw := struct {
@@ -254,73 +257,118 @@ func (u Update) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the selected schema variant.
 func (u *Update) UnmarshalJSON(data []byte) error {
 	type alias Update
-	decoded := alias{}
-	raw := struct {
-		Meta    json.RawMessage `json:"_meta"`
-		Content json.RawMessage `json:"content"`
-		Title   json.RawMessage `json:"title"`
-		*alias
-	}{alias: &decoded}
+	var decoded alias
+	var raw struct {
+		Kind        json.RawMessage `json:"kind"`
+		Meta        json.RawMessage `json:"_meta"`
+		Content     json.RawMessage `json:"content"`
+		ID          json.RawMessage `json:"id"`
+		NullFields2 json.RawMessage `json:"nullFields"`
+		Title       json.RawMessage `json:"title"`
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Meta) > 0 {
-		switch decoded.Kind {
-		case UpdateTypePatch:
-			if isJSONNull(raw.Meta) {
-				decoded.NullFields = append(decoded.NullFields, "_meta")
-			} else {
-				var value Meta
-				if err := unmarshalJSON(raw.Meta, &value); err == nil {
-					decoded.Meta = value
-				}
-			}
-		}
+	var tag UpdateType
+	var tagErr error
+	if len(raw.Kind) > 0 {
+		tagErr = unmarshalJSON(raw.Kind, &tag)
 	}
-	if len(raw.Content) > 0 {
-		switch decoded.Kind {
-		case UpdateTypePatch:
-			if isJSONNull(raw.Content) {
-				decoded.NullFields = append(decoded.NullFields, "content")
-			} else {
-				var values []json.RawMessage
-				if err := unmarshalJSON(raw.Content, &values); err == nil && values != nil {
-					items := []string{}
-					for _, rawItem := range values {
-						var item string
-						if err := unmarshalJSON(rawItem, &item); err == nil {
-							items = append(items, item)
-						}
-					}
-					decoded.Content = &items
-				}
+	var err error
+	switch tag {
+	case "patch":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
 			}
-		}
-	}
-	if len(raw.Title) > 0 {
-		switch decoded.Kind {
-		case UpdateTypePatch:
-			if isJSONNull(raw.Title) {
-				decoded.NullFields = append(decoded.NullFields, "title")
-			} else {
-				var value *string
-				if err := unmarshalJSON(raw.Title, &value); err == nil {
-					decoded.Title = value
-				}
-			}
-		case UpdateTypeStrict:
-			var value string
-			if err := unmarshalJSON(raw.Title, &value); err != nil {
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "id"}, []string{"id", "kind", "nullFields"}); err != nil {
 				return err
 			}
-			decoded.Title = func(v string) *string {
-				converted := string(v)
-				return &converted
-			}(value)
-		}
+			if len(raw.Meta) > 0 {
+				if isJSONNull(raw.Meta) {
+					decoded.NullFields = append(decoded.NullFields, "_meta")
+				} else {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+			}
+			if len(raw.Content) > 0 {
+				if isJSONNull(raw.Content) {
+					decoded.NullFields = append(decoded.NullFields, "content")
+				} else {
+					var values []json.RawMessage
+					if err := unmarshalJSON(raw.Content, &values); err == nil && values != nil {
+						items := []string{}
+						for _, rawItem := range values {
+							var item string
+							if err := unmarshalJSON(rawItem, &item); err == nil {
+								items = append(items, item)
+							}
+						}
+						decoded.Content = &items
+					}
+				}
+			}
+			if len(raw.ID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.ID, &value); err != nil {
+					return err
+				}
+				decoded.ID = value
+			}
+			if len(raw.NullFields2) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.NullFields2, &value); err != nil {
+					return err
+				}
+				decoded.NullFields2 = value
+			}
+			if len(raw.Title) > 0 {
+				if isJSONNull(raw.Title) {
+					decoded.NullFields = append(decoded.NullFields, "title")
+				} else {
+					var value *string
+					if err := unmarshalJSON(raw.Title, &value); err == nil {
+						decoded.Title = value
+					}
+				}
+			}
+			return nil
+		}()
+	case "strict":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "title"}, []string{"kind", "title"}); err != nil {
+				return err
+			}
+			if len(raw.Title) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Title, &value); err != nil {
+					return err
+				}
+				decoded.Title = func(v string) *string {
+					converted := string(v)
+					return &converted
+				}(value)
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("Update: unknown kind %q", tag)
+	}
+	if err != nil {
+		return err
 	}
 	*u = Update(decoded)
 	return nil
@@ -363,6 +411,9 @@ func (p Patch) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (p *Patch) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"id"}, []string{"id", "nullFields"}); err != nil {
+		return err
+	}
 	type alias Patch
 	decoded := alias{}
 	raw := struct {
