@@ -1,0 +1,27 @@
+{
+  "$defs": {
+    "Base": {
+      "description": "An object with a required field.",
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"}
+      },
+      "required": ["name"]
+    },
+    "AllOfAlias": {
+      "description": "Names Base through allOf, so it is the same payload.",
+      "allOf": [{"$ref": "#/$defs/Base"}]
+    },
+    "RefAlias": {
+      "description": "Names Base directly.",
+      "$ref": "#/$defs/Base"
+    },
+    "Label": {
+      "type": "string"
+    },
+    "LabelName": {
+      "description": "Names a string definition and stays a distinct type.",
+      "$ref": "#/$defs/Label"
+    }
+  }
+}

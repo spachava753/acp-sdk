@@ -18,13 +18,23 @@ func TestProxyMethodNames(t *testing.T) {
 }
 
 // TestProxyInitializeMatchesInitialize checks that proxy/initialize uses the
-// same payloads as initialize. Default-valued capability fields are omitted.
+// same payloads as initialize, with the same validation: a missing or null
+// protocol version is rejected and invalid _meta is dropped. Default-valued
+// capability fields are omitted.
 func TestProxyInitializeMatchesInitialize(t *testing.T) {
 	const literal = `{"protocolVersion":1}`
 	acptest.RoundTrip(t, literal, new(acp.InitializeRequest))
 	var response acp.InitializeProxyResponse
 	acptest.RoundTrip(t, literal, &response)
 	acptest.EqualMarshaled(t, acp.InitializeResponse(response), literal)
+
+	newRequest := alloc[acp.InitializeProxyRequest]
+	runDecodeCases(t, []decodeCase{
+		{name: "missing_protocol_version", new: newRequest, input: `{}`, reject: true},
+		{name: "null_protocol_version", new: newRequest, input: `{"protocolVersion":null}`, reject: true},
+		{name: "invalid_meta_dropped", new: newRequest, input: `{"protocolVersion":1,"_meta":"bad"}`, want: literal},
+		{name: "response_missing_protocol_version", new: alloc[acp.InitializeProxyResponse], input: `{}`, reject: true},
+	})
 }
 
 // TestSuccessorEnvelope checks the proxy/successor envelope: its params hold

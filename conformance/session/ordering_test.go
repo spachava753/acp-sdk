@@ -264,26 +264,34 @@ type nestedValue struct {
 	Value string `json:"value"`
 }
 
-// nestingClient makes an extension call from inside its update callback and
-// waits for the answer.
+// nestingClient makes an extension call and then a prompt from inside its
+// update callback, waiting for each answer.
 type nestingClient struct {
-	client *acp.Client
-	result chan acptest.Result[*nestedValue] // buffered for the one update
+	client   *acp.Client
+	result   chan acptest.Result[*nestedValue]        // buffered for the one update
+	prompted chan acptest.Result[*acp.PromptResponse] // buffered for the one update
 }
 
 func (h *nestingClient) SessionUpdate(ctx context.Context, _ *acp.SessionNotification) error {
 	value, err := acp.CallExtension[nestedValue](ctx, h.client, "_nested", struct{}{})
 	h.result <- acptest.Result[*nestedValue]{Value: value, Err: err}
+	if err != nil {
+		return err
+	}
+	response, err := h.client.SessionPrompt(ctx, &acp.PromptRequest{SessionID: "s", Prompt: []acp.ContentBlock{acp.TextContentBlock("nested")}})
+	h.prompted <- acptest.Result[*acp.PromptResponse]{Value: response, Err: err}
 	return err
 }
 
 // TestUpdateCallbackCanAwaitRequest checks that an update callback can make a
 // request and receive its response, even though the prompt whose response has
 // already arrived stays pending behind that update. Responses do not queue
-// behind held callbacks, so the nested call cannot deadlock.
+// behind held callbacks, so the nested call cannot deadlock. A prompt made with
+// the callback's own context also returns: it does not wait for the callback
+// that is making it.
 func TestUpdateCallbackCanAwaitRequest(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		h := &nestingClient{result: make(chan acptest.Result[*nestedValue], 1)}
+		h := &nestingClient{result: make(chan acptest.Result[*nestedValue], 1), prompted: make(chan acptest.Result[*acp.PromptResponse], 1)}
 		client, peer := startOrderingClient(t, h)
 		h.client = client
 		acptest.NewSession(t, client, peer, "s")
@@ -304,6 +312,10 @@ func TestUpdateCallbackCanAwaitRequest(t *testing.T) {
 		got := acptest.Value(t, h.result)
 		if got.Value != "nested content" {
 			t.Errorf("nested result = %#v, want nested content", got)
+		}
+		endTurn(peer, peer.ExpectCall("session/prompt"))
+		if stop := acptest.Value(t, h.prompted).StopReason; stop != acp.StopReasonEndTurn {
+			t.Errorf("nested prompt stop reason = %q, want end_turn", stop)
 		}
 		if !returned {
 			result = acptest.Await(t, done)

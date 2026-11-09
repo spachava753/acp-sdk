@@ -199,9 +199,10 @@ Agents call client methods through `AgentConnection`, such as `SessionUpdate`, `
 Proxy Chains methods are generated on both sides: a conductor is a client and a proxy is an agent. `Client` sends `ProxyInitialize`, both sides send `ProxySuccessor` and `ProxySuccessorNotification`, and handlers implement the matching `Proxy*Handler` interfaces.
 
 If the agent implements `InitializeHandler`, other requests are rejected until
-an initialization response has been successfully encoded. A failed or null
-initialization response does not activate the connection. Raw agents without
-that handler keep their partial-handler behavior.
+an `initialize` or `proxy/initialize` response has been successfully encoded, so
+an agent that also implements `ProxyInitializeHandler` can be started either
+way. A failed or null initialization response does not activate the connection.
+Raw agents without that handler keep their partial-handler behavior.
 
 ## Ordering, cancellation, and shutdown
 

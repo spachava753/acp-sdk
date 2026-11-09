@@ -45,6 +45,26 @@ func TestInitializationGate(t *testing.T) {
 	acptest.EqualJSON(t, peer.Call(4, "initialize", initialize).Result, `{"protocolVersion":1}`)
 }
 
+// dualModeAgent can start either standalone or as a proxy.
+type dualModeAgent struct{ initializeAgent }
+
+func (dualModeAgent) ProxyInitialize(_ context.Context, r *acp.InitializeProxyRequest) (*acp.InitializeProxyResponse, error) {
+	return &acp.InitializeProxyResponse{ProtocolVersion: r.ProtocolVersion}, nil
+}
+
+// TestProxyInitializationOpensGate checks that a conductor can start an agent
+// that also supports standalone use with proxy/initialize instead of
+// initialize, and that later requests are then served.
+func TestProxyInitializationOpensGate(t *testing.T) {
+	_, peer := acptest.StartAgent(t, dualModeAgent{})
+	if r := peer.Call(1, "session/new", json.RawMessage(newSessionParams)); r.Error == nil || r.Error.Code != jsonrpc.CodeInvalidRequest {
+		t.Errorf("session/new before proxy/initialize = %s, want InvalidRequest", r)
+	}
+	initialize := map[string]any{"protocolVersion": 1, "clientCapabilities": map[string]any{}}
+	acptest.EqualJSON(t, peer.Call(2, "proxy/initialize", initialize).Result, `{"protocolVersion":1}`)
+	acptest.EqualJSON(t, peer.Call(3, "session/new", json.RawMessage(newSessionParams)).Result, `{"sessionId":"session-1"}`)
+}
+
 // TestNoInitializeHandler checks that an agent without an initialize handler
 // serves requests without being initialized.
 func TestNoInitializeHandler(t *testing.T) {

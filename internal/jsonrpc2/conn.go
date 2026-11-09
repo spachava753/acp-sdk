@@ -256,11 +256,11 @@ func (c *Connection) Notify(ctx context.Context, method string, params any) (err
 	}()
 
 	c.updateInFlight(func(s *inFlightState) {
-		// If the connection is shutting down, allow outgoing notifications only if
-		// there is at least one call still in flight. The number of calls in flight
-		// cannot increase once shutdown begins, and allowing outgoing notifications
-		// may permit notifications that will cancel in-flight calls.
-		if len(s.outgoingCalls) == 0 && len(s.incomingByID) == 0 {
+		// After a clean input EOF, handlers still in flight may send
+		// notifications, such as progress before a final reply. A local Close or
+		// an abort refuses new notifications outright: Close drains only work
+		// accepted before it began.
+		if s.connClosing || s.abortErr != nil || (len(s.outgoingCalls) == 0 && len(s.incomingByID) == 0) {
 			err = s.shuttingDown(ErrClientClosing)
 			if err != nil {
 				return

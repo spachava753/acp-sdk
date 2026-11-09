@@ -5135,7 +5135,7 @@ func (i *Implementation) UnmarshalJSON(data []byte) error {
 // the proxy MUST forward an `initialize` request to its successor through `proxy/successor`.
 //
 // See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
-type InitializeProxyRequest InitializeRequest
+type InitializeProxyRequest = InitializeRequest
 
 // InitializeProxyResponse: **UNSTABLE**
 //
@@ -5146,7 +5146,7 @@ type InitializeProxyRequest InitializeRequest
 // The same as the `initialize` response. The proxy builds it from its successor's
 // `initialize` response and answers with the capabilities of the chain from itself onward.
 // It MUST NOT change `protocolVersion`.
-type InitializeProxyResponse InitializeResponse
+type InitializeProxyResponse = InitializeResponse
 
 // InitializeRequest: Request parameters for the initialize method.
 //

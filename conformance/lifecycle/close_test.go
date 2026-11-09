@@ -61,6 +61,38 @@ func TestCloseFlushesAcceptedOutput(t *testing.T) {
 	}
 }
 
+// Once Close begins, new notifications are refused even while an earlier
+// request handler is still draining, and are never written; only work
+// accepted before Close is flushed.
+func TestCloseRefusesNewNotifications(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		peer, transport := acptest.NewPeer(t)
+		mux := acp.NewExtensionMux()
+		h := addHeld(t, mux, false)
+		defer h.unblock()
+		client, err := acp.Connect(context.Background(), transport, mux)
+		if err != nil {
+			t.Fatal(err)
+		}
+		peer.Request("held", heldMethod, map[string]any{"tag": "draining"})
+		call := acptest.Await(t, h.started)
+		closing := acptest.Go(func() (struct{}, error) { return struct{}{}, client.Close() })
+		<-call.ctx.Done() // Close has begun: it cancels inbound handler contexts.
+		if err := client.NotifyExtension(context.Background(), "_test/late", map[string]any{}); !errors.Is(err, acp.ErrConnectionClosed) {
+			t.Errorf("notification after Close began = %v, want ErrConnectionClosed", err)
+		}
+		h.unblock()
+		if err := acptest.Await(t, closing).Err; err != nil {
+			t.Errorf("Close = %v", err)
+		}
+		for _, m := range drainNow(t, peer) {
+			if m.Method == "_test/late" {
+				t.Errorf("notification refused by Close was written: %s", m)
+			}
+		}
+	})
+}
+
 // closeErrWriter returns err from Close after closing the underlying writer.
 type closeErrWriter struct {
 	io.WriteCloser
