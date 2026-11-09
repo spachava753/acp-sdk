@@ -477,21 +477,11 @@ Run all conformance packages:
 go test ./conformance/...
 ```
 
-The upstream-derived v1 scenarios are kept separately from the original local
-suite:
-
-```sh
-go test ./conformance/rustv1/...
-```
-
-See [the Rust v1 port inventory](./conformance/rustv1/README.md) for the pinned
-upstream revision, scenario mappings, partial coverage, and Rust-only API
-exclusions. These tests include SDK behavior policies as well as protocol
-requirements; passing them is not an ACP certification.
-
-[Additional local regressions](./conformance/regressions/README.md) cover gaps
-identified after that port. Their source attribution and historical pre-fix
-results are kept separate from the Rust-derived cases.
+They test the SDK against an independent peer, grouped by area: `wire`
+(JSON-RPC framing, IDs, errors and dispatch), `lifecycle` (cancellation,
+shutdown and transports), `session` (session methods, callbacks and ordering)
+and `schema` (typed payloads and routes). They cover SDK behavior choices as
+well as protocol requirements; passing them is not an ACP certification.
 
 To refresh and regenerate the protocol surface:
 

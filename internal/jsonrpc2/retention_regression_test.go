@@ -13,11 +13,10 @@ import (
 	"time"
 )
 
-// This local regression chooses Go call-context retirement semantics: once a
-// successfully written Call's own context expires, its pending entry must be
-// released without a response. It is not ACP wire conformance or a port of
-// Rust's owned-future/drop policy. acp.call supplies the same context to Call
-// and Await, so exercising that real pair reaches the SDK consumer's lifecycle.
+// Once a successfully written call's own context expires, its pending entry
+// must be released even though the peer never responds. This is SDK resource
+// behavior rather than an ACP wire rule. acp.call supplies the same context to
+// Call and Await, so exercising that pair covers the SDK's real usage.
 //
 // Close can hide retention by provoking EOF, so the one internal observation is
 // outgoingCalls under stateMu, before a peer reply or raw transport closure.

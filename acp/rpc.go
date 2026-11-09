@@ -139,8 +139,8 @@ func (p *protocolPreempter) Preempt(_ context.Context, req *jsonrpc.Request) (an
 		return nil, jsonrpc2.ErrNotHandled
 	}
 	method, params := req.Method, req.Params
-	// Accept the Rust-compatible wrapped control form, but never forward a
-	// cancellation to another hop. The identifier targets this connection only.
+	// Also accept a cancellation wrapped in proxy/successor, which some peers
+	// send, but never forward it to another hop: the ID targets this connection.
 	for method == "proxy/successor" {
 		var wrapper struct {
 			Method *string         `json:"method"`
