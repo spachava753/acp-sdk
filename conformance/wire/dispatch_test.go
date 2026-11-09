@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"testing"
+	"testing/synctest"
 
 	"github.com/spachava753/acp-sdk/acp"
 	"github.com/spachava753/acp-sdk/conformance/internal/acptest"
@@ -46,32 +48,45 @@ func TestConcurrentRequests(t *testing.T) {
 	}
 }
 
-// TestNotificationsDelivered checks that client notifications reach the
-// agent's handler, each exactly once and with its original params. Extension
-// notification handlers may run concurrently, so each delivery is awaited
-// before the next notification is sent rather than asserting an order.
-func TestNotificationsDelivered(t *testing.T) {
-	a := newAgent()
-	// Buffered for every expected delivery, so an extra one is visible
-	// after dispatch has settled rather than blocking the handler.
-	logs := make(chan string, 3)
-	check(t, acp.AddExtensionNotification(a.ExtensionMux, "_test/log", func(_ context.Context, m *message) error {
-		logs <- m.Message
-		return nil
-	}))
-	client, stop := connect(t, a)
-	for _, text := range []string{"test log 1", "test log 2"} {
-		acptest.Value(t, acptest.Go(func() (struct{}, error) {
-			return struct{}{}, client.NotifyExtension(context.Background(), "_test/log", message{text})
+// TestNotificationsHandledInOrder checks that notifications are handled one at
+// a time in receive order, each exactly once with its original params. The
+// first handler is held, so the second notification has arrived while it runs.
+func TestNotificationsHandledInOrder(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		a := newAgent()
+		release := make(chan struct{})
+		var releaseOnce sync.Once
+		unblock := func() { releaseOnce.Do(func() { close(release) }) }
+		// Buffered for every expected delivery, so an extra one is visible
+		// after dispatch has settled rather than blocking the handler.
+		logs := make(chan string, 3)
+		check(t, acp.AddExtensionNotification(a.ExtensionMux, "_test/log", func(_ context.Context, m *message) error {
+			if m.Message == "test log 1" {
+				<-release
+			}
+			logs <- m.Message
+			return nil
 		}))
-		if got := acptest.Await(t, logs); got != text {
-			t.Errorf("notification = %q, want %q", got, text)
+		client, stop := connect(t, a)
+		t.Cleanup(unblock) // Runs before connect's cleanup, which waits for handlers.
+		for _, text := range []string{"test log 1", "test log 2"} {
+			check(t, client.NotifyExtension(context.Background(), "_test/log", message{text}))
 		}
-	}
-	check(t, stop())
-	if len(logs) != 0 {
-		t.Errorf("%d extra notification deliveries", len(logs))
-	}
+		synctest.Wait()
+		if len(logs) != 0 {
+			t.Fatalf("notification %q was handled while an earlier one was still running", <-logs)
+		}
+		unblock()
+		for _, want := range []string{"test log 1", "test log 2"} {
+			if got := acptest.Await(t, logs); got != want {
+				t.Errorf("notification = %q, want %q", got, want)
+			}
+		}
+		check(t, stop())
+		if len(logs) != 0 {
+			t.Errorf("%d extra notification deliveries", len(logs))
+		}
+	})
 }
 
 // TestRegisteredMethods checks that each registered extension request is

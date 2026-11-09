@@ -205,22 +205,26 @@ that handler keep their partial-handler behavior.
 
 ## Ordering, cancellation, and shutdown
 
-`SessionUpdate` notification handlers run in receive order, one at a time.
-Normal `SessionPrompt` and `SessionLoad` calls wait for update callbacks preceding
-their response, on both success and error. Later session-state updates do not
-extend that completion boundary. This is a Go SDK delivery guarantee, not a claim
-that ACP specifies every callback scheduling policy.
+Notification handlers, including `SessionUpdate` and extension notifications,
+run in receive order, one at a time. Normal `SessionPrompt` and `SessionLoad`
+calls wait for the notification callbacks received before their response, on
+both success and error. Later notifications do not extend that completion
+boundary. This is a Go SDK delivery guarantee, not a claim that ACP specifies
+every callback scheduling policy.
 
 Incoming requests start in receive order too: a request does not start until
-the update callbacks received before it have returned. A permission callback
-therefore sees the tool announcements that preceded it. Requests and other
-notification handlers then run concurrently.
+the notification callbacks received before it have returned. A permission
+callback therefore sees the tool announcements that preceded it. Request
+handlers then run concurrently, so a long prompt turn does not hold up later
+messages.
 
-A handler can make nested calls using its supplied context. Such calls bypass the
-update-completion barrier so they cannot wait on their own handler. Responses
-are never queued, so an update callback can await the answer to its own call.
-If the peer must first send this side a request, that request waits behind the
-update callback; do such work in a goroutine with its own context instead.
+A slow notification handler delays the messages behind it, so keep notification
+handlers short. A handler can make nested calls using its supplied context. Such
+calls bypass the completion barrier so they cannot wait on their own handler.
+Responses are never queued, so a notification callback can await the answer to
+its own call. If the peer must first send this side a request, that request
+waits behind the callback; do such work in a goroutine with its own context
+instead.
 
 Canceling a call's context releases its local pending entry. After a successful
 send, the SDK also attempts `$/cancel_request`; peers may ignore this optional
@@ -319,7 +323,8 @@ an `AgentConnection`.
 
 Register before connecting so handlers are ready when messages arrive. Duplicate
 registrations of the same message kind are rejected; one name may have both a
-request and a notification handler. Handlers may run concurrently and may call
+request and a notification handler. Request handlers may run concurrently;
+notification handlers run one at a time in receive order. Handlers may call
 back to the peer. JSON decoding failures return `-32602` for requests; handlers
 must validate required fields and other application constraints themselves.
 Missing or `null` parameters produce a zero-valued parameter struct. Return a

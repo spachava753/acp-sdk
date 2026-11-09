@@ -13,12 +13,12 @@ import (
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
-// Session updates apply in receive order, and later requests start only after
-// them. Other callbacks may need later peer messages to finish, so they release
-// the dispatcher once started. Use the stable wire method here: minimal
-// generated schemas need not declare its constant.
+// Notifications are handled one at a time in receive order, and a message
+// starts only after the notifications received before it have been handled.
+// Requests release the dispatcher once started: a request handler may run for a
+// whole prompt turn and must not hold up later messages.
 func beginHandler(ctx context.Context, req *jsonrpc.Request) {
-	if req.IsCall() || req.Method != "session/update" {
+	if req.IsCall() {
 		jsonrpc2.Async(ctx)
 	}
 }
