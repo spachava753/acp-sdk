@@ -2,6 +2,7 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -61,4 +62,81 @@ func (n SharedNullable) MarshalJSON() ([]byte, error) {
 		w.Value = &Value
 	}
 	return json.Marshal(w)
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (n *SharedNullable) UnmarshalJSON(data []byte) error {
+	type alias SharedNullable
+	var decoded alias
+	var raw struct {
+		Kind  json.RawMessage `json:"kind"`
+		Label json.RawMessage `json:"label"`
+		Value json.RawMessage `json:"value"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag SharedNullableType
+	var tagErr error
+	if len(raw.Kind) > 0 {
+		tagErr = unmarshalJSON(raw.Kind, &tag)
+	}
+	var err error
+	switch tag {
+	case "strict":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "label", "value"}, []string{"kind", "label", "value"}); err != nil {
+				return err
+			}
+			if len(raw.Label) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Label, &value); err != nil {
+					return err
+				}
+				decoded.Label = func(v string) *string {
+					converted := string(v)
+					return &converted
+				}(value)
+			}
+			if len(raw.Value) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Value, &value); err != nil {
+					return err
+				}
+				decoded.Value = value
+			}
+			return nil
+		}()
+	case "maybe":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind"}, []string{"kind"}); err != nil {
+				return err
+			}
+			if len(raw.Label) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Label, &value); err != nil {
+					return err
+				}
+				decoded.Label = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("SharedNullable: unknown kind %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*n = SharedNullable(decoded)
+	return nil
 }

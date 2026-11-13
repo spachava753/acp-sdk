@@ -6,14 +6,65 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (e *Error) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"code", "message"}, []string{"code", "message"}); err != nil {
+		return err
+	}
+	type alias Error
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*e = Error(decoded)
+	return nil
+}
+
 // MessageRequest: Parameters for processing a peer message.
 type MessageRequest struct {
 	Text string `json:"text"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *MessageRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"text"}, []string{"text"}); err != nil {
+		return err
+	}
+	type alias MessageRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = MessageRequest(decoded)
+	return nil
+}
+
 // MessageResponse: Result from processing a peer message.
 type MessageResponse struct {
 	Acknowledged bool `json:"acknowledged"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *MessageResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"acknowledged"}, []string{"acknowledged"}); err != nil {
+		return err
+	}
+	type alias MessageResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = MessageResponse(decoded)
+	return nil
 }
 
 // RequestId: A JSON-RPC request identifier.

@@ -15,11 +15,45 @@ type AgentMethodNotification struct {
 	SessionID SessionId `json:"sessionId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (n *AgentMethodNotification) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId"}, []string{"sessionId"}); err != nil {
+		return err
+	}
+	type alias AgentMethodNotification
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*n = AgentMethodNotification(decoded)
+	return nil
+}
+
 // AgentMethodRequest: Request sent from the client to the agent.
 type AgentMethodRequest struct {
 	Meta       Meta     `json:"_meta,omitzero"`
 	Cwd        string   `json:"cwd"`
 	ExtraRoots []string `json:"extraRoots,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *AgentMethodRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"cwd"}, []string{"cwd", "extraRoots"}); err != nil {
+		return err
+	}
+	type alias AgentMethodRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = AgentMethodRequest(decoded)
+	return nil
 }
 
 // AgentMethodResponse: Response sent from the agent to the client.
@@ -28,10 +62,44 @@ type AgentMethodResponse struct {
 	SessionID SessionId `json:"sessionId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *AgentMethodResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId"}, []string{"sessionId"}); err != nil {
+		return err
+	}
+	type alias AgentMethodResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = AgentMethodResponse(decoded)
+	return nil
+}
+
 // ClientMethodNotification: Notification sent from the agent to the client.
 type ClientMethodNotification struct {
 	Meta    Meta   `json:"_meta,omitzero"`
 	Message string `json:"message"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (n *ClientMethodNotification) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"message"}, []string{"message"}); err != nil {
+		return err
+	}
+	type alias ClientMethodNotification
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*n = ClientMethodNotification(decoded)
+	return nil
 }
 
 // ClientMethodRequest: Request sent from the agent to the client.
@@ -40,10 +108,44 @@ type ClientMethodRequest struct {
 	Path string `json:"path"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ClientMethodRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"path"}, []string{"path"}); err != nil {
+		return err
+	}
+	type alias ClientMethodRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = ClientMethodRequest(decoded)
+	return nil
+}
+
 // ClientMethodResponse: Response sent from the client to the agent.
 type ClientMethodResponse struct {
 	Meta    Meta   `json:"_meta,omitzero"`
 	Content string `json:"content"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ClientMethodResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"content"}, []string{"content"}); err != nil {
+		return err
+	}
+	type alias ClientMethodResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = ClientMethodResponse(decoded)
+	return nil
 }
 
 // Error: A JSON-RPC error response.
@@ -52,10 +154,44 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (e *Error) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"code", "message"}, []string{"code", "message"}); err != nil {
+		return err
+	}
+	type alias Error
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*e = Error(decoded)
+	return nil
+}
+
 // ProtocolNotification: Protocol-level notification shared by both sides.
 type ProtocolNotification struct {
 	Meta      Meta      `json:"_meta,omitzero"`
 	RequestID RequestId `json:"requestId"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (n *ProtocolNotification) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"requestId"}, []string{"requestId"}); err != nil {
+		return err
+	}
+	type alias ProtocolNotification
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*n = ProtocolNotification(decoded)
+	return nil
 }
 
 // RequestId: A JSON-RPC request identifier.

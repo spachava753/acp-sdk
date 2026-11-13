@@ -2,7 +2,6 @@ package acp
 
 import (
 	"context"
-	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
@@ -17,14 +16,17 @@ func (c *AgentConnection) ProxySuccessorNotification(ctx context.Context, params
 }
 
 func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
-	jsonrpc2.Async(ctx)
+	beginHandler(ctx, req)
 	switch req.Method {
 	case MethodProxyInitialize:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(ProxyInitializeHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[InitializeProxyRequest](req)
+		params, err := decodeProtocolParams[InitializeProxyRequest](req)
 		if err != nil {
 			return nil, err
 		}
@@ -35,7 +37,7 @@ func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) 
 			if !ok {
 				return nil, methodNotFound(req.Method)
 			}
-			params, err := decodeParams[ProxySuccessorRequest](req)
+			params, err := decodeProtocolParams[ProxySuccessorRequest](req)
 			if err != nil {
 				return nil, err
 			}
@@ -45,7 +47,7 @@ func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) 
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[ProxySuccessorNotification](req)
+		params, err := decodeProtocolParams[ProxySuccessorNotification](req)
 		if err != nil {
 			return nil, err
 		}
@@ -53,4 +55,8 @@ func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) 
 	default:
 		return handleExtension(ctx, handler, req)
 	}
+}
+
+func hasAgentInitializeHandler(handler any) bool {
+	return false
 }

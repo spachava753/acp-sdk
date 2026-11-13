@@ -34,6 +34,7 @@ func (c *AgentAuthCapabilities) UnmarshalJSON(data []byte) error {
 	type alias AgentAuthCapabilities
 	decoded := alias{}
 	raw := struct {
+		Meta   json.RawMessage `json:"_meta"`
 		Logout json.RawMessage `json:"logout"`
 		Status json.RawMessage `json:"status"`
 		*alias
@@ -41,11 +42,23 @@ func (c *AgentAuthCapabilities) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Logout) > 0 {
-		_ = unmarshalJSON(raw.Logout, &decoded.Logout)
+		var value *LogoutCapabilities
+		if err := unmarshalJSON(raw.Logout, &value); err == nil {
+			decoded.Logout = value
+		}
 	}
 	if len(raw.Status) > 0 {
-		_ = unmarshalJSON(raw.Status, &decoded.Status)
+		var value *AuthStatusCapabilities
+		if err := unmarshalJSON(raw.Status, &value); err == nil {
+			decoded.Status = value
+		}
 	}
 	*c = AgentAuthCapabilities(decoded)
 	return nil
@@ -72,6 +85,7 @@ func (c *AgentCapabilities) UnmarshalJSON(data []byte) error {
 	type alias AgentCapabilities
 	decoded := alias{}
 	raw := struct {
+		Meta                json.RawMessage `json:"_meta"`
 		Auth                json.RawMessage `json:"auth"`
 		LoadSession         json.RawMessage `json:"loadSession"`
 		McpCapabilities     json.RawMessage `json:"mcpCapabilities"`
@@ -83,23 +97,47 @@ func (c *AgentCapabilities) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Auth) > 0 {
-		_ = unmarshalJSON(raw.Auth, &decoded.Auth)
+		var value *AgentAuthCapabilities
+		if err := unmarshalJSON(raw.Auth, &value); err == nil {
+			decoded.Auth = value
+		}
 	}
 	if len(raw.LoadSession) > 0 {
-		_ = unmarshalJSON(raw.LoadSession, &decoded.LoadSession)
+		var value bool
+		if err := unmarshalJSON(raw.LoadSession, &value); err == nil {
+			decoded.LoadSession = value
+		}
 	}
 	if len(raw.McpCapabilities) > 0 {
-		_ = unmarshalJSON(raw.McpCapabilities, &decoded.McpCapabilities)
+		var value *McpCapabilities
+		if err := unmarshalJSON(raw.McpCapabilities, &value); err == nil {
+			decoded.McpCapabilities = value
+		}
 	}
 	if len(raw.PromptCapabilities) > 0 {
-		_ = unmarshalJSON(raw.PromptCapabilities, &decoded.PromptCapabilities)
+		var value *PromptCapabilities
+		if err := unmarshalJSON(raw.PromptCapabilities, &value); err == nil {
+			decoded.PromptCapabilities = value
+		}
 	}
 	if len(raw.Providers) > 0 {
-		_ = unmarshalJSON(raw.Providers, &decoded.Providers)
+		var value *ProvidersCapabilities
+		if err := unmarshalJSON(raw.Providers, &value); err == nil {
+			decoded.Providers = value
+		}
 	}
 	if len(raw.SessionCapabilities) > 0 {
-		_ = unmarshalJSON(raw.SessionCapabilities, &decoded.SessionCapabilities)
+		var value *SessionCapabilities
+		if err := unmarshalJSON(raw.SessionCapabilities, &value); err == nil {
+			decoded.SessionCapabilities = value
+		}
 	}
 	*c = AgentCapabilities(decoded)
 	return nil
@@ -118,6 +156,7 @@ func (a *Annotations) UnmarshalJSON(data []byte) error {
 	type alias Annotations
 	decoded := alias{}
 	raw := struct {
+		Meta         json.RawMessage `json:"_meta"`
 		Audience     json.RawMessage `json:"audience"`
 		LastModified json.RawMessage `json:"lastModified"`
 		Priority     json.RawMessage `json:"priority"`
@@ -126,13 +165,19 @@ func (a *Annotations) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Audience) > 0 {
 		var values []json.RawMessage
 		if err := unmarshalJSON(raw.Audience, &values); err == nil && values != nil {
 			items := []Role{}
 			for _, value := range values {
 				var item Role
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item {
 					case RoleAssistant, RoleUser:
 						items = append(items, item)
@@ -143,10 +188,16 @@ func (a *Annotations) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.LastModified) > 0 {
-		_ = unmarshalJSON(raw.LastModified, &decoded.LastModified)
+		var value *string
+		if err := unmarshalJSON(raw.LastModified, &value); err == nil {
+			decoded.LastModified = value
+		}
 	}
 	if len(raw.Priority) > 0 {
-		_ = unmarshalJSON(raw.Priority, &decoded.Priority)
+		var value *float64
+		if err := unmarshalJSON(raw.Priority, &value); err == nil {
+			decoded.Priority = value
+		}
 	}
 	*a = Annotations(decoded)
 	return nil
@@ -169,6 +220,30 @@ type ArchiveSessionRequest struct {
 	SessionID SessionId `json:"sessionId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ArchiveSessionRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId"}, []string{"sessionId"}); err != nil {
+		return err
+	}
+	type alias ArchiveSessionRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = ArchiveSessionRequest(decoded)
+	return nil
+}
+
 // ArchiveSessionResponse: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -176,6 +251,27 @@ type ArchiveSessionRequest struct {
 // Response from archiving a session.
 type ArchiveSessionResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ArchiveSessionResponse) UnmarshalJSON(data []byte) error {
+	type alias ArchiveSessionResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = ArchiveSessionResponse(decoded)
+	return nil
 }
 
 // AudioContent: Audio provided to or from an LLM.
@@ -188,17 +284,30 @@ type AudioContent struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (c *AudioContent) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"data", "mimeType"}, []string{"data", "mimeType"}); err != nil {
+		return err
+	}
 	type alias AudioContent
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Annotations json.RawMessage `json:"annotations"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Annotations) > 0 {
-		_ = unmarshalJSON(raw.Annotations, &decoded.Annotations)
+		var value *Annotations
+		if err := unmarshalJSON(raw.Annotations, &value); err == nil {
+			decoded.Annotations = value
+		}
 	}
 	*c = AudioContent(decoded)
 	return nil
@@ -225,9 +334,13 @@ type AuthAccount struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (a *AuthAccount) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"label"}, []string{"label"}); err != nil {
+		return err
+	}
 	type alias AuthAccount
 	decoded := alias{}
 	raw := struct {
+		Meta         json.RawMessage `json:"_meta"`
 		Active       json.RawMessage `json:"active"`
 		Email        json.RawMessage `json:"email"`
 		Name         json.RawMessage `json:"name"`
@@ -237,17 +350,35 @@ func (a *AuthAccount) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Active) > 0 {
-		_ = unmarshalJSON(raw.Active, &decoded.Active)
+		var value *bool
+		if err := unmarshalJSON(raw.Active, &value); err == nil {
+			decoded.Active = value
+		}
 	}
 	if len(raw.Email) > 0 {
-		_ = unmarshalJSON(raw.Email, &decoded.Email)
+		var value *string
+		if err := unmarshalJSON(raw.Email, &value); err == nil {
+			decoded.Email = value
+		}
 	}
 	if len(raw.Name) > 0 {
-		_ = unmarshalJSON(raw.Name, &decoded.Name)
+		var value *string
+		if err := unmarshalJSON(raw.Name, &value); err == nil {
+			decoded.Name = value
+		}
 	}
 	if len(raw.Organization) > 0 {
-		_ = unmarshalJSON(raw.Organization, &decoded.Organization)
+		var value *string
+		if err := unmarshalJSON(raw.Organization, &value); err == nil {
+			decoded.Organization = value
+		}
 	}
 	*a = AuthAccount(decoded)
 	return nil
@@ -268,14 +399,24 @@ func (c *AuthCapabilities) UnmarshalJSON(data []byte) error {
 	type alias AuthCapabilities
 	decoded := alias{}
 	raw := struct {
+		Meta     json.RawMessage `json:"_meta"`
 		Terminal json.RawMessage `json:"terminal"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Terminal) > 0 {
-		_ = unmarshalJSON(raw.Terminal, &decoded.Terminal)
+		var value bool
+		if err := unmarshalJSON(raw.Terminal, &value); err == nil {
+			decoded.Terminal = value
+		}
 	}
 	*c = AuthCapabilities(decoded)
 	return nil
@@ -322,19 +463,153 @@ func AgentAuthMethod(id AuthMethodId, name string) AuthMethod {
 	}
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the selected schema variant.
 func (m *AuthMethod) UnmarshalJSON(data []byte) error {
 	type alias AuthMethod
-	decoded := alias{}
-	raw := struct {
+	var decoded alias
+	var raw struct {
+		Type        json.RawMessage `json:"type"`
+		Meta        json.RawMessage `json:"_meta"`
+		Args        json.RawMessage `json:"args"`
 		Description json.RawMessage `json:"description"`
-		*alias
-	}{alias: &decoded}
+		Env         json.RawMessage `json:"env"`
+		ID          json.RawMessage `json:"id"`
+		Name        json.RawMessage `json:"name"`
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+	var tag AuthMethodType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "terminal":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "id", "name"}, []string{"id", "name", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Args) > 0 {
+				var value []string
+				if err := unmarshalJSON(raw.Args, &value); err != nil {
+					return err
+				}
+				decoded.Args = value
+			}
+			if len(raw.Description) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Description, &value); err == nil {
+					decoded.Description = value
+				}
+			}
+			if len(raw.Env) > 0 {
+				var value map[string]string
+				if err := unmarshalJSON(raw.Env, &value); err != nil {
+					return err
+				}
+				decoded.Env = value
+			}
+			if len(raw.ID) > 0 {
+				var value AuthMethodId
+				if err := unmarshalJSON(raw.ID, &value); err != nil {
+					return err
+				}
+				decoded.ID = value
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"id", "name"}, []string{"id", "name"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Description) > 0 {
+					var value *string
+					if err := unmarshalJSON(raw.Description, &value); err == nil {
+						decoded.Description = value
+					}
+				}
+				if len(raw.ID) > 0 {
+					var value AuthMethodId
+					if err := unmarshalJSON(raw.ID, &value); err != nil {
+						return err
+					}
+					decoded.ID = value
+				}
+				if len(raw.Name) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Name, &value); err != nil {
+						return err
+					}
+					decoded.Name = value
+				}
+				return nil
+			}()
+		}
+	default:
+		err = func() error {
+			decoded = alias{}
+			if err := requireJSONProperties(data, []string{"id", "name"}, []string{"id", "name"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Description) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Description, &value); err == nil {
+					decoded.Description = value
+				}
+			}
+			if len(raw.ID) > 0 {
+				var value AuthMethodId
+				if err := unmarshalJSON(raw.ID, &value); err != nil {
+					return err
+				}
+				decoded.ID = value
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			return nil
+		}()
+	}
+	if err != nil {
+		return err
 	}
 	*m = AuthMethod(decoded)
 	return nil
@@ -352,17 +627,30 @@ type AuthMethodAgent struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (a *AuthMethodAgent) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"id", "name"}, []string{"id", "name"}); err != nil {
+		return err
+	}
 	type alias AuthMethodAgent
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Description json.RawMessage `json:"description"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+		var value *string
+		if err := unmarshalJSON(raw.Description, &value); err == nil {
+			decoded.Description = value
+		}
 	}
 	*a = AuthMethodAgent(decoded)
 	return nil
@@ -389,17 +677,30 @@ type AuthMethodTerminal struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (t *AuthMethodTerminal) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"id", "name"}, []string{"id", "name"}); err != nil {
+		return err
+	}
 	type alias AuthMethodTerminal
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Description json.RawMessage `json:"description"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+		var value *string
+		if err := unmarshalJSON(raw.Description, &value); err == nil {
+			decoded.Description = value
+		}
 	}
 	*t = AuthMethodTerminal(decoded)
 	return nil
@@ -435,6 +736,27 @@ type AuthStatusCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *AuthStatusCapabilities) UnmarshalJSON(data []byte) error {
+	type alias AuthStatusCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = AuthStatusCapabilities(decoded)
+	return nil
+}
+
 // AuthStatusRequest: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -447,6 +769,27 @@ type AuthStatusCapabilities struct {
 // whether authentication is required.
 type AuthStatusRequest struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *AuthStatusRequest) UnmarshalJSON(data []byte) error {
+	type alias AuthStatusRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = AuthStatusRequest(decoded)
+	return nil
 }
 
 // AuthStatusResponse: **UNSTABLE**
@@ -462,14 +805,24 @@ type AuthStatusResponse struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (r *AuthStatusResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"state"}, []string{"state"}); err != nil {
+		return err
+	}
 	type alias AuthStatusResponse
 	decoded := alias{}
 	raw := struct {
+		Meta     json.RawMessage `json:"_meta"`
 		Accounts json.RawMessage `json:"accounts"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
 	}
 	if len(raw.Accounts) > 0 {
 		var values []json.RawMessage
@@ -477,7 +830,7 @@ func (r *AuthStatusResponse) UnmarshalJSON(data []byte) error {
 			decoded.Accounts = []AuthAccount{}
 			for _, value := range values {
 				var item AuthAccount
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Accounts = append(decoded.Accounts, item)
 				}
 			}
@@ -504,14 +857,24 @@ type AuthStatusUpdateNotification struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (n *AuthStatusUpdateNotification) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"state"}, []string{"state"}); err != nil {
+		return err
+	}
 	type alias AuthStatusUpdateNotification
 	decoded := alias{}
 	raw := struct {
+		Meta     json.RawMessage `json:"_meta"`
 		Accounts json.RawMessage `json:"accounts"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
 	}
 	if len(raw.Accounts) > 0 {
 		var values []json.RawMessage
@@ -519,7 +882,7 @@ func (n *AuthStatusUpdateNotification) UnmarshalJSON(data []byte) error {
 			decoded.Accounts = []AuthAccount{}
 			for _, value := range values {
 				var item AuthAccount
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Accounts = append(decoded.Accounts, item)
 				}
 			}
@@ -537,9 +900,54 @@ type AuthenticateRequest struct {
 	MethodID AuthMethodId `json:"methodId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *AuthenticateRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"methodId"}, []string{"methodId"}); err != nil {
+		return err
+	}
+	type alias AuthenticateRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = AuthenticateRequest(decoded)
+	return nil
+}
+
 // AuthenticateResponse: Response to the `authenticate` method.
 type AuthenticateResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *AuthenticateResponse) UnmarshalJSON(data []byte) error {
+	type alias AuthenticateResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = AuthenticateResponse(decoded)
+	return nil
 }
 
 // AvailableCommand: Information about a command.
@@ -552,17 +960,30 @@ type AvailableCommand struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (c *AvailableCommand) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "description"}, []string{"description", "name"}); err != nil {
+		return err
+	}
 	type alias AvailableCommand
 	decoded := alias{}
 	raw := struct {
+		Meta  json.RawMessage `json:"_meta"`
 		Input json.RawMessage `json:"input"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Input) > 0 {
-		_ = unmarshalJSON(raw.Input, &decoded.Input)
+		var value *AvailableCommandInput
+		if err := unmarshalJSON(raw.Input, &value); err == nil {
+			decoded.Input = value
+		}
 	}
 	*c = AvailableCommand(decoded)
 	return nil
@@ -579,6 +1000,45 @@ func UnstructuredAvailableCommandInput(hint string) AvailableCommandInput {
 	return AvailableCommandInput{
 		Hint: hint,
 	}
+}
+
+// UnmarshalJSON decodes the first valid schema alternative.
+func (i *AvailableCommandInput) UnmarshalJSON(data []byte) error {
+	type alias AvailableCommandInput
+	var decoded alias
+	var raw struct {
+		Meta json.RawMessage `json:"_meta"`
+		Hint json.RawMessage `json:"hint"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var err error
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"hint"}, []string{"hint"}); err != nil {
+			return err
+		}
+		if len(raw.Meta) > 0 {
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err == nil {
+				decoded.Meta = value
+			}
+		}
+		if len(raw.Hint) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.Hint, &value); err != nil {
+				return err
+			}
+			decoded.Hint = value
+		}
+		return nil
+	}()
+	if err == nil {
+		*i = AvailableCommandInput(decoded)
+		return nil
+	}
+	return err
 }
 
 // AvailableCommandsUpdate: Available commands are ready or have changed
@@ -599,14 +1059,24 @@ func (u AvailableCommandsUpdate) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (u *AvailableCommandsUpdate) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"availableCommands"}, []string{}); err != nil {
+		return err
+	}
 	type alias AvailableCommandsUpdate
 	decoded := alias{}
 	raw := struct {
+		Meta              json.RawMessage `json:"_meta"`
 		AvailableCommands json.RawMessage `json:"availableCommands"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
 	}
 	if len(raw.AvailableCommands) > 0 {
 		var values []json.RawMessage
@@ -614,7 +1084,7 @@ func (u *AvailableCommandsUpdate) UnmarshalJSON(data []byte) error {
 			decoded.AvailableCommands = []AvailableCommand{}
 			for _, value := range values {
 				var item AvailableCommand
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.AvailableCommands = append(decoded.AvailableCommands, item)
 				}
 			}
@@ -634,17 +1104,30 @@ type BlobResourceContents struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (c *BlobResourceContents) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"blob", "uri"}, []string{"blob", "uri"}); err != nil {
+		return err
+	}
 	type alias BlobResourceContents
 	decoded := alias{}
 	raw := struct {
+		Meta     json.RawMessage `json:"_meta"`
 		MimeType json.RawMessage `json:"mimeType"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.MimeType) > 0 {
-		_ = unmarshalJSON(raw.MimeType, &decoded.MimeType)
+		var value *string
+		if err := unmarshalJSON(raw.MimeType, &value); err == nil {
+			decoded.MimeType = value
+		}
 	}
 	*c = BlobResourceContents(decoded)
 	return nil
@@ -655,6 +1138,27 @@ func (c *BlobResourceContents) UnmarshalJSON(data []byte) error {
 // Supplying `{}` means the client supports boolean session configuration options.
 type BooleanConfigOptionCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *BooleanConfigOptionCapabilities) UnmarshalJSON(data []byte) error {
+	type alias BooleanConfigOptionCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = BooleanConfigOptionCapabilities(decoded)
+	return nil
 }
 
 // BooleanPropertySchema: Schema for boolean properties in an elicitation form.
@@ -670,6 +1174,7 @@ func (s *BooleanPropertySchema) UnmarshalJSON(data []byte) error {
 	type alias BooleanPropertySchema
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Default     json.RawMessage `json:"default"`
 		Description json.RawMessage `json:"description"`
 		Title       json.RawMessage `json:"title"`
@@ -678,14 +1183,29 @@ func (s *BooleanPropertySchema) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Default) > 0 {
-		_ = unmarshalJSON(raw.Default, &decoded.Default)
+		var value *bool
+		if err := unmarshalJSON(raw.Default, &value); err == nil {
+			decoded.Default = value
+		}
 	}
 	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+		var value *string
+		if err := unmarshalJSON(raw.Description, &value); err == nil {
+			decoded.Description = value
+		}
 	}
 	if len(raw.Title) > 0 {
-		_ = unmarshalJSON(raw.Title, &decoded.Title)
+		var value *string
+		if err := unmarshalJSON(raw.Title, &value); err == nil {
+			decoded.Title = value
+		}
 	}
 	*s = BooleanPropertySchema(decoded)
 	return nil
@@ -697,6 +1217,30 @@ func (s *BooleanPropertySchema) UnmarshalJSON(data []byte) error {
 type CancelNotification struct {
 	Meta      Meta      `json:"_meta,omitzero"`
 	SessionID SessionId `json:"sessionId"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (n *CancelNotification) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId"}, []string{"sessionId"}); err != nil {
+		return err
+	}
+	type alias CancelNotification
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*n = CancelNotification(decoded)
+	return nil
 }
 
 // ClientCapabilities: Capabilities supported by the client.
@@ -721,6 +1265,7 @@ func (c *ClientCapabilities) UnmarshalJSON(data []byte) error {
 	type alias ClientCapabilities
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Auth        json.RawMessage `json:"auth"`
 		Elicitation json.RawMessage `json:"elicitation"`
 		Fs          json.RawMessage `json:"fs"`
@@ -733,26 +1278,53 @@ func (c *ClientCapabilities) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Auth) > 0 {
-		_ = unmarshalJSON(raw.Auth, &decoded.Auth)
+		var value *AuthCapabilities
+		if err := unmarshalJSON(raw.Auth, &value); err == nil {
+			decoded.Auth = value
+		}
 	}
 	if len(raw.Elicitation) > 0 {
-		_ = unmarshalJSON(raw.Elicitation, &decoded.Elicitation)
+		var value *ElicitationCapabilities
+		if err := unmarshalJSON(raw.Elicitation, &value); err == nil {
+			decoded.Elicitation = value
+		}
 	}
 	if len(raw.Fs) > 0 {
-		_ = unmarshalJSON(raw.Fs, &decoded.Fs)
+		var value *FileSystemCapabilities
+		if err := unmarshalJSON(raw.Fs, &value); err == nil {
+			decoded.Fs = value
+		}
 	}
 	if len(raw.Plan) > 0 {
-		_ = unmarshalJSON(raw.Plan, &decoded.Plan)
+		var value *PlanCapabilities
+		if err := unmarshalJSON(raw.Plan, &value); err == nil {
+			decoded.Plan = value
+		}
 	}
 	if len(raw.Session) > 0 {
-		_ = unmarshalJSON(raw.Session, &decoded.Session)
+		var value *ClientSessionCapabilities
+		if err := unmarshalJSON(raw.Session, &value); err == nil {
+			decoded.Session = value
+		}
 	}
 	if len(raw.Subagents) > 0 {
-		_ = unmarshalJSON(raw.Subagents, &decoded.Subagents)
+		var value *SubagentCapabilities
+		if err := unmarshalJSON(raw.Subagents, &value); err == nil {
+			decoded.Subagents = value
+		}
 	}
 	if len(raw.Terminal) > 0 {
-		_ = unmarshalJSON(raw.Terminal, &decoded.Terminal)
+		var value bool
+		if err := unmarshalJSON(raw.Terminal, &value); err == nil {
+			decoded.Terminal = value
+		}
 	}
 	*c = ClientCapabilities(decoded)
 	return nil
@@ -771,6 +1343,7 @@ func (c *ClientSessionCapabilities) UnmarshalJSON(data []byte) error {
 	type alias ClientSessionCapabilities
 	decoded := alias{}
 	raw := struct {
+		Meta          json.RawMessage `json:"_meta"`
 		Compaction    json.RawMessage `json:"compaction"`
 		ConfigOptions json.RawMessage `json:"configOptions"`
 		Notices       json.RawMessage `json:"notices"`
@@ -779,14 +1352,29 @@ func (c *ClientSessionCapabilities) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Compaction) > 0 {
-		_ = unmarshalJSON(raw.Compaction, &decoded.Compaction)
+		var value *CompactionCapabilities
+		if err := unmarshalJSON(raw.Compaction, &value); err == nil {
+			decoded.Compaction = value
+		}
 	}
 	if len(raw.ConfigOptions) > 0 {
-		_ = unmarshalJSON(raw.ConfigOptions, &decoded.ConfigOptions)
+		var value *SessionConfigOptionsCapabilities
+		if err := unmarshalJSON(raw.ConfigOptions, &value); err == nil {
+			decoded.ConfigOptions = value
+		}
 	}
 	if len(raw.Notices) > 0 {
-		_ = unmarshalJSON(raw.Notices, &decoded.Notices)
+		var value *NoticeCapabilities
+		if err := unmarshalJSON(raw.Notices, &value); err == nil {
+			decoded.Notices = value
+		}
 	}
 	*c = ClientSessionCapabilities(decoded)
 	return nil
@@ -804,9 +1392,54 @@ type CloseSessionRequest struct {
 	SessionID SessionId `json:"sessionId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *CloseSessionRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId"}, []string{"sessionId"}); err != nil {
+		return err
+	}
+	type alias CloseSessionRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = CloseSessionRequest(decoded)
+	return nil
+}
+
 // CloseSessionResponse: Response from closing a session.
 type CloseSessionResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *CloseSessionResponse) UnmarshalJSON(data []byte) error {
+	type alias CloseSessionResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = CloseSessionResponse(decoded)
+	return nil
 }
 
 // CompactionCapabilities: Client support for ID-addressed context compaction updates.
@@ -845,6 +1478,30 @@ type CompactionSummaryChunk struct {
 	Content      ContentBlock `json:"content"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *CompactionSummaryChunk) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"compactionId", "content"}, []string{"compactionId", "content"}); err != nil {
+		return err
+	}
+	type alias CompactionSummaryChunk
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = CompactionSummaryChunk(decoded)
+	return nil
+}
+
 // CompactionUpdate: A context compaction upsert. The first notification fixes the compaction's
 // timeline position. Later updates with the same ID patch that entity in place.
 // Agents MUST only send this update when the Client advertised
@@ -859,47 +1516,39 @@ type CompactionUpdate struct {
 	Error        *string          `json:"error,omitempty"`
 	Status       CompactionStatus `json:"status"`
 	Summary      *[]ContentBlock  `json:"summary,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *CompactionUpdate) UnmarshalJSON(data []byte) error {
-	type alias CompactionUpdate
-	decoded := alias{}
-	raw := struct {
-		Error   json.RawMessage `json:"error"`
-		Summary json.RawMessage `json:"summary"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Error) > 0 {
-		_ = unmarshalJSON(raw.Error, &decoded.Error)
-	}
-	if len(raw.Summary) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.Summary, &values); err == nil && values != nil {
-			items := []ContentBlock{}
-			for _, value := range values {
-				var item ContentBlock
-				if err := unmarshalJSON(value, &item); err == nil {
-					switch item.Type {
-					case ContentBlockTypeText, ContentBlockTypeImage, ContentBlockTypeAudio, ContentBlockTypeResourceLink, ContentBlockTypeResource:
-						items = append(items, item)
-					}
-				}
-			}
-			decoded.Summary = &items
-		}
-	}
-	*u = CompactionUpdate(decoded)
-	return nil
+	// NullFields lists JSON field names to send as explicit null, regardless of their values.
+	// Decoding records explicit nulls here, separately from omitted fields.
+	NullFields []string `json:"-"`
 }
 
 // CompleteElicitationNotification: Notification sent by the agent when a URL-based elicitation is complete.
 type CompleteElicitationNotification struct {
 	Meta          Meta          `json:"_meta,omitzero"`
 	ElicitationID ElicitationId `json:"elicitationId"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (n *CompleteElicitationNotification) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"elicitationId"}, []string{"elicitationId"}); err != nil {
+		return err
+	}
+	type alias CompleteElicitationNotification
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*n = CompleteElicitationNotification(decoded)
+	return nil
 }
 
 // ConfigOptionUpdate: Session configuration options have been updated.
@@ -920,14 +1569,24 @@ func (u ConfigOptionUpdate) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (u *ConfigOptionUpdate) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"configOptions"}, []string{}); err != nil {
+		return err
+	}
 	type alias ConfigOptionUpdate
 	decoded := alias{}
 	raw := struct {
+		Meta          json.RawMessage `json:"_meta"`
 		ConfigOptions json.RawMessage `json:"configOptions"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
 	}
 	if len(raw.ConfigOptions) > 0 {
 		var values []json.RawMessage
@@ -935,7 +1594,7 @@ func (u *ConfigOptionUpdate) UnmarshalJSON(data []byte) error {
 			decoded.ConfigOptions = []SessionConfigOption{}
 			for _, value := range values {
 				var item SessionConfigOption
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
 						decoded.ConfigOptions = append(decoded.ConfigOptions, item)
@@ -952,6 +1611,30 @@ func (u *ConfigOptionUpdate) UnmarshalJSON(data []byte) error {
 type Content struct {
 	Meta    Meta         `json:"_meta,omitzero"`
 	Content ContentBlock `json:"content"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *Content) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"content"}, []string{"content"}); err != nil {
+		return err
+	}
+	type alias Content
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = Content(decoded)
+	return nil
 }
 
 // ContentBlock: Content blocks represent displayable information in the Agent Client Protocol.
@@ -973,7 +1656,7 @@ type ContentBlock struct {
 	Description *string                  `json:"description,omitempty"`
 	MimeType    *string                  `json:"mimeType,omitempty"`
 	Name        string                   `json:"name,omitempty"`
-	Resource    EmbeddedResourceResource `json:"resource,omitempty,omitzero"`
+	Resource    EmbeddedResourceResource `json:"resource,omitzero"`
 	Size        *int64                   `json:"size,omitempty"`
 	Text        string                   `json:"text,omitempty"`
 	Title       *string                  `json:"title,omitempty"`
@@ -1110,78 +1793,254 @@ func (b ContentBlock) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the selected schema variant.
 func (b *ContentBlock) UnmarshalJSON(data []byte) error {
 	type alias ContentBlock
-	decoded := alias{}
-	raw := struct {
+	var decoded alias
+	var raw struct {
+		Type        json.RawMessage `json:"type"`
+		Meta        json.RawMessage `json:"_meta"`
 		Annotations json.RawMessage `json:"annotations"`
+		Data        json.RawMessage `json:"data"`
 		Description json.RawMessage `json:"description"`
 		MimeType    json.RawMessage `json:"mimeType"`
+		Name        json.RawMessage `json:"name"`
+		Resource    json.RawMessage `json:"resource"`
 		Size        json.RawMessage `json:"size"`
+		Text        json.RawMessage `json:"text"`
 		Title       json.RawMessage `json:"title"`
 		URI         json.RawMessage `json:"uri"`
-		*alias
-	}{alias: &decoded}
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Annotations) > 0 {
-		_ = unmarshalJSON(raw.Annotations, &decoded.Annotations)
+	var tag ContentBlockType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
 	}
-	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
-	}
-	if len(raw.MimeType) > 0 {
-		switch decoded.Type {
-		case ContentBlockTypeImage:
-			var value string
-			if err := unmarshalJSON(raw.MimeType, &value); err != nil {
+	var err error
+	switch tag {
+	case "text":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "text"}, []string{"text", "type"}); err != nil {
 				return err
 			}
-			decoded.MimeType = func(v string) *string {
-				converted := string(v)
-				return &converted
-			}(value)
-		case ContentBlockTypeAudio:
-			var value string
-			if err := unmarshalJSON(raw.MimeType, &value); err != nil {
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Annotations) > 0 {
+				var value *Annotations
+				if err := unmarshalJSON(raw.Annotations, &value); err == nil {
+					decoded.Annotations = value
+				}
+			}
+			if len(raw.Text) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Text, &value); err != nil {
+					return err
+				}
+				decoded.Text = value
+			}
+			return nil
+		}()
+	case "image":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "data", "mimeType"}, []string{"data", "mimeType", "type"}); err != nil {
 				return err
 			}
-			decoded.MimeType = func(v string) *string {
-				converted := string(v)
-				return &converted
-			}(value)
-		case ContentBlockTypeResourceLink:
-			var value *string
-			if err := unmarshalJSON(raw.MimeType, &value); err == nil {
-				decoded.MimeType = value
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
 			}
-		}
-	}
-	if len(raw.Size) > 0 {
-		_ = unmarshalJSON(raw.Size, &decoded.Size)
-	}
-	if len(raw.Title) > 0 {
-		_ = unmarshalJSON(raw.Title, &decoded.Title)
-	}
-	if len(raw.URI) > 0 {
-		switch decoded.Type {
-		case ContentBlockTypeImage:
-			var value *string
-			if err := unmarshalJSON(raw.URI, &value); err == nil {
-				decoded.URI = value
+			if len(raw.Annotations) > 0 {
+				var value *Annotations
+				if err := unmarshalJSON(raw.Annotations, &value); err == nil {
+					decoded.Annotations = value
+				}
 			}
-		case ContentBlockTypeResourceLink:
-			var value string
-			if err := unmarshalJSON(raw.URI, &value); err != nil {
+			if len(raw.Data) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Data, &value); err != nil {
+					return err
+				}
+				decoded.Data = value
+			}
+			if len(raw.MimeType) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.MimeType, &value); err != nil {
+					return err
+				}
+				decoded.MimeType = func(v string) *string {
+					converted := string(v)
+					return &converted
+				}(value)
+			}
+			if len(raw.URI) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.URI, &value); err == nil {
+					decoded.URI = value
+				}
+			}
+			return nil
+		}()
+	case "audio":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "data", "mimeType"}, []string{"data", "mimeType", "type"}); err != nil {
 				return err
 			}
-			decoded.URI = func(v string) *string {
-				converted := string(v)
-				return &converted
-			}(value)
-		}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Annotations) > 0 {
+				var value *Annotations
+				if err := unmarshalJSON(raw.Annotations, &value); err == nil {
+					decoded.Annotations = value
+				}
+			}
+			if len(raw.Data) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Data, &value); err != nil {
+					return err
+				}
+				decoded.Data = value
+			}
+			if len(raw.MimeType) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.MimeType, &value); err != nil {
+					return err
+				}
+				decoded.MimeType = func(v string) *string {
+					converted := string(v)
+					return &converted
+				}(value)
+			}
+			return nil
+		}()
+	case "resource_link":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "name", "uri"}, []string{"name", "type", "uri"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Annotations) > 0 {
+				var value *Annotations
+				if err := unmarshalJSON(raw.Annotations, &value); err == nil {
+					decoded.Annotations = value
+				}
+			}
+			if len(raw.Description) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Description, &value); err == nil {
+					decoded.Description = value
+				}
+			}
+			if len(raw.MimeType) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.MimeType, &value); err == nil {
+					decoded.MimeType = value
+				}
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			if len(raw.Size) > 0 {
+				var value *int64
+				if err := unmarshalJSON(raw.Size, &value); err == nil {
+					decoded.Size = value
+				}
+			}
+			if len(raw.Title) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Title, &value); err == nil {
+					decoded.Title = value
+				}
+			}
+			if len(raw.URI) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.URI, &value); err != nil {
+					return err
+				}
+				decoded.URI = func(v string) *string {
+					converted := string(v)
+					return &converted
+				}(value)
+			}
+			return nil
+		}()
+	case "resource":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "resource"}, []string{"resource", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Annotations) > 0 {
+				var value *Annotations
+				if err := unmarshalJSON(raw.Annotations, &value); err == nil {
+					decoded.Annotations = value
+				}
+			}
+			if len(raw.Resource) > 0 {
+				var value EmbeddedResourceResource
+				if err := unmarshalJSON(raw.Resource, &value); err != nil {
+					return err
+				}
+				decoded.Resource = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("ContentBlock: unknown type %q", tag)
+	}
+	if err != nil {
+		return err
 	}
 	*b = ContentBlock(decoded)
 	return nil
@@ -1196,17 +2055,30 @@ type ContentChunk struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (c *ContentChunk) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"content"}, []string{"content"}); err != nil {
+		return err
+	}
 	type alias ContentChunk
 	decoded := alias{}
 	raw := struct {
+		Meta      json.RawMessage `json:"_meta"`
 		MessageID json.RawMessage `json:"messageId"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.MessageID) > 0 {
-		_ = unmarshalJSON(raw.MessageID, &decoded.MessageID)
+		var value *MessageId
+		if err := unmarshalJSON(raw.MessageID, &value); err == nil {
+			decoded.MessageID = value
+		}
 	}
 	*c = ContentChunk(decoded)
 	return nil
@@ -1219,21 +2091,50 @@ type Cost struct {
 	Currency string  `json:"currency"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *Cost) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"amount", "currency"}, []string{"amount", "currency"}); err != nil {
+		return err
+	}
+	type alias Cost
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = Cost(decoded)
+	return nil
+}
+
 // CreateElicitationRequest: Request from the agent to elicit structured user input.
 //
 // The agent sends this to the client to request information from the user,
 // either via a form or by directing them to a URL.
 // Elicitations are tied to a session (optionally a tool call) or a request.
 type CreateElicitationRequest struct {
+	// requiredFields retains selected nested scalar fields even when they are zero.
+	requiredFields  []string
 	Mode            CreateElicitationRequestType `json:"mode"`
 	Meta            Meta                         `json:"_meta,omitzero"`
 	ElicitationID   ElicitationId                `json:"elicitationId,omitempty"`
 	Message         string                       `json:"message"`
 	RequestID       RequestId                    `json:"requestId,omitempty"`
-	RequestedSchema ElicitationSchema            `json:"requestedSchema,omitempty,omitzero"`
+	RequestedSchema ElicitationSchema            `json:"requestedSchema,omitzero"`
 	SessionID       SessionId                    `json:"sessionId,omitempty"`
 	ToolCallID      *ToolCallId                  `json:"toolCallId,omitempty"`
 	Url             string                       `json:"url,omitempty"`
+	// ExtraFields retains extension properties explicitly permitted by the schema.
+	// Known properties take precedence when encoding.
+	ExtraFields map[string]json.RawMessage `json:"-"`
 }
 
 // CreateElicitationRequestType is the discriminator for CreateElicitationRequest variants.
@@ -1287,6 +2188,7 @@ func (r CreateElicitationRequest) MarshalJSON() ([]byte, error) {
 		RequestedSchema *ElicitationSchema `json:"requestedSchema,omitempty"`
 		ElicitationID   *ElicitationId     `json:"elicitationId,omitempty"`
 		Url             *string            `json:"url,omitempty"`
+		SessionID       *SessionId         `json:"sessionId,omitempty"`
 	}
 	w := wire{alias: (*alias)(&r)}
 	if !reflect.ValueOf(r.RequestedSchema).IsZero() {
@@ -1301,6 +2203,14 @@ func (r CreateElicitationRequest) MarshalJSON() ([]byte, error) {
 		Url := r.Url
 		w.Url = &Url
 	}
+	if !reflect.ValueOf(r.SessionID).IsZero() {
+		SessionID := r.SessionID
+		w.SessionID = &SessionID
+	}
+	if slices.Contains(r.requiredFields, "sessionId") {
+		SessionID := r.SessionID
+		w.SessionID = &SessionID
+	}
 	switch r.Mode {
 	case CreateElicitationRequestTypeForm:
 		RequestedSchema := r.RequestedSchema
@@ -1311,22 +2221,336 @@ func (r CreateElicitationRequest) MarshalJSON() ([]byte, error) {
 		Url := r.Url
 		w.Url = &Url
 	}
-	return json.Marshal(w)
+	switch r.Mode {
+	case "form":
+		return json.Marshal(w)
+	case "url":
+		return json.Marshal(w)
+	default:
+		return marshalJSONWithExtraFields(w, r.ExtraFields, []string{"_meta", "message", "mode", "requestId", "sessionId", "toolCallId"})
+	}
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the selected schema variant.
 func (r *CreateElicitationRequest) UnmarshalJSON(data []byte) error {
 	type alias CreateElicitationRequest
-	decoded := alias{}
-	raw := struct {
-		ToolCallID json.RawMessage `json:"toolCallId"`
-		*alias
-	}{alias: &decoded}
+	var decoded alias
+	var raw struct {
+		Mode            json.RawMessage `json:"mode"`
+		Meta            json.RawMessage `json:"_meta"`
+		ElicitationID   json.RawMessage `json:"elicitationId"`
+		Message         json.RawMessage `json:"message"`
+		RequestID       json.RawMessage `json:"requestId"`
+		RequestedSchema json.RawMessage `json:"requestedSchema"`
+		SessionID       json.RawMessage `json:"sessionId"`
+		ToolCallID      json.RawMessage `json:"toolCallId"`
+		Url             json.RawMessage `json:"url"`
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.ToolCallID) > 0 {
-		_ = unmarshalJSON(raw.ToolCallID, &decoded.ToolCallID)
+	var tag CreateElicitationRequestType
+	var tagErr error
+	if len(raw.Mode) > 0 {
+		tagErr = unmarshalJSON(raw.Mode, &tag)
+	}
+	var err error
+	switch tag {
+	case "form":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Mode = tag
+			if err := requireJSONProperties(data, []string{"message", "mode", "requestedSchema", "sessionId"}, []string{"message", "mode", "requestedSchema", "sessionId"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Message) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Message, &value); err != nil {
+					return err
+				}
+				decoded.Message = value
+			}
+			if len(raw.RequestedSchema) > 0 {
+				var value ElicitationSchema
+				if err := unmarshalJSON(raw.RequestedSchema, &value); err != nil {
+					return err
+				}
+				decoded.RequestedSchema = value
+			}
+			if len(raw.SessionID) > 0 {
+				var value SessionId
+				if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+					return err
+				}
+				decoded.SessionID = value
+			}
+			if len(raw.ToolCallID) > 0 {
+				var value *ToolCallId
+				if err := unmarshalJSON(raw.ToolCallID, &value); err == nil {
+					decoded.ToolCallID = value
+				}
+			}
+			decoded.requiredFields = []string{"message", "mode", "requestedSchema", "sessionId"}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.Mode = tag
+				if err := requireJSONProperties(data, []string{"message", "mode", "requestedSchema", "requestId"}, []string{"message", "mode", "requestedSchema"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Message) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Message, &value); err != nil {
+						return err
+					}
+					decoded.Message = value
+				}
+				if len(raw.RequestID) > 0 {
+					var value RequestId
+					if err := func() error {
+						if err := func(data []byte) error {
+							return validateJSONUnion(data, validateJSONNull, validateJSONType[int64], validateJSONType[string])
+						}(raw.RequestID); err != nil {
+							return err
+						}
+						return unmarshalJSON(raw.RequestID, &value)
+					}(); err != nil {
+						return err
+					}
+					decoded.RequestID = value
+				}
+				if len(raw.RequestedSchema) > 0 {
+					var value ElicitationSchema
+					if err := unmarshalJSON(raw.RequestedSchema, &value); err != nil {
+						return err
+					}
+					decoded.RequestedSchema = value
+				}
+				decoded.requiredFields = []string{"message", "mode", "requestedSchema", "requestId"}
+				return nil
+			}()
+		}
+	case "url":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Mode = tag
+			if err := requireJSONProperties(data, []string{"message", "mode", "elicitationId", "url", "sessionId"}, []string{"elicitationId", "message", "mode", "sessionId", "url"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.ElicitationID) > 0 {
+				var value ElicitationId
+				if err := unmarshalJSON(raw.ElicitationID, &value); err != nil {
+					return err
+				}
+				decoded.ElicitationID = value
+			}
+			if len(raw.Message) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Message, &value); err != nil {
+					return err
+				}
+				decoded.Message = value
+			}
+			if len(raw.SessionID) > 0 {
+				var value SessionId
+				if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+					return err
+				}
+				decoded.SessionID = value
+			}
+			if len(raw.ToolCallID) > 0 {
+				var value *ToolCallId
+				if err := unmarshalJSON(raw.ToolCallID, &value); err == nil {
+					decoded.ToolCallID = value
+				}
+			}
+			if len(raw.Url) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Url, &value); err != nil {
+					return err
+				}
+				decoded.Url = value
+			}
+			decoded.requiredFields = []string{"message", "mode", "elicitationId", "url", "sessionId"}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.Mode = tag
+				if err := requireJSONProperties(data, []string{"message", "mode", "elicitationId", "url", "requestId"}, []string{"elicitationId", "message", "mode", "url"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.ElicitationID) > 0 {
+					var value ElicitationId
+					if err := unmarshalJSON(raw.ElicitationID, &value); err != nil {
+						return err
+					}
+					decoded.ElicitationID = value
+				}
+				if len(raw.Message) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Message, &value); err != nil {
+						return err
+					}
+					decoded.Message = value
+				}
+				if len(raw.RequestID) > 0 {
+					var value RequestId
+					if err := func() error {
+						if err := func(data []byte) error {
+							return validateJSONUnion(data, validateJSONNull, validateJSONType[int64], validateJSONType[string])
+						}(raw.RequestID); err != nil {
+							return err
+						}
+						return unmarshalJSON(raw.RequestID, &value)
+					}(); err != nil {
+						return err
+					}
+					decoded.RequestID = value
+				}
+				if len(raw.Url) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Url, &value); err != nil {
+						return err
+					}
+					decoded.Url = value
+				}
+				decoded.requiredFields = []string{"message", "mode", "elicitationId", "url", "requestId"}
+				return nil
+			}()
+		}
+	default:
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Mode = tag
+			if err := requireJSONProperties(data, []string{"message", "mode", "sessionId"}, []string{"message", "mode", "sessionId"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Message) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Message, &value); err != nil {
+					return err
+				}
+				decoded.Message = value
+			}
+			if len(raw.SessionID) > 0 {
+				var value SessionId
+				if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+					return err
+				}
+				decoded.SessionID = value
+			}
+			if len(raw.ToolCallID) > 0 {
+				var value *ToolCallId
+				if err := unmarshalJSON(raw.ToolCallID, &value); err == nil {
+					decoded.ToolCallID = value
+				}
+			}
+			decoded.requiredFields = []string{"message", "mode", "sessionId"}
+			extra, err := captureJSONExtraFields(data, []string{"_meta", "message", "mode", "sessionId", "toolCallId"})
+			if err != nil {
+				return err
+			}
+			decoded.ExtraFields = extra
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.Mode = tag
+				if err := requireJSONProperties(data, []string{"message", "mode", "requestId"}, []string{"message", "mode"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Message) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Message, &value); err != nil {
+						return err
+					}
+					decoded.Message = value
+				}
+				if len(raw.RequestID) > 0 {
+					var value RequestId
+					if err := func() error {
+						if err := func(data []byte) error {
+							return validateJSONUnion(data, validateJSONNull, validateJSONType[int64], validateJSONType[string])
+						}(raw.RequestID); err != nil {
+							return err
+						}
+						return unmarshalJSON(raw.RequestID, &value)
+					}(); err != nil {
+						return err
+					}
+					decoded.RequestID = value
+				}
+				decoded.requiredFields = []string{"message", "mode", "requestId"}
+				extra, err := captureJSONExtraFields(data, []string{"_meta", "message", "mode", "requestId"})
+				if err != nil {
+					return err
+				}
+				decoded.ExtraFields = extra
+				return nil
+			}()
+		}
+	}
+	if err != nil {
+		return err
 	}
 	*r = CreateElicitationRequest(decoded)
 	return nil
@@ -1337,6 +2561,9 @@ type CreateElicitationResponse struct {
 	Action  CreateElicitationResponseType       `json:"action"`
 	Meta    Meta                                `json:"_meta,omitzero"`
 	Content *map[string]ElicitationContentValue `json:"content,omitempty"`
+	// ExtraFields retains extension properties explicitly permitted by the schema.
+	// Known properties take precedence when encoding.
+	ExtraFields map[string]json.RawMessage `json:"-"`
 }
 
 // CreateElicitationResponseType is the discriminator for CreateElicitationResponse variants.
@@ -1384,6 +2611,148 @@ func OtherCreateElicitationResponse(action string) CreateElicitationResponse {
 	}
 }
 
+// MarshalJSON retains explicit extension fields for open variants.
+func (r CreateElicitationResponse) MarshalJSON() ([]byte, error) {
+	type alias CreateElicitationResponse
+	switch r.Action {
+	case "accept":
+		return json.Marshal(alias(r))
+	case "decline":
+		return json.Marshal(alias(r))
+	case "cancel":
+		return json.Marshal(alias(r))
+	default:
+		return marshalJSONWithExtraFields(alias(r), r.ExtraFields, []string{"_meta", "action"})
+	}
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (r *CreateElicitationResponse) UnmarshalJSON(data []byte) error {
+	type alias CreateElicitationResponse
+	var decoded alias
+	var raw struct {
+		Action  json.RawMessage `json:"action"`
+		Meta    json.RawMessage `json:"_meta"`
+		Content json.RawMessage `json:"content"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag CreateElicitationResponseType
+	var tagErr error
+	if len(raw.Action) > 0 {
+		tagErr = unmarshalJSON(raw.Action, &tag)
+	}
+	var err error
+	switch tag {
+	case "accept":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Action = tag
+			if err := requireJSONProperties(data, []string{"action"}, []string{"action"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Content) > 0 {
+				var value *map[string]ElicitationContentValue
+				if err := func() error {
+					if err := func(data []byte) error {
+						if isJSONNull(data) {
+							return nil
+						}
+						return func(data []byte) error {
+							return validateJSONMapValues(data, func(data []byte) error {
+								return validateJSONUnion(data, validateJSONType[string], validateJSONType[int64], validateJSONType[float64], validateJSONType[bool], func(data []byte) error {
+									return validateJSONArrayValues(data, validateJSONType[string])
+								})
+							})
+						}(data)
+					}(raw.Content); err != nil {
+						return err
+					}
+					return unmarshalJSON(raw.Content, &value)
+				}(); err != nil {
+					return err
+				}
+				decoded.Content = value
+			}
+			return nil
+		}()
+	case "decline":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Action = tag
+			if err := requireJSONProperties(data, []string{"action"}, []string{"action"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			return nil
+		}()
+	case "cancel":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Action = tag
+			if err := requireJSONProperties(data, []string{"action"}, []string{"action"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			return nil
+		}()
+	default:
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Action = tag
+			if err := requireJSONProperties(data, []string{"action"}, []string{"action"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			extra, err := captureJSONExtraFields(data, []string{"_meta", "action"})
+			if err != nil {
+				return err
+			}
+			decoded.ExtraFields = extra
+			return nil
+		}()
+	}
+	if err != nil {
+		return err
+	}
+	*r = CreateElicitationResponse(decoded)
+	return nil
+}
+
 // CreateTerminalRequest: Request to create a new terminal and execute a command.
 type CreateTerminalRequest struct {
 	Meta            Meta          `json:"_meta,omitzero"`
@@ -1395,10 +2764,58 @@ type CreateTerminalRequest struct {
 	SessionID       SessionId     `json:"sessionId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *CreateTerminalRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId", "command"}, []string{"command", "sessionId"}); err != nil {
+		return err
+	}
+	type alias CreateTerminalRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = CreateTerminalRequest(decoded)
+	return nil
+}
+
 // CreateTerminalResponse: Response containing the ID of the created terminal.
 type CreateTerminalResponse struct {
 	Meta       Meta       `json:"_meta,omitzero"`
 	TerminalID TerminalId `json:"terminalId"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *CreateTerminalResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"terminalId"}, []string{"terminalId"}); err != nil {
+		return err
+	}
+	type alias CreateTerminalResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = CreateTerminalResponse(decoded)
+	return nil
 }
 
 // CurrentModeUpdate: The current mode of the session has changed
@@ -1409,6 +2826,30 @@ type CurrentModeUpdate struct {
 	CurrentModeID SessionModeId `json:"currentModeId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *CurrentModeUpdate) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"currentModeId"}, []string{"currentModeId"}); err != nil {
+		return err
+	}
+	type alias CurrentModeUpdate
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*u = CurrentModeUpdate(decoded)
+	return nil
+}
+
 // DeleteSessionRequest: Request parameters for deleting an existing session from `session/list`.
 //
 // Only available if the Agent supports the `sessionCapabilities.delete` capability.
@@ -1417,9 +2858,54 @@ type DeleteSessionRequest struct {
 	SessionID SessionId `json:"sessionId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *DeleteSessionRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId"}, []string{"sessionId"}); err != nil {
+		return err
+	}
+	type alias DeleteSessionRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = DeleteSessionRequest(decoded)
+	return nil
+}
+
 // DeleteSessionResponse: Response from deleting a session.
 type DeleteSessionResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *DeleteSessionResponse) UnmarshalJSON(data []byte) error {
+	type alias DeleteSessionResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = DeleteSessionResponse(decoded)
+	return nil
 }
 
 // Diff: A diff representing file modifications.
@@ -1436,17 +2922,30 @@ type Diff struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (d *Diff) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"path", "newText"}, []string{"newText", "path"}); err != nil {
+		return err
+	}
 	type alias Diff
 	decoded := alias{}
 	raw := struct {
+		Meta    json.RawMessage `json:"_meta"`
 		OldText json.RawMessage `json:"oldText"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.OldText) > 0 {
-		_ = unmarshalJSON(raw.OldText, &decoded.OldText)
+		var value *string
+		if err := unmarshalJSON(raw.OldText, &value); err == nil {
+			decoded.OldText = value
+		}
 	}
 	*d = Diff(decoded)
 	return nil
@@ -1462,6 +2961,30 @@ type DisableProviderRequest struct {
 	ProviderID ProviderId `json:"providerId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *DisableProviderRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"providerId"}, []string{"providerId"}); err != nil {
+		return err
+	}
+	type alias DisableProviderRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = DisableProviderRequest(decoded)
+	return nil
+}
+
 // DisableProviderResponse: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -1471,9 +2994,68 @@ type DisableProviderResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *DisableProviderResponse) UnmarshalJSON(data []byte) error {
+	type alias DisableProviderResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = DisableProviderResponse(decoded)
+	return nil
+}
+
 // ElicitationAcceptAction: The user accepted the elicitation and provided content.
 type ElicitationAcceptAction struct {
 	Content *map[string]ElicitationContentValue `json:"content,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (a *ElicitationAcceptAction) UnmarshalJSON(data []byte) error {
+	type alias ElicitationAcceptAction
+	decoded := alias{}
+	raw := struct {
+		Content json.RawMessage `json:"content"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Content) > 0 {
+		var value *map[string]ElicitationContentValue
+		if err := func() error {
+			if err := func(data []byte) error {
+				if isJSONNull(data) {
+					return nil
+				}
+				return func(data []byte) error {
+					return validateJSONMapValues(data, func(data []byte) error {
+						return validateJSONUnion(data, validateJSONType[string], validateJSONType[int64], validateJSONType[float64], validateJSONType[bool], func(data []byte) error {
+							return validateJSONArrayValues(data, validateJSONType[string])
+						})
+					})
+				}(data)
+			}(raw.Content); err != nil {
+				return err
+			}
+			return unmarshalJSON(raw.Content, &value)
+		}(); err != nil {
+			return err
+		}
+		decoded.Content = value
+	}
+	*a = ElicitationAcceptAction(decoded)
+	return nil
 }
 
 // ElicitationCapabilities: Elicitation capabilities supported by the client.
@@ -1488,6 +3070,7 @@ func (c *ElicitationCapabilities) UnmarshalJSON(data []byte) error {
 	type alias ElicitationCapabilities
 	decoded := alias{}
 	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
 		Form json.RawMessage `json:"form"`
 		Url  json.RawMessage `json:"url"`
 		*alias
@@ -1495,11 +3078,23 @@ func (c *ElicitationCapabilities) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Form) > 0 {
-		_ = unmarshalJSON(raw.Form, &decoded.Form)
+		var value *ElicitationFormCapabilities
+		if err := unmarshalJSON(raw.Form, &value); err == nil {
+			decoded.Form = value
+		}
 	}
 	if len(raw.Url) > 0 {
-		_ = unmarshalJSON(raw.Url, &decoded.Url)
+		var value *ElicitationUrlCapabilities
+		if err := unmarshalJSON(raw.Url, &value); err == nil {
+			decoded.Url = value
+		}
 	}
 	*c = ElicitationCapabilities(decoded)
 	return nil
@@ -1513,6 +3108,27 @@ type ElicitationContentValue = json.RawMessage
 // Supplying `{}` means the client supports form-based elicitation.
 type ElicitationFormCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *ElicitationFormCapabilities) UnmarshalJSON(data []byte) error {
+	type alias ElicitationFormCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = ElicitationFormCapabilities(decoded)
+	return nil
 }
 
 // ElicitationFormMode: Form-based elicitation mode where the client renders a form from the provided schema.
@@ -1540,22 +3156,90 @@ func RequestElicitationFormMode(requestedSchema ElicitationSchema, requestID Req
 	}
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the first valid schema alternative.
 func (m *ElicitationFormMode) UnmarshalJSON(data []byte) error {
 	type alias ElicitationFormMode
-	decoded := alias{}
-	raw := struct {
-		ToolCallID json.RawMessage `json:"toolCallId"`
-		*alias
-	}{alias: &decoded}
+	var decoded alias
+	var raw struct {
+		RequestID       json.RawMessage `json:"requestId"`
+		RequestedSchema json.RawMessage `json:"requestedSchema"`
+		SessionID       json.RawMessage `json:"sessionId"`
+		ToolCallID      json.RawMessage `json:"toolCallId"`
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.ToolCallID) > 0 {
-		_ = unmarshalJSON(raw.ToolCallID, &decoded.ToolCallID)
+	var err error
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"requestedSchema", "sessionId"}, []string{"requestedSchema", "sessionId"}); err != nil {
+			return err
+		}
+		if len(raw.RequestedSchema) > 0 {
+			var value ElicitationSchema
+			if err := unmarshalJSON(raw.RequestedSchema, &value); err != nil {
+				return err
+			}
+			decoded.RequestedSchema = value
+		}
+		if len(raw.SessionID) > 0 {
+			var value SessionId
+			if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+				return err
+			}
+			decoded.SessionID = func(v SessionId) *SessionId {
+				converted := SessionId(v)
+				return &converted
+			}(value)
+		}
+		if len(raw.ToolCallID) > 0 {
+			var value *ToolCallId
+			if err := unmarshalJSON(raw.ToolCallID, &value); err == nil {
+				decoded.ToolCallID = value
+			}
+		}
+		return nil
+	}()
+	if err == nil {
+		*m = ElicitationFormMode(decoded)
+		return nil
 	}
-	*m = ElicitationFormMode(decoded)
-	return nil
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"requestedSchema", "requestId"}, []string{"requestedSchema"}); err != nil {
+			return err
+		}
+		if len(raw.RequestID) > 0 {
+			var value RequestId
+			if err := func() error {
+				if err := func(data []byte) error {
+					return validateJSONUnion(data, validateJSONNull, validateJSONType[int64], validateJSONType[string])
+				}(raw.RequestID); err != nil {
+					return err
+				}
+				return unmarshalJSON(raw.RequestID, &value)
+			}(); err != nil {
+				return err
+			}
+			decoded.RequestID = func(v RequestId) *RequestId {
+				converted := RequestId(v)
+				return &converted
+			}(value)
+		}
+		if len(raw.RequestedSchema) > 0 {
+			var value ElicitationSchema
+			if err := unmarshalJSON(raw.RequestedSchema, &value); err != nil {
+				return err
+			}
+			decoded.RequestedSchema = value
+		}
+		return nil
+	}()
+	if err == nil {
+		*m = ElicitationFormMode(decoded)
+		return nil
+	}
+	return err
 }
 
 // ElicitationId: Unique identifier for an elicitation.
@@ -1573,7 +3257,7 @@ type ElicitationPropertySchema struct {
 	Description *string                       `json:"description,omitempty"`
 	Enum        *[]string                     `json:"enum,omitempty"`
 	Format      *StringFormat                 `json:"format,omitempty"`
-	Items       MultiSelectItems              `json:"items,omitempty,omitzero"`
+	Items       MultiSelectItems              `json:"items,omitzero"`
 	MaxItems    *uint64                       `json:"maxItems,omitempty"`
 	MaxLength   *uint32                       `json:"maxLength,omitempty"`
 	Maximum     any                           `json:"maximum,omitempty"`
@@ -1583,6 +3267,9 @@ type ElicitationPropertySchema struct {
 	OneOf       *[]EnumOption                 `json:"oneOf,omitempty"`
 	Pattern     *string                       `json:"pattern,omitempty"`
 	Title       *string                       `json:"title,omitempty"`
+	// ExtraFields retains extension properties explicitly permitted by the schema.
+	// Known properties take precedence when encoding.
+	ExtraFields map[string]json.RawMessage `json:"-"`
 }
 
 // ElicitationPropertySchemaType is the discriminator for ElicitationPropertySchema variants.
@@ -1664,63 +3351,352 @@ func (s ElicitationPropertySchema) MarshalJSON() ([]byte, error) {
 		Items := s.Items
 		w.Items = &Items
 	}
-	return json.Marshal(w)
+	switch s.Type {
+	case "string":
+		return json.Marshal(w)
+	case "number":
+		return json.Marshal(w)
+	case "integer":
+		return json.Marshal(w)
+	case "boolean":
+		return json.Marshal(w)
+	case "array":
+		return json.Marshal(w)
+	default:
+		return marshalJSONWithExtraFields(w, s.ExtraFields, []string{"type"})
+	}
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the selected schema variant.
 func (s *ElicitationPropertySchema) UnmarshalJSON(data []byte) error {
 	type alias ElicitationPropertySchema
-	decoded := alias{}
-	raw := struct {
+	var decoded alias
+	var raw struct {
+		Type        json.RawMessage `json:"type"`
+		Meta        json.RawMessage `json:"_meta"`
 		Default     json.RawMessage `json:"default"`
 		Description json.RawMessage `json:"description"`
+		Enum        json.RawMessage `json:"enum"`
+		Format      json.RawMessage `json:"format"`
+		Items       json.RawMessage `json:"items"`
+		MaxItems    json.RawMessage `json:"maxItems"`
+		MaxLength   json.RawMessage `json:"maxLength"`
+		Maximum     json.RawMessage `json:"maximum"`
+		MinItems    json.RawMessage `json:"minItems"`
+		MinLength   json.RawMessage `json:"minLength"`
+		Minimum     json.RawMessage `json:"minimum"`
+		OneOf       json.RawMessage `json:"oneOf"`
+		Pattern     json.RawMessage `json:"pattern"`
 		Title       json.RawMessage `json:"title"`
-		*alias
-	}{alias: &decoded}
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Default) > 0 {
-		switch decoded.Type {
-		case ElicitationPropertySchemaTypeString:
-			var value *string
-			if err := unmarshalJSON(raw.Default, &value); err == nil {
-				decoded.Default = value
+	var tag ElicitationPropertySchemaType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "string":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
 			}
-		case ElicitationPropertySchemaTypeNumber:
-			var value *float64
-			if err := unmarshalJSON(raw.Default, &value); err == nil {
-				decoded.Default = value
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type"}, []string{"type"}); err != nil {
+				return err
 			}
-		case ElicitationPropertySchemaTypeInteger:
-			var value *int64
-			if err := unmarshalJSON(raw.Default, &value); err == nil {
-				decoded.Default = value
-			}
-		case ElicitationPropertySchemaTypeBoolean:
-			var value *bool
-			if err := unmarshalJSON(raw.Default, &value); err == nil {
-				decoded.Default = value
-			}
-		case ElicitationPropertySchemaTypeArray:
-			var values []json.RawMessage
-			if err := unmarshalJSON(raw.Default, &values); err == nil && values != nil {
-				items := []string{}
-				for _, rawItem := range values {
-					var item string
-					if err := unmarshalJSON(rawItem, &item); err == nil {
-						items = append(items, item)
-					}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
 				}
-				decoded.Default = &items
 			}
-		}
+			if len(raw.Default) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Default, &value); err == nil {
+					decoded.Default = value
+				}
+			}
+			if len(raw.Description) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Description, &value); err == nil {
+					decoded.Description = value
+				}
+			}
+			if len(raw.Enum) > 0 {
+				var value *[]string
+				if err := unmarshalJSON(raw.Enum, &value); err != nil {
+					return err
+				}
+				decoded.Enum = value
+			}
+			if len(raw.Format) > 0 {
+				var value *StringFormat
+				if err := unmarshalJSON(raw.Format, &value); err != nil {
+					return err
+				}
+				decoded.Format = value
+			}
+			if len(raw.MaxLength) > 0 {
+				var value *uint32
+				if err := unmarshalJSON(raw.MaxLength, &value); err != nil {
+					return err
+				}
+				decoded.MaxLength = value
+			}
+			if len(raw.MinLength) > 0 {
+				var value *uint32
+				if err := unmarshalJSON(raw.MinLength, &value); err != nil {
+					return err
+				}
+				decoded.MinLength = value
+			}
+			if len(raw.OneOf) > 0 {
+				var value *[]EnumOption
+				if err := unmarshalJSON(raw.OneOf, &value); err != nil {
+					return err
+				}
+				decoded.OneOf = value
+			}
+			if len(raw.Pattern) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Pattern, &value); err != nil {
+					return err
+				}
+				decoded.Pattern = value
+			}
+			if len(raw.Title) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Title, &value); err == nil {
+					decoded.Title = value
+				}
+			}
+			return nil
+		}()
+	case "number":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type"}, []string{"type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Default) > 0 {
+				var value *float64
+				if err := unmarshalJSON(raw.Default, &value); err == nil {
+					decoded.Default = value
+				}
+			}
+			if len(raw.Description) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Description, &value); err == nil {
+					decoded.Description = value
+				}
+			}
+			if len(raw.Maximum) > 0 {
+				var value *float64
+				if err := unmarshalJSON(raw.Maximum, &value); err != nil {
+					return err
+				}
+				decoded.Maximum = value
+			}
+			if len(raw.Minimum) > 0 {
+				var value *float64
+				if err := unmarshalJSON(raw.Minimum, &value); err != nil {
+					return err
+				}
+				decoded.Minimum = value
+			}
+			if len(raw.Title) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Title, &value); err == nil {
+					decoded.Title = value
+				}
+			}
+			return nil
+		}()
+	case "integer":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type"}, []string{"type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Default) > 0 {
+				var value *int64
+				if err := unmarshalJSON(raw.Default, &value); err == nil {
+					decoded.Default = value
+				}
+			}
+			if len(raw.Description) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Description, &value); err == nil {
+					decoded.Description = value
+				}
+			}
+			if len(raw.Maximum) > 0 {
+				var value *int64
+				if err := unmarshalJSON(raw.Maximum, &value); err != nil {
+					return err
+				}
+				decoded.Maximum = value
+			}
+			if len(raw.Minimum) > 0 {
+				var value *int64
+				if err := unmarshalJSON(raw.Minimum, &value); err != nil {
+					return err
+				}
+				decoded.Minimum = value
+			}
+			if len(raw.Title) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Title, &value); err == nil {
+					decoded.Title = value
+				}
+			}
+			return nil
+		}()
+	case "boolean":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type"}, []string{"type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Default) > 0 {
+				var value *bool
+				if err := unmarshalJSON(raw.Default, &value); err == nil {
+					decoded.Default = value
+				}
+			}
+			if len(raw.Description) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Description, &value); err == nil {
+					decoded.Description = value
+				}
+			}
+			if len(raw.Title) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Title, &value); err == nil {
+					decoded.Title = value
+				}
+			}
+			return nil
+		}()
+	case "array":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "items"}, []string{"items", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Default) > 0 {
+				var values []json.RawMessage
+				if err := unmarshalJSON(raw.Default, &values); err == nil && values != nil {
+					items := []string{}
+					for _, rawItem := range values {
+						var item string
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
+							items = append(items, item)
+						}
+					}
+					decoded.Default = &items
+				}
+			}
+			if len(raw.Description) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Description, &value); err == nil {
+					decoded.Description = value
+				}
+			}
+			if len(raw.Items) > 0 {
+				var value MultiSelectItems
+				if err := unmarshalJSON(raw.Items, &value); err != nil {
+					return err
+				}
+				decoded.Items = value
+			}
+			if len(raw.MaxItems) > 0 {
+				var value *uint64
+				if err := unmarshalJSON(raw.MaxItems, &value); err != nil {
+					return err
+				}
+				decoded.MaxItems = value
+			}
+			if len(raw.MinItems) > 0 {
+				var value *uint64
+				if err := unmarshalJSON(raw.MinItems, &value); err != nil {
+					return err
+				}
+				decoded.MinItems = value
+			}
+			if len(raw.Title) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Title, &value); err == nil {
+					decoded.Title = value
+				}
+			}
+			return nil
+		}()
+	default:
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type"}, []string{"type"}); err != nil {
+				return err
+			}
+			extra, err := captureJSONExtraFields(data, []string{"type"})
+			if err != nil {
+				return err
+			}
+			decoded.ExtraFields = extra
+			return nil
+		}()
 	}
-	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
-	}
-	if len(raw.Title) > 0 {
-		_ = unmarshalJSON(raw.Title, &decoded.Title)
+	if err != nil {
+		return err
 	}
 	*s = ElicitationPropertySchema(decoded)
 	return nil
@@ -1730,6 +3706,38 @@ func (s *ElicitationPropertySchema) UnmarshalJSON(data []byte) error {
 // (e.g., during auth/configuration phases before any session is started).
 type ElicitationRequestScope struct {
 	RequestID RequestId `json:"requestId"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *ElicitationRequestScope) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"requestId"}, []string{}); err != nil {
+		return err
+	}
+	type alias ElicitationRequestScope
+	decoded := alias{}
+	raw := struct {
+		RequestID json.RawMessage `json:"requestId"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.RequestID) > 0 {
+		var value RequestId
+		if err := func() error {
+			if err := func(data []byte) error {
+				return validateJSONUnion(data, validateJSONNull, validateJSONType[int64], validateJSONType[string])
+			}(raw.RequestID); err != nil {
+				return err
+			}
+			return unmarshalJSON(raw.RequestID, &value)
+		}(); err != nil {
+			return err
+		}
+		decoded.RequestID = value
+	}
+	*s = ElicitationRequestScope(decoded)
+	return nil
 }
 
 // ElicitationSchema: Type-safe elicitation schema for requesting structured user input.
@@ -1747,9 +3755,13 @@ type ElicitationSchema struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *ElicitationSchema) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{}, []string{"properties"}); err != nil {
+		return err
+	}
 	type alias ElicitationSchema
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Description json.RawMessage `json:"description"`
 		Title       json.RawMessage `json:"title"`
 		Type        json.RawMessage `json:"type"`
@@ -1758,11 +3770,23 @@ func (s *ElicitationSchema) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+		var value *string
+		if err := unmarshalJSON(raw.Description, &value); err == nil {
+			decoded.Description = value
+		}
 	}
 	if len(raw.Title) > 0 {
-		_ = unmarshalJSON(raw.Title, &decoded.Title)
+		var value *string
+		if err := unmarshalJSON(raw.Title, &value); err == nil {
+			decoded.Title = value
+		}
 	}
 	if len(raw.Type) > 0 {
 		var value ElicitationSchemaType
@@ -1785,6 +3809,23 @@ const (
 	ElicitationSchemaTypeObject ElicitationSchemaType = "object"
 )
 
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *ElicitationSchemaType) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("ElicitationSchemaType must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "object":
+		*v = ElicitationSchemaType(value)
+		return nil
+	}
+	return fmt.Errorf("invalid ElicitationSchemaType value %q", value)
+}
+
 // ElicitationSessionScope: Session-scoped elicitation, optionally tied to a specific tool call.
 //
 // When `toolCallId` is set, the elicitation is tied to a specific tool call.
@@ -1797,6 +3838,9 @@ type ElicitationSessionScope struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *ElicitationSessionScope) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId"}, []string{"sessionId"}); err != nil {
+		return err
+	}
 	type alias ElicitationSessionScope
 	decoded := alias{}
 	raw := struct {
@@ -1807,7 +3851,10 @@ func (s *ElicitationSessionScope) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(raw.ToolCallID) > 0 {
-		_ = unmarshalJSON(raw.ToolCallID, &decoded.ToolCallID)
+		var value *ToolCallId
+		if err := unmarshalJSON(raw.ToolCallID, &value); err == nil {
+			decoded.ToolCallID = value
+		}
 	}
 	*s = ElicitationSessionScope(decoded)
 	return nil
@@ -1818,6 +3865,27 @@ func (s *ElicitationSessionScope) UnmarshalJSON(data []byte) error {
 // Supplying `{}` means the client supports URL-based elicitation.
 type ElicitationUrlCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *ElicitationUrlCapabilities) UnmarshalJSON(data []byte) error {
+	type alias ElicitationUrlCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = ElicitationUrlCapabilities(decoded)
+	return nil
 }
 
 // ElicitationUrlMode: URL-based elicitation mode where the client directs the user to a URL.
@@ -1848,22 +3916,105 @@ func RequestElicitationUrlMode(elicitationID ElicitationId, url string, requestI
 	}
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the first valid schema alternative.
 func (m *ElicitationUrlMode) UnmarshalJSON(data []byte) error {
 	type alias ElicitationUrlMode
-	decoded := alias{}
-	raw := struct {
-		ToolCallID json.RawMessage `json:"toolCallId"`
-		*alias
-	}{alias: &decoded}
+	var decoded alias
+	var raw struct {
+		ElicitationID json.RawMessage `json:"elicitationId"`
+		RequestID     json.RawMessage `json:"requestId"`
+		SessionID     json.RawMessage `json:"sessionId"`
+		ToolCallID    json.RawMessage `json:"toolCallId"`
+		Url           json.RawMessage `json:"url"`
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.ToolCallID) > 0 {
-		_ = unmarshalJSON(raw.ToolCallID, &decoded.ToolCallID)
+	var err error
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"elicitationId", "url", "sessionId"}, []string{"elicitationId", "sessionId", "url"}); err != nil {
+			return err
+		}
+		if len(raw.ElicitationID) > 0 {
+			var value ElicitationId
+			if err := unmarshalJSON(raw.ElicitationID, &value); err != nil {
+				return err
+			}
+			decoded.ElicitationID = value
+		}
+		if len(raw.SessionID) > 0 {
+			var value SessionId
+			if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+				return err
+			}
+			decoded.SessionID = func(v SessionId) *SessionId {
+				converted := SessionId(v)
+				return &converted
+			}(value)
+		}
+		if len(raw.ToolCallID) > 0 {
+			var value *ToolCallId
+			if err := unmarshalJSON(raw.ToolCallID, &value); err == nil {
+				decoded.ToolCallID = value
+			}
+		}
+		if len(raw.Url) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.Url, &value); err != nil {
+				return err
+			}
+			decoded.Url = value
+		}
+		return nil
+	}()
+	if err == nil {
+		*m = ElicitationUrlMode(decoded)
+		return nil
 	}
-	*m = ElicitationUrlMode(decoded)
-	return nil
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"elicitationId", "url", "requestId"}, []string{"elicitationId", "url"}); err != nil {
+			return err
+		}
+		if len(raw.ElicitationID) > 0 {
+			var value ElicitationId
+			if err := unmarshalJSON(raw.ElicitationID, &value); err != nil {
+				return err
+			}
+			decoded.ElicitationID = value
+		}
+		if len(raw.RequestID) > 0 {
+			var value RequestId
+			if err := func() error {
+				if err := func(data []byte) error {
+					return validateJSONUnion(data, validateJSONNull, validateJSONType[int64], validateJSONType[string])
+				}(raw.RequestID); err != nil {
+					return err
+				}
+				return unmarshalJSON(raw.RequestID, &value)
+			}(); err != nil {
+				return err
+			}
+			decoded.RequestID = func(v RequestId) *RequestId {
+				converted := RequestId(v)
+				return &converted
+			}(value)
+		}
+		if len(raw.Url) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.Url, &value); err != nil {
+				return err
+			}
+			decoded.Url = value
+		}
+		return nil
+	}()
+	if err == nil {
+		*m = ElicitationUrlMode(decoded)
+		return nil
+	}
+	return err
 }
 
 // EmbeddedResource: The contents of a resource, embedded into a prompt or tool call result.
@@ -1875,17 +4026,30 @@ type EmbeddedResource struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (r *EmbeddedResource) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"resource"}, []string{"resource"}); err != nil {
+		return err
+	}
 	type alias EmbeddedResource
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Annotations json.RawMessage `json:"annotations"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Annotations) > 0 {
-		_ = unmarshalJSON(raw.Annotations, &decoded.Annotations)
+		var value *Annotations
+		if err := unmarshalJSON(raw.Annotations, &value); err == nil {
+			decoded.Annotations = value
+		}
 	}
 	*r = EmbeddedResource(decoded)
 	return nil
@@ -1916,22 +4080,102 @@ func BlobResourceContentsEmbeddedResourceResource(blob string, uri string) Embed
 	}
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the first valid schema alternative.
 func (r *EmbeddedResourceResource) UnmarshalJSON(data []byte) error {
 	type alias EmbeddedResourceResource
-	decoded := alias{}
-	raw := struct {
+	var decoded alias
+	var raw struct {
+		Meta     json.RawMessage `json:"_meta"`
+		Blob     json.RawMessage `json:"blob"`
 		MimeType json.RawMessage `json:"mimeType"`
-		*alias
-	}{alias: &decoded}
+		Text     json.RawMessage `json:"text"`
+		URI      json.RawMessage `json:"uri"`
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.MimeType) > 0 {
-		_ = unmarshalJSON(raw.MimeType, &decoded.MimeType)
+	var err error
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"text", "uri"}, []string{"text", "uri"}); err != nil {
+			return err
+		}
+		if len(raw.Meta) > 0 {
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err == nil {
+				decoded.Meta = value
+			}
+		}
+		if len(raw.MimeType) > 0 {
+			var value *string
+			if err := unmarshalJSON(raw.MimeType, &value); err == nil {
+				decoded.MimeType = value
+			}
+		}
+		if len(raw.Text) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.Text, &value); err != nil {
+				return err
+			}
+			decoded.Text = func(v string) *string {
+				converted := string(v)
+				return &converted
+			}(value)
+		}
+		if len(raw.URI) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.URI, &value); err != nil {
+				return err
+			}
+			decoded.URI = value
+		}
+		return nil
+	}()
+	if err == nil {
+		*r = EmbeddedResourceResource(decoded)
+		return nil
 	}
-	*r = EmbeddedResourceResource(decoded)
-	return nil
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"blob", "uri"}, []string{"blob", "uri"}); err != nil {
+			return err
+		}
+		if len(raw.Meta) > 0 {
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err == nil {
+				decoded.Meta = value
+			}
+		}
+		if len(raw.Blob) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.Blob, &value); err != nil {
+				return err
+			}
+			decoded.Blob = func(v string) *string {
+				converted := string(v)
+				return &converted
+			}(value)
+		}
+		if len(raw.MimeType) > 0 {
+			var value *string
+			if err := unmarshalJSON(raw.MimeType, &value); err == nil {
+				decoded.MimeType = value
+			}
+		}
+		if len(raw.URI) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.URI, &value); err != nil {
+				return err
+			}
+			decoded.URI = value
+		}
+		return nil
+	}()
+	if err == nil {
+		*r = EmbeddedResourceResource(decoded)
+		return nil
+	}
+	return err
 }
 
 // EnumOption: A titled enum option with a const value, human-readable title, and optional description.
@@ -1944,17 +4188,30 @@ type EnumOption struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (o *EnumOption) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"const", "title"}, []string{"const", "title"}); err != nil {
+		return err
+	}
 	type alias EnumOption
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Description json.RawMessage `json:"description"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+		var value *string
+		if err := unmarshalJSON(raw.Description, &value); err == nil {
+			decoded.Description = value
+		}
 	}
 	*o = EnumOption(decoded)
 	return nil
@@ -1967,6 +4224,30 @@ type EnvVariable struct {
 	Value string `json:"value"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (v *EnvVariable) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "value"}, []string{"name", "value"}); err != nil {
+		return err
+	}
+	type alias EnvVariable
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*v = EnvVariable(decoded)
+	return nil
+}
+
 // Error: JSON-RPC error object.
 //
 // Represents an error that occurred during method execution, following the
@@ -1977,10 +4258,35 @@ type Error struct {
 	Code    ErrorCode `json:"code"`
 	Data    any       `json:"data,omitempty"`
 	Message string    `json:"message"`
+	// NullFields lists JSON field names to send as explicit null, regardless of their values.
+	// Decoding records explicit nulls here, separately from omitted fields.
+	NullFields []string `json:"-"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (e Error) MarshalJSON() ([]byte, error) {
+	type alias Error
+	a := alias(e)
+	type wire struct {
+		*alias
+		Data *any `json:"data,omitempty"`
+	}
+	w := wire{alias: &a}
+	if a.Data != nil {
+		Data := a.Data
+		w.Data = &Data
+	}
+	if slices.Contains(a.NullFields, "data") {
+		w.Data = new(any)
+	}
+	return json.Marshal(w)
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (e *Error) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"code", "message"}, []string{"code", "message"}); err != nil {
+		return err
+	}
 	type alias Error
 	decoded := alias{}
 	raw := struct {
@@ -1991,7 +4297,14 @@ func (e *Error) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(raw.Data) > 0 {
-		_ = unmarshalJSON(raw.Data, &decoded.Data)
+		if isJSONNull(raw.Data) {
+			decoded.NullFields = append(decoded.NullFields, "data")
+		} else {
+			var value any
+			if err := unmarshalJSON(raw.Data, &value); err == nil {
+				decoded.Data = value
+			}
+		}
 	}
 	*e = Error(decoded)
 	return nil
@@ -2046,7 +4359,10 @@ func (r *ErrorStopReason) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(raw.Error) > 0 {
-		_ = unmarshalJSON(raw.Error, &decoded.Error)
+		var value *Error
+		if err := unmarshalJSON(raw.Error, &value); err == nil {
+			decoded.Error = value
+		}
 	}
 	*r = ErrorStopReason(decoded)
 	return nil
@@ -2087,6 +4403,7 @@ func (c *FileSystemCapabilities) UnmarshalJSON(data []byte) error {
 	type alias FileSystemCapabilities
 	decoded := alias{}
 	raw := struct {
+		Meta          json.RawMessage `json:"_meta"`
 		ReadTextFile  json.RawMessage `json:"readTextFile"`
 		WriteTextFile json.RawMessage `json:"writeTextFile"`
 		*alias
@@ -2094,11 +4411,23 @@ func (c *FileSystemCapabilities) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.ReadTextFile) > 0 {
-		_ = unmarshalJSON(raw.ReadTextFile, &decoded.ReadTextFile)
+		var value bool
+		if err := unmarshalJSON(raw.ReadTextFile, &value); err == nil {
+			decoded.ReadTextFile = value
+		}
 	}
 	if len(raw.WriteTextFile) > 0 {
-		_ = unmarshalJSON(raw.WriteTextFile, &decoded.WriteTextFile)
+		var value bool
+		if err := unmarshalJSON(raw.WriteTextFile, &value); err == nil {
+			decoded.WriteTextFile = value
+		}
 	}
 	*c = FileSystemCapabilities(decoded)
 	return nil
@@ -2123,6 +4452,30 @@ type ForkSessionRequest struct {
 	SystemPrompt          *SystemPrompt `json:"systemPrompt,omitempty"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ForkSessionRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId", "cwd"}, []string{"cwd", "sessionId"}); err != nil {
+		return err
+	}
+	type alias ForkSessionRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = ForkSessionRequest(decoded)
+	return nil
+}
+
 // ForkSessionResponse: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -2137,9 +4490,13 @@ type ForkSessionResponse struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (r *ForkSessionResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId"}, []string{"sessionId"}); err != nil {
+		return err
+	}
 	type alias ForkSessionResponse
 	decoded := alias{}
 	raw := struct {
+		Meta          json.RawMessage `json:"_meta"`
 		ConfigOptions json.RawMessage `json:"configOptions"`
 		Modes         json.RawMessage `json:"modes"`
 		*alias
@@ -2147,13 +4504,19 @@ func (r *ForkSessionResponse) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.ConfigOptions) > 0 {
 		var values []json.RawMessage
 		if err := unmarshalJSON(raw.ConfigOptions, &values); err == nil && values != nil {
 			items := []SessionConfigOption{}
 			for _, value := range values {
 				var item SessionConfigOption
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
 						items = append(items, item)
@@ -2164,7 +4527,10 @@ func (r *ForkSessionResponse) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.Modes) > 0 {
-		_ = unmarshalJSON(raw.Modes, &decoded.Modes)
+		var value *SessionModeState
+		if err := unmarshalJSON(raw.Modes, &value); err == nil {
+			decoded.Modes = value
+		}
 	}
 	*r = ForkSessionResponse(decoded)
 	return nil
@@ -2177,6 +4543,30 @@ type HttpHeader struct {
 	Value string `json:"value"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (h *HttpHeader) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "value"}, []string{"name", "value"}); err != nil {
+		return err
+	}
+	type alias HttpHeader
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*h = HttpHeader(decoded)
+	return nil
+}
+
 // IdleStateUpdate: The child is ready to process another prompt.
 //
 // An omitted, `null`, or malformed `stopReason` means not reported.
@@ -2185,6 +4575,9 @@ type IdleStateUpdate struct {
 	Meta       Meta                `json:"_meta,omitzero"`
 	Error      *Error              `json:"error,omitempty"`
 	Usage      *Usage              `json:"usage,omitempty"`
+	// ExtraFields retains extension properties explicitly permitted by the schema.
+	// Known properties take precedence when encoding.
+	ExtraFields map[string]json.RawMessage `json:"-"`
 }
 
 // IdleStateUpdateType is the discriminator for IdleStateUpdate variants.
@@ -2257,23 +4650,383 @@ func NoneIdleStateUpdate() IdleStateUpdate {
 	return IdleStateUpdate{}
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// MarshalJSON retains explicit extension fields for open variants.
+func (u IdleStateUpdate) MarshalJSON() ([]byte, error) {
+	type alias IdleStateUpdate
+	switch u.StopReason {
+	case "end_turn":
+		return json.Marshal(alias(u))
+	case "max_tokens":
+		return json.Marshal(alias(u))
+	case "max_turn_requests":
+		return json.Marshal(alias(u))
+	case "refusal":
+		return json.Marshal(alias(u))
+	case "cancelled":
+		return json.Marshal(alias(u))
+	case "error":
+		return json.Marshal(alias(u))
+	default:
+		return marshalJSONWithExtraFields(alias(u), u.ExtraFields, []string{"_meta", "stopReason", "usage"})
+	}
+}
+
+// UnmarshalJSON decodes the selected schema variant.
 func (u *IdleStateUpdate) UnmarshalJSON(data []byte) error {
 	type alias IdleStateUpdate
-	decoded := alias{}
-	raw := struct {
-		Error json.RawMessage `json:"error"`
-		Usage json.RawMessage `json:"usage"`
-		*alias
-	}{alias: &decoded}
+	var decoded alias
+	var raw struct {
+		StopReason json.RawMessage `json:"stopReason"`
+		Meta       json.RawMessage `json:"_meta"`
+		Error      json.RawMessage `json:"error"`
+		Usage      json.RawMessage `json:"usage"`
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Error) > 0 {
-		_ = unmarshalJSON(raw.Error, &decoded.Error)
+	var tag IdleStateUpdateType
+	var tagErr error
+	if len(raw.StopReason) > 0 {
+		tagErr = unmarshalJSON(raw.StopReason, &tag)
 	}
-	if len(raw.Usage) > 0 {
-		_ = unmarshalJSON(raw.Usage, &decoded.Usage)
+	var err error
+	switch tag {
+	case "end_turn":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.StopReason = tag
+			if err := requireJSONProperties(data, []string{"stopReason"}, []string{"stopReason"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Usage) > 0 {
+				var value *Usage
+				if err := unmarshalJSON(raw.Usage, &value); err == nil {
+					decoded.Usage = value
+				}
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.StopReason = tag
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Usage) > 0 {
+					var value *Usage
+					if err := unmarshalJSON(raw.Usage, &value); err == nil {
+						decoded.Usage = value
+					}
+				}
+				return nil
+			}()
+		}
+	case "max_tokens":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.StopReason = tag
+			if err := requireJSONProperties(data, []string{"stopReason"}, []string{"stopReason"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Usage) > 0 {
+				var value *Usage
+				if err := unmarshalJSON(raw.Usage, &value); err == nil {
+					decoded.Usage = value
+				}
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.StopReason = tag
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Usage) > 0 {
+					var value *Usage
+					if err := unmarshalJSON(raw.Usage, &value); err == nil {
+						decoded.Usage = value
+					}
+				}
+				return nil
+			}()
+		}
+	case "max_turn_requests":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.StopReason = tag
+			if err := requireJSONProperties(data, []string{"stopReason"}, []string{"stopReason"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Usage) > 0 {
+				var value *Usage
+				if err := unmarshalJSON(raw.Usage, &value); err == nil {
+					decoded.Usage = value
+				}
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.StopReason = tag
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Usage) > 0 {
+					var value *Usage
+					if err := unmarshalJSON(raw.Usage, &value); err == nil {
+						decoded.Usage = value
+					}
+				}
+				return nil
+			}()
+		}
+	case "refusal":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.StopReason = tag
+			if err := requireJSONProperties(data, []string{"stopReason"}, []string{"stopReason"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Usage) > 0 {
+				var value *Usage
+				if err := unmarshalJSON(raw.Usage, &value); err == nil {
+					decoded.Usage = value
+				}
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.StopReason = tag
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Usage) > 0 {
+					var value *Usage
+					if err := unmarshalJSON(raw.Usage, &value); err == nil {
+						decoded.Usage = value
+					}
+				}
+				return nil
+			}()
+		}
+	case "cancelled":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.StopReason = tag
+			if err := requireJSONProperties(data, []string{"stopReason"}, []string{"stopReason"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Usage) > 0 {
+				var value *Usage
+				if err := unmarshalJSON(raw.Usage, &value); err == nil {
+					decoded.Usage = value
+				}
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.StopReason = tag
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Usage) > 0 {
+					var value *Usage
+					if err := unmarshalJSON(raw.Usage, &value); err == nil {
+						decoded.Usage = value
+					}
+				}
+				return nil
+			}()
+		}
+	case "error":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.StopReason = tag
+			if err := requireJSONProperties(data, []string{"stopReason"}, []string{"stopReason"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Error) > 0 {
+				var value *Error
+				if err := unmarshalJSON(raw.Error, &value); err == nil {
+					decoded.Error = value
+				}
+			}
+			if len(raw.Usage) > 0 {
+				var value *Usage
+				if err := unmarshalJSON(raw.Usage, &value); err == nil {
+					decoded.Usage = value
+				}
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.StopReason = tag
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Usage) > 0 {
+					var value *Usage
+					if err := unmarshalJSON(raw.Usage, &value); err == nil {
+						decoded.Usage = value
+					}
+				}
+				return nil
+			}()
+		}
+	default:
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.StopReason = tag
+			if err := requireJSONProperties(data, []string{"stopReason"}, []string{"stopReason"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Usage) > 0 {
+				var value *Usage
+				if err := unmarshalJSON(raw.Usage, &value); err == nil {
+					decoded.Usage = value
+				}
+			}
+			extra, err := captureJSONExtraFields(data, []string{"_meta", "stopReason", "usage"})
+			if err != nil {
+				return err
+			}
+			decoded.ExtraFields = extra
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.StopReason = tag
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Usage) > 0 {
+					var value *Usage
+					if err := unmarshalJSON(raw.Usage, &value); err == nil {
+						decoded.Usage = value
+					}
+				}
+				return nil
+			}()
+		}
+	}
+	if err != nil {
+		return err
 	}
 	*u = IdleStateUpdate(decoded)
 	return nil
@@ -2290,9 +5043,13 @@ type ImageContent struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (c *ImageContent) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"data", "mimeType"}, []string{"data", "mimeType"}); err != nil {
+		return err
+	}
 	type alias ImageContent
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Annotations json.RawMessage `json:"annotations"`
 		URI         json.RawMessage `json:"uri"`
 		*alias
@@ -2300,11 +5057,23 @@ func (c *ImageContent) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Annotations) > 0 {
-		_ = unmarshalJSON(raw.Annotations, &decoded.Annotations)
+		var value *Annotations
+		if err := unmarshalJSON(raw.Annotations, &value); err == nil {
+			decoded.Annotations = value
+		}
 	}
 	if len(raw.URI) > 0 {
-		_ = unmarshalJSON(raw.URI, &decoded.URI)
+		var value *string
+		if err := unmarshalJSON(raw.URI, &value); err == nil {
+			decoded.URI = value
+		}
 	}
 	*c = ImageContent(decoded)
 	return nil
@@ -2322,17 +5091,30 @@ type Implementation struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (i *Implementation) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "version"}, []string{"name", "version"}); err != nil {
+		return err
+	}
 	type alias Implementation
 	decoded := alias{}
 	raw := struct {
+		Meta  json.RawMessage `json:"_meta"`
 		Title json.RawMessage `json:"title"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Title) > 0 {
-		_ = unmarshalJSON(raw.Title, &decoded.Title)
+		var value *string
+		if err := unmarshalJSON(raw.Title, &value); err == nil {
+			decoded.Title = value
+		}
 	}
 	*i = Implementation(decoded)
 	return nil
@@ -2353,7 +5135,7 @@ func (i *Implementation) UnmarshalJSON(data []byte) error {
 // the proxy MUST forward an `initialize` request to its successor through `proxy/successor`.
 //
 // See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
-type InitializeProxyRequest InitializeRequest
+type InitializeProxyRequest = InitializeRequest
 
 // InitializeProxyResponse: **UNSTABLE**
 //
@@ -2364,7 +5146,7 @@ type InitializeProxyRequest InitializeRequest
 // The same as the `initialize` response. The proxy builds it from its successor's
 // `initialize` response and answers with the capabilities of the chain from itself onward.
 // It MUST NOT change `protocolVersion`.
-type InitializeProxyResponse InitializeResponse
+type InitializeProxyResponse = InitializeResponse
 
 // InitializeRequest: Request parameters for the initialize method.
 //
@@ -2380,9 +5162,13 @@ type InitializeRequest struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (r *InitializeRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"protocolVersion"}, []string{"protocolVersion"}); err != nil {
+		return err
+	}
 	type alias InitializeRequest
 	decoded := alias{}
 	raw := struct {
+		Meta               json.RawMessage `json:"_meta"`
 		ClientCapabilities json.RawMessage `json:"clientCapabilities"`
 		ClientInfo         json.RawMessage `json:"clientInfo"`
 		*alias
@@ -2390,11 +5176,23 @@ func (r *InitializeRequest) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.ClientCapabilities) > 0 {
-		_ = unmarshalJSON(raw.ClientCapabilities, &decoded.ClientCapabilities)
+		var value *ClientCapabilities
+		if err := unmarshalJSON(raw.ClientCapabilities, &value); err == nil {
+			decoded.ClientCapabilities = value
+		}
 	}
 	if len(raw.ClientInfo) > 0 {
-		_ = unmarshalJSON(raw.ClientInfo, &decoded.ClientInfo)
+		var value *Implementation
+		if err := unmarshalJSON(raw.ClientInfo, &value); err == nil {
+			decoded.ClientInfo = value
+		}
 	}
 	*r = InitializeRequest(decoded)
 	return nil
@@ -2415,9 +5213,13 @@ type InitializeResponse struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (r *InitializeResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"protocolVersion"}, []string{"protocolVersion"}); err != nil {
+		return err
+	}
 	type alias InitializeResponse
 	decoded := alias{}
 	raw := struct {
+		Meta              json.RawMessage `json:"_meta"`
 		AgentCapabilities json.RawMessage `json:"agentCapabilities"`
 		AgentInfo         json.RawMessage `json:"agentInfo"`
 		AuthMethods       json.RawMessage `json:"authMethods"`
@@ -2426,11 +5228,23 @@ func (r *InitializeResponse) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.AgentCapabilities) > 0 {
-		_ = unmarshalJSON(raw.AgentCapabilities, &decoded.AgentCapabilities)
+		var value *AgentCapabilities
+		if err := unmarshalJSON(raw.AgentCapabilities, &value); err == nil {
+			decoded.AgentCapabilities = value
+		}
 	}
 	if len(raw.AgentInfo) > 0 {
-		_ = unmarshalJSON(raw.AgentInfo, &decoded.AgentInfo)
+		var value *Implementation
+		if err := unmarshalJSON(raw.AgentInfo, &value); err == nil {
+			decoded.AgentInfo = value
+		}
 	}
 	if len(raw.AuthMethods) > 0 {
 		var values []json.RawMessage
@@ -2438,11 +5252,8 @@ func (r *InitializeResponse) UnmarshalJSON(data []byte) error {
 			decoded.AuthMethods = []AuthMethod{}
 			for _, value := range values {
 				var item AuthMethod
-				if err := unmarshalJSON(value, &item); err == nil {
-					switch item.Type {
-					case AuthMethodTypeTerminal, "":
-						decoded.AuthMethods = append(decoded.AuthMethods, item)
-					}
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
+					decoded.AuthMethods = append(decoded.AuthMethods, item)
 				}
 			}
 		}
@@ -2466,6 +5277,7 @@ func (s *IntegerPropertySchema) UnmarshalJSON(data []byte) error {
 	type alias IntegerPropertySchema
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Default     json.RawMessage `json:"default"`
 		Description json.RawMessage `json:"description"`
 		Title       json.RawMessage `json:"title"`
@@ -2474,14 +5286,29 @@ func (s *IntegerPropertySchema) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Default) > 0 {
-		_ = unmarshalJSON(raw.Default, &decoded.Default)
+		var value *int64
+		if err := unmarshalJSON(raw.Default, &value); err == nil {
+			decoded.Default = value
+		}
 	}
 	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+		var value *string
+		if err := unmarshalJSON(raw.Description, &value); err == nil {
+			decoded.Description = value
+		}
 	}
 	if len(raw.Title) > 0 {
-		_ = unmarshalJSON(raw.Title, &decoded.Title)
+		var value *string
+		if err := unmarshalJSON(raw.Title, &value); err == nil {
+			decoded.Title = value
+		}
 	}
 	*s = IntegerPropertySchema(decoded)
 	return nil
@@ -2494,9 +5321,54 @@ type KillTerminalRequest struct {
 	TerminalID TerminalId `json:"terminalId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *KillTerminalRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId", "terminalId"}, []string{"sessionId", "terminalId"}); err != nil {
+		return err
+	}
+	type alias KillTerminalRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = KillTerminalRequest(decoded)
+	return nil
+}
+
 // KillTerminalResponse: Response to `terminal/kill` method
 type KillTerminalResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *KillTerminalResponse) UnmarshalJSON(data []byte) error {
+	type alias KillTerminalResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = KillTerminalResponse(decoded)
+	return nil
 }
 
 // ListProvidersRequest: **UNSTABLE**
@@ -2506,6 +5378,27 @@ type KillTerminalResponse struct {
 // Request parameters for `providers/list`.
 type ListProvidersRequest struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ListProvidersRequest) UnmarshalJSON(data []byte) error {
+	type alias ListProvidersRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = ListProvidersRequest(decoded)
+	return nil
 }
 
 // ListProvidersResponse: **UNSTABLE**
@@ -2528,6 +5421,30 @@ func (r ListProvidersResponse) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ListProvidersResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"providers"}, []string{"providers"}); err != nil {
+		return err
+	}
+	type alias ListProvidersResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = ListProvidersResponse(decoded)
+	return nil
+}
+
 // ListSessionsRequest: Request parameters for listing existing sessions.
 //
 // Only available if the Agent supports the `sessionCapabilities.list` capability.
@@ -2536,6 +5453,27 @@ type ListSessionsRequest struct {
 	Archived *SessionArchiveFilter `json:"archived,omitempty"`
 	Cursor   *string               `json:"cursor,omitempty"`
 	Cwd      *string               `json:"cwd,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ListSessionsRequest) UnmarshalJSON(data []byte) error {
+	type alias ListSessionsRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = ListSessionsRequest(decoded)
+	return nil
 }
 
 // ListSessionsResponse: Response from listing sessions.
@@ -2596,6 +5534,7 @@ func (r *LoadSessionResponse) UnmarshalJSON(data []byte) error {
 	type alias LoadSessionResponse
 	decoded := alias{}
 	raw := struct {
+		Meta          json.RawMessage `json:"_meta"`
 		ConfigOptions json.RawMessage `json:"configOptions"`
 		Modes         json.RawMessage `json:"modes"`
 		*alias
@@ -2603,13 +5542,19 @@ func (r *LoadSessionResponse) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.ConfigOptions) > 0 {
 		var values []json.RawMessage
 		if err := unmarshalJSON(raw.ConfigOptions, &values); err == nil && values != nil {
 			items := []SessionConfigOption{}
 			for _, value := range values {
 				var item SessionConfigOption
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
 						items = append(items, item)
@@ -2620,7 +5565,10 @@ func (r *LoadSessionResponse) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.Modes) > 0 {
-		_ = unmarshalJSON(raw.Modes, &decoded.Modes)
+		var value *SessionModeState
+		if err := unmarshalJSON(raw.Modes, &value); err == nil {
+			decoded.Modes = value
+		}
 	}
 	*r = LoadSessionResponse(decoded)
 	return nil
@@ -2633,6 +5581,27 @@ type LogoutCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *LogoutCapabilities) UnmarshalJSON(data []byte) error {
+	type alias LogoutCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = LogoutCapabilities(decoded)
+	return nil
+}
+
 // LogoutRequest: Request parameters for the logout method.
 //
 // Terminates the current authenticated session.
@@ -2640,9 +5609,51 @@ type LogoutRequest struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *LogoutRequest) UnmarshalJSON(data []byte) error {
+	type alias LogoutRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = LogoutRequest(decoded)
+	return nil
+}
+
 // LogoutResponse: Response to the `logout` method.
 type LogoutResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *LogoutResponse) UnmarshalJSON(data []byte) error {
+	type alias LogoutResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = LogoutResponse(decoded)
+	return nil
 }
 
 // McpCapabilities: MCP capabilities supported by the agent
@@ -2658,6 +5669,7 @@ func (c *McpCapabilities) UnmarshalJSON(data []byte) error {
 	type alias McpCapabilities
 	decoded := alias{}
 	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
 		Acp  json.RawMessage `json:"acp"`
 		Http json.RawMessage `json:"http"`
 		Sse  json.RawMessage `json:"sse"`
@@ -2666,14 +5678,29 @@ func (c *McpCapabilities) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Acp) > 0 {
-		_ = unmarshalJSON(raw.Acp, &decoded.Acp)
+		var value bool
+		if err := unmarshalJSON(raw.Acp, &value); err == nil {
+			decoded.Acp = value
+		}
 	}
 	if len(raw.Http) > 0 {
-		_ = unmarshalJSON(raw.Http, &decoded.Http)
+		var value bool
+		if err := unmarshalJSON(raw.Http, &value); err == nil {
+			decoded.Http = value
+		}
 	}
 	if len(raw.Sse) > 0 {
-		_ = unmarshalJSON(raw.Sse, &decoded.Sse)
+		var value bool
+		if err := unmarshalJSON(raw.Sse, &value); err == nil {
+			decoded.Sse = value
+		}
 	}
 	*c = McpCapabilities(decoded)
 	return nil
@@ -2692,6 +5719,9 @@ type McpError struct {
 	// NullFields lists JSON field names to send as explicit null, regardless of their values.
 	// Decoding records explicit nulls here, separately from omitted fields.
 	NullFields []string `json:"-"`
+	// ExtraFields retains extension properties explicitly permitted by the schema.
+	// Known properties take precedence when encoding.
+	ExtraFields map[string]json.RawMessage `json:"-"`
 }
 
 // MarshalJSON implements json.Marshaler.
@@ -2710,11 +5740,14 @@ func (e McpError) MarshalJSON() ([]byte, error) {
 	if slices.Contains(a.NullFields, "data") {
 		w.Data = new(any)
 	}
-	return json.Marshal(w)
+	return marshalJSONWithExtraFields(w, a.ExtraFields, []string{"code", "data", "message"})
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (e *McpError) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"code", "message"}, []string{"code", "message"}); err != nil {
+		return err
+	}
 	type alias McpError
 	decoded := alias{}
 	raw := struct {
@@ -2735,6 +5768,11 @@ func (e *McpError) UnmarshalJSON(data []byte) error {
 			decoded.Data = value
 		}
 	}
+	extra, err := captureJSONExtraFields(data, []string{"code", "data", "message"})
+	if err != nil {
+		return err
+	}
+	decoded.ExtraFields = extra
 	*e = McpError(decoded)
 	return nil
 }
@@ -2902,6 +5940,320 @@ func (s McpServer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
+// UnmarshalJSON decodes the selected schema variant.
+func (s *McpServer) UnmarshalJSON(data []byte) error {
+	type alias McpServer
+	var decoded alias
+	var raw struct {
+		Type     json.RawMessage `json:"type"`
+		Meta     json.RawMessage `json:"_meta"`
+		Args     json.RawMessage `json:"args"`
+		Command  json.RawMessage `json:"command"`
+		Env      json.RawMessage `json:"env"`
+		Headers  json.RawMessage `json:"headers"`
+		Name     json.RawMessage `json:"name"`
+		ServerID json.RawMessage `json:"serverId"`
+		Url      json.RawMessage `json:"url"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag McpServerType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "http":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "name", "url", "headers"}, []string{"name", "type", "url"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Headers) > 0 {
+				var value []HttpHeader
+				if err := unmarshalJSON(raw.Headers, &value); err != nil {
+					return err
+				}
+				decoded.Headers = value
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			if len(raw.Url) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Url, &value); err != nil {
+					return err
+				}
+				decoded.Url = value
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"name", "command", "args", "env"}, []string{"command", "name"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Args) > 0 {
+					var value []string
+					if err := unmarshalJSON(raw.Args, &value); err != nil {
+						return err
+					}
+					decoded.Args = value
+				}
+				if len(raw.Command) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Command, &value); err != nil {
+						return err
+					}
+					decoded.Command = value
+				}
+				if len(raw.Env) > 0 {
+					var value []EnvVariable
+					if err := unmarshalJSON(raw.Env, &value); err != nil {
+						return err
+					}
+					decoded.Env = value
+				}
+				if len(raw.Name) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Name, &value); err != nil {
+						return err
+					}
+					decoded.Name = value
+				}
+				return nil
+			}()
+		}
+	case "sse":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "name", "url", "headers"}, []string{"name", "type", "url"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Headers) > 0 {
+				var value []HttpHeader
+				if err := unmarshalJSON(raw.Headers, &value); err != nil {
+					return err
+				}
+				decoded.Headers = value
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			if len(raw.Url) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Url, &value); err != nil {
+					return err
+				}
+				decoded.Url = value
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"name", "command", "args", "env"}, []string{"command", "name"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Args) > 0 {
+					var value []string
+					if err := unmarshalJSON(raw.Args, &value); err != nil {
+						return err
+					}
+					decoded.Args = value
+				}
+				if len(raw.Command) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Command, &value); err != nil {
+						return err
+					}
+					decoded.Command = value
+				}
+				if len(raw.Env) > 0 {
+					var value []EnvVariable
+					if err := unmarshalJSON(raw.Env, &value); err != nil {
+						return err
+					}
+					decoded.Env = value
+				}
+				if len(raw.Name) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Name, &value); err != nil {
+						return err
+					}
+					decoded.Name = value
+				}
+				return nil
+			}()
+		}
+	case "acp":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "name", "serverId"}, []string{"name", "serverId", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			if len(raw.ServerID) > 0 {
+				var value McpServerAcpId
+				if err := unmarshalJSON(raw.ServerID, &value); err != nil {
+					return err
+				}
+				decoded.ServerID = value
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"name", "command", "args", "env"}, []string{"command", "name"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Args) > 0 {
+					var value []string
+					if err := unmarshalJSON(raw.Args, &value); err != nil {
+						return err
+					}
+					decoded.Args = value
+				}
+				if len(raw.Command) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Command, &value); err != nil {
+						return err
+					}
+					decoded.Command = value
+				}
+				if len(raw.Env) > 0 {
+					var value []EnvVariable
+					if err := unmarshalJSON(raw.Env, &value); err != nil {
+						return err
+					}
+					decoded.Env = value
+				}
+				if len(raw.Name) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Name, &value); err != nil {
+						return err
+					}
+					decoded.Name = value
+				}
+				return nil
+			}()
+		}
+	default:
+		err = func() error {
+			decoded = alias{}
+			if err := requireJSONProperties(data, []string{"name", "command", "args", "env"}, []string{"command", "name"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Args) > 0 {
+				var value []string
+				if err := unmarshalJSON(raw.Args, &value); err != nil {
+					return err
+				}
+				decoded.Args = value
+			}
+			if len(raw.Command) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Command, &value); err != nil {
+					return err
+				}
+				decoded.Command = value
+			}
+			if len(raw.Env) > 0 {
+				var value []EnvVariable
+				if err := unmarshalJSON(raw.Env, &value); err != nil {
+					return err
+				}
+				decoded.Env = value
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			return nil
+		}()
+	}
+	if err != nil {
+		return err
+	}
+	*s = McpServer(decoded)
+	return nil
+}
+
 // McpServerAcp: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -2914,6 +6266,30 @@ type McpServerAcp struct {
 	Meta     Meta           `json:"_meta,omitzero"`
 	Name     string         `json:"name"`
 	ServerID McpServerAcpId `json:"serverId"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (a *McpServerAcp) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "serverId"}, []string{"name", "serverId"}); err != nil {
+		return err
+	}
+	type alias McpServerAcp
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*a = McpServerAcp(decoded)
+	return nil
 }
 
 // McpServerAcpId: **UNSTABLE**
@@ -2944,6 +6320,30 @@ func (h McpServerHttp) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (h *McpServerHttp) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "url", "headers"}, []string{"name", "url"}); err != nil {
+		return err
+	}
+	type alias McpServerHttp
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*h = McpServerHttp(decoded)
+	return nil
+}
+
 // McpServerSse: SSE transport configuration for MCP.
 type McpServerSse struct {
 	Meta    Meta         `json:"_meta,omitzero"`
@@ -2960,6 +6360,30 @@ func (s McpServerSse) MarshalJSON() ([]byte, error) {
 		a.Headers = []HttpHeader{}
 	}
 	return json.Marshal(a)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *McpServerSse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "url", "headers"}, []string{"name", "url"}); err != nil {
+		return err
+	}
+	type alias McpServerSse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*s = McpServerSse(decoded)
+	return nil
 }
 
 // McpServerStdio: Stdio transport configuration for MCP.
@@ -2984,6 +6408,30 @@ func (s McpServerStdio) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *McpServerStdio) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "command", "args", "env"}, []string{"command", "name"}); err != nil {
+		return err
+	}
+	type alias McpServerStdio
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*s = McpServerStdio(decoded)
+	return nil
+}
+
 // MessageId: Unique identifier for a message within a session.
 type MessageId string
 
@@ -3003,10 +6451,28 @@ type MessageMcpNotification struct {
 	ServerID  McpServerAcpId `json:"serverId"`
 }
 
-// UnmarshalJSON preserves unstructured numbers as json.Number.
+// UnmarshalJSON implements json.Unmarshaler.
 func (n *MessageMcpNotification) UnmarshalJSON(data []byte) error {
-	type plain MessageMcpNotification
-	return unmarshalJSON(data, (*plain)(n))
+	if err := requireJSONProperties(data, []string{"serverId", "requestId", "method"}, []string{"method", "requestId", "serverId"}); err != nil {
+		return err
+	}
+	type alias MessageMcpNotification
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*n = MessageMcpNotification(decoded)
+	return nil
 }
 
 // MessageMcpRequest: **UNSTABLE**
@@ -3022,10 +6488,28 @@ type MessageMcpRequest struct {
 	ServerID  McpServerAcpId `json:"serverId"`
 }
 
-// UnmarshalJSON preserves unstructured numbers as json.Number.
+// UnmarshalJSON implements json.Unmarshaler.
 func (r *MessageMcpRequest) UnmarshalJSON(data []byte) error {
-	type plain MessageMcpRequest
-	return unmarshalJSON(data, (*plain)(r))
+	if err := requireJSONProperties(data, []string{"serverId", "requestId", "method"}, []string{"method", "requestId", "serverId"}); err != nil {
+		return err
+	}
+	type alias MessageMcpRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = MessageMcpRequest(decoded)
+	return nil
 }
 
 // MessageMcpResponse: **UNSTABLE**
@@ -3131,6 +6615,9 @@ type MultiSelectItems struct {
 	Meta  Meta                 `json:"_meta,omitzero"`
 	AnyOf []EnumOption         `json:"anyOf,omitempty"`
 	Enum  []string             `json:"enum,omitempty"`
+	// ExtraFields retains extension properties explicitly permitted by the schema.
+	// Known properties take precedence when encoding.
+	ExtraFields map[string]json.RawMessage `json:"-"`
 }
 
 // MultiSelectItemsType is the discriminator for MultiSelectItems variants.
@@ -3195,7 +6682,129 @@ func (i MultiSelectItems) MarshalJSON() ([]byte, error) {
 		}
 		w.AnyOf = &AnyOf
 	}
-	return json.Marshal(w)
+	switch i.Type {
+	case "string":
+		return json.Marshal(w)
+	default:
+		return marshalJSONWithExtraFields(w, i.ExtraFields, []string{"type"})
+	}
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (i *MultiSelectItems) UnmarshalJSON(data []byte) error {
+	type alias MultiSelectItems
+	var decoded alias
+	var raw struct {
+		Type  json.RawMessage `json:"type"`
+		Meta  json.RawMessage `json:"_meta"`
+		AnyOf json.RawMessage `json:"anyOf"`
+		Enum  json.RawMessage `json:"enum"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag MultiSelectItemsType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "string":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "enum"}, []string{"enum", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Enum) > 0 {
+				var value []string
+				if err := unmarshalJSON(raw.Enum, &value); err != nil {
+					return err
+				}
+				decoded.Enum = value
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"anyOf"}, []string{"anyOf"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.AnyOf) > 0 {
+					var value []EnumOption
+					if err := unmarshalJSON(raw.AnyOf, &value); err != nil {
+						return err
+					}
+					decoded.AnyOf = value
+				}
+				return nil
+			}()
+		}
+	default:
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			if tag == "" {
+				return fmt.Errorf("MultiSelectItems: empty type is not supported")
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type"}, []string{"type"}); err != nil {
+				return err
+			}
+			extra, err := captureJSONExtraFields(data, []string{"type"})
+			if err != nil {
+				return err
+			}
+			decoded.ExtraFields = extra
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"anyOf"}, []string{"anyOf"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.AnyOf) > 0 {
+					var value []EnumOption
+					if err := unmarshalJSON(raw.AnyOf, &value); err != nil {
+						return err
+					}
+					decoded.AnyOf = value
+				}
+				return nil
+			}()
+		}
+	}
+	if err != nil {
+		return err
+	}
+	*i = MultiSelectItems(decoded)
+	return nil
 }
 
 // MultiSelectPropertySchema: Schema for multi-select (array) properties in an elicitation form.
@@ -3211,9 +6820,13 @@ type MultiSelectPropertySchema struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *MultiSelectPropertySchema) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"items"}, []string{"items"}); err != nil {
+		return err
+	}
 	type alias MultiSelectPropertySchema
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Default     json.RawMessage `json:"default"`
 		Description json.RawMessage `json:"description"`
 		Title       json.RawMessage `json:"title"`
@@ -3222,13 +6835,19 @@ func (s *MultiSelectPropertySchema) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Default) > 0 {
 		var values []json.RawMessage
 		if err := unmarshalJSON(raw.Default, &values); err == nil && values != nil {
 			items := []string{}
 			for _, value := range values {
 				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					items = append(items, item)
 				}
 			}
@@ -3236,10 +6855,16 @@ func (s *MultiSelectPropertySchema) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+		var value *string
+		if err := unmarshalJSON(raw.Description, &value); err == nil {
+			decoded.Description = value
+		}
 	}
 	if len(raw.Title) > 0 {
-		_ = unmarshalJSON(raw.Title, &decoded.Title)
+		var value *string
+		if err := unmarshalJSON(raw.Title, &value); err == nil {
+			decoded.Title = value
+		}
 	}
 	*s = MultiSelectPropertySchema(decoded)
 	return nil
@@ -3268,9 +6893,13 @@ type NewSessionResponse struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (r *NewSessionResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId"}, []string{"sessionId"}); err != nil {
+		return err
+	}
 	type alias NewSessionResponse
 	decoded := alias{}
 	raw := struct {
+		Meta          json.RawMessage `json:"_meta"`
 		ConfigOptions json.RawMessage `json:"configOptions"`
 		Modes         json.RawMessage `json:"modes"`
 		*alias
@@ -3278,13 +6907,19 @@ func (r *NewSessionResponse) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.ConfigOptions) > 0 {
 		var values []json.RawMessage
 		if err := unmarshalJSON(raw.ConfigOptions, &values); err == nil && values != nil {
 			items := []SessionConfigOption{}
 			for _, value := range values {
 				var item SessionConfigOption
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
 						items = append(items, item)
@@ -3295,7 +6930,10 @@ func (r *NewSessionResponse) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.Modes) > 0 {
-		_ = unmarshalJSON(raw.Modes, &decoded.Modes)
+		var value *SessionModeState
+		if err := unmarshalJSON(raw.Modes, &value); err == nil {
+			decoded.Modes = value
+		}
 	}
 	*r = NewSessionResponse(decoded)
 	return nil
@@ -3319,17 +6957,30 @@ type Notice struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (n *Notice) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"severity", "title"}, []string{"severity", "title"}); err != nil {
+		return err
+	}
 	type alias Notice
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Description json.RawMessage `json:"description"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+		var value *string
+		if err := unmarshalJSON(raw.Description, &value); err == nil {
+			decoded.Description = value
+		}
 	}
 	*n = Notice(decoded)
 	return nil
@@ -3371,6 +7022,7 @@ func (s *NumberPropertySchema) UnmarshalJSON(data []byte) error {
 	type alias NumberPropertySchema
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Default     json.RawMessage `json:"default"`
 		Description json.RawMessage `json:"description"`
 		Title       json.RawMessage `json:"title"`
@@ -3379,14 +7031,29 @@ func (s *NumberPropertySchema) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Default) > 0 {
-		_ = unmarshalJSON(raw.Default, &decoded.Default)
+		var value *float64
+		if err := unmarshalJSON(raw.Default, &value); err == nil {
+			decoded.Default = value
+		}
 	}
 	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+		var value *string
+		if err := unmarshalJSON(raw.Description, &value); err == nil {
+			decoded.Description = value
+		}
 	}
 	if len(raw.Title) > 0 {
-		_ = unmarshalJSON(raw.Title, &decoded.Title)
+		var value *string
+		if err := unmarshalJSON(raw.Title, &value); err == nil {
+			decoded.Title = value
+		}
 	}
 	*s = NumberPropertySchema(decoded)
 	return nil
@@ -3398,6 +7065,30 @@ type PermissionOption struct {
 	Kind     PermissionOptionKind `json:"kind"`
 	Name     string               `json:"name"`
 	OptionID PermissionOptionId   `json:"optionId"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *PermissionOption) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"optionId", "name", "kind"}, []string{"kind", "name", "optionId"}); err != nil {
+		return err
+	}
+	type alias PermissionOption
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*o = PermissionOption(decoded)
+	return nil
 }
 
 // PermissionOptionId: Unique identifier for a permission option.
@@ -3418,6 +7109,23 @@ const (
 	// PermissionOptionKindRejectAlways: Reject this operation and remember the choice.
 	PermissionOptionKindRejectAlways PermissionOptionKind = "reject_always"
 )
+
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *PermissionOptionKind) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("PermissionOptionKind must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "allow_once", "allow_always", "reject_once", "reject_always":
+		*v = PermissionOptionKind(value)
+		return nil
+	}
+	return fmt.Errorf("invalid PermissionOptionKind value %q", value)
+}
 
 // Plan: An execution plan for accomplishing complex tasks.
 //
@@ -3443,14 +7151,24 @@ func (p Plan) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (p *Plan) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"entries"}, []string{}); err != nil {
+		return err
+	}
 	type alias Plan
 	decoded := alias{}
 	raw := struct {
+		Meta    json.RawMessage `json:"_meta"`
 		Entries json.RawMessage `json:"entries"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
 	}
 	if len(raw.Entries) > 0 {
 		var values []json.RawMessage
@@ -3458,7 +7176,7 @@ func (p *Plan) UnmarshalJSON(data []byte) error {
 			decoded.Entries = []PlanEntry{}
 			for _, value := range values {
 				var item PlanEntry
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Entries = append(decoded.Entries, item)
 				}
 			}
@@ -3477,6 +7195,27 @@ type PlanCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *PlanCapabilities) UnmarshalJSON(data []byte) error {
+	type alias PlanCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = PlanCapabilities(decoded)
+	return nil
+}
+
 // PlanEntry: A single entry in the execution plan.
 //
 // Represents a task or goal that the assistant intends to accomplish
@@ -3487,6 +7226,30 @@ type PlanEntry struct {
 	Content  string            `json:"content"`
 	Priority PlanEntryPriority `json:"priority"`
 	Status   PlanEntryStatus   `json:"status"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (e *PlanEntry) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"content", "priority", "status"}, []string{"content", "priority", "status"}); err != nil {
+		return err
+	}
+	type alias PlanEntry
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*e = PlanEntry(decoded)
+	return nil
 }
 
 // PlanEntryPriority: Priority levels for plan entries.
@@ -3505,6 +7268,23 @@ const (
 	PlanEntryPriorityLow PlanEntryPriority = "low"
 )
 
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *PlanEntryPriority) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("PlanEntryPriority must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "high", "medium", "low":
+		*v = PlanEntryPriority(value)
+		return nil
+	}
+	return fmt.Errorf("invalid PlanEntryPriority value %q", value)
+}
+
 // PlanEntryStatus: Status of a plan entry in the execution flow.
 //
 // Tracks the lifecycle of each task from planning through completion.
@@ -3520,6 +7300,23 @@ const (
 	PlanEntryStatusCompleted PlanEntryStatus = "completed"
 )
 
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *PlanEntryStatus) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("PlanEntryStatus must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "pending", "in_progress", "completed":
+		*v = PlanEntryStatus(value)
+		return nil
+	}
+	return fmt.Errorf("invalid PlanEntryStatus value %q", value)
+}
+
 // PlanFile: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -3529,6 +7326,30 @@ type PlanFile struct {
 	Meta   Meta   `json:"_meta,omitzero"`
 	PlanID PlanId `json:"planId"`
 	URI    string `json:"uri"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (f *PlanFile) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"planId", "uri"}, []string{"planId", "uri"}); err != nil {
+		return err
+	}
+	type alias PlanFile
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*f = PlanFile(decoded)
+	return nil
 }
 
 // PlanId: **UNSTABLE**
@@ -3561,14 +7382,24 @@ func (i PlanItems) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (i *PlanItems) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"planId", "entries"}, []string{"planId"}); err != nil {
+		return err
+	}
 	type alias PlanItems
 	decoded := alias{}
 	raw := struct {
+		Meta    json.RawMessage `json:"_meta"`
 		Entries json.RawMessage `json:"entries"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
 	}
 	if len(raw.Entries) > 0 {
 		var values []json.RawMessage
@@ -3576,7 +7407,7 @@ func (i *PlanItems) UnmarshalJSON(data []byte) error {
 			decoded.Entries = []PlanEntry{}
 			for _, value := range values {
 				var item PlanEntry
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Entries = append(decoded.Entries, item)
 				}
 			}
@@ -3597,6 +7428,30 @@ type PlanMarkdown struct {
 	PlanID  PlanId `json:"planId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (m *PlanMarkdown) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"planId", "content"}, []string{"content", "planId"}); err != nil {
+		return err
+	}
+	type alias PlanMarkdown
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*m = PlanMarkdown(decoded)
+	return nil
+}
+
 // PlanRemoved: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -3607,6 +7462,30 @@ type PlanRemoved struct {
 	PlanID PlanId `json:"planId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *PlanRemoved) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"planId"}, []string{"planId"}); err != nil {
+		return err
+	}
+	type alias PlanRemoved
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = PlanRemoved(decoded)
+	return nil
+}
+
 // PlanUpdate: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -3615,6 +7494,30 @@ type PlanRemoved struct {
 type PlanUpdate struct {
 	Meta Meta              `json:"_meta,omitzero"`
 	Plan PlanUpdateContent `json:"plan"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *PlanUpdate) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"plan"}, []string{"plan"}); err != nil {
+		return err
+	}
+	type alias PlanUpdate
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*u = PlanUpdate(decoded)
+	return nil
 }
 
 // PlanUpdateContent: **UNSTABLE**
@@ -3706,28 +7609,135 @@ func (c PlanUpdateContent) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the selected schema variant.
 func (c *PlanUpdateContent) UnmarshalJSON(data []byte) error {
 	type alias PlanUpdateContent
-	decoded := alias{}
-	raw := struct {
+	var decoded alias
+	var raw struct {
+		Type    json.RawMessage `json:"type"`
+		Meta    json.RawMessage `json:"_meta"`
+		Content json.RawMessage `json:"content"`
 		Entries json.RawMessage `json:"entries"`
-		*alias
-	}{alias: &decoded}
+		PlanID  json.RawMessage `json:"planId"`
+		URI     json.RawMessage `json:"uri"`
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Entries) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.Entries, &values); err == nil {
-			decoded.Entries = []PlanEntry{}
-			for _, value := range values {
-				var item PlanEntry
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.Entries = append(decoded.Entries, item)
+	var tag PlanUpdateContentType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "items":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "planId", "entries"}, []string{"planId", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
 				}
 			}
-		}
+			if len(raw.Entries) > 0 {
+				var values []json.RawMessage
+				if err := unmarshalJSON(raw.Entries, &values); err == nil {
+					items := []PlanEntry{}
+					for _, rawItem := range values {
+						var item PlanEntry
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
+							items = append(items, item)
+						}
+					}
+					decoded.Entries = items
+				}
+			}
+			if len(raw.PlanID) > 0 {
+				var value PlanId
+				if err := unmarshalJSON(raw.PlanID, &value); err != nil {
+					return err
+				}
+				decoded.PlanID = value
+			}
+			return nil
+		}()
+	case "file":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "planId", "uri"}, []string{"planId", "type", "uri"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.PlanID) > 0 {
+				var value PlanId
+				if err := unmarshalJSON(raw.PlanID, &value); err != nil {
+					return err
+				}
+				decoded.PlanID = value
+			}
+			if len(raw.URI) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.URI, &value); err != nil {
+					return err
+				}
+				decoded.URI = value
+			}
+			return nil
+		}()
+	case "markdown":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "planId", "content"}, []string{"content", "planId", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Content) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Content, &value); err != nil {
+					return err
+				}
+				decoded.Content = value
+			}
+			if len(raw.PlanID) > 0 {
+				var value PlanId
+				if err := unmarshalJSON(raw.PlanID, &value); err != nil {
+					return err
+				}
+				decoded.PlanID = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("PlanUpdateContent: unknown type %q", tag)
+	}
+	if err != nil {
+		return err
 	}
 	*c = PlanUpdateContent(decoded)
 	return nil
@@ -3757,6 +7767,7 @@ func (c *PromptCapabilities) UnmarshalJSON(data []byte) error {
 	type alias PromptCapabilities
 	decoded := alias{}
 	raw := struct {
+		Meta            json.RawMessage `json:"_meta"`
 		Audio           json.RawMessage `json:"audio"`
 		EmbeddedContext json.RawMessage `json:"embeddedContext"`
 		Image           json.RawMessage `json:"image"`
@@ -3765,14 +7776,29 @@ func (c *PromptCapabilities) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Audio) > 0 {
-		_ = unmarshalJSON(raw.Audio, &decoded.Audio)
+		var value bool
+		if err := unmarshalJSON(raw.Audio, &value); err == nil {
+			decoded.Audio = value
+		}
 	}
 	if len(raw.EmbeddedContext) > 0 {
-		_ = unmarshalJSON(raw.EmbeddedContext, &decoded.EmbeddedContext)
+		var value bool
+		if err := unmarshalJSON(raw.EmbeddedContext, &value); err == nil {
+			decoded.EmbeddedContext = value
+		}
 	}
 	if len(raw.Image) > 0 {
-		_ = unmarshalJSON(raw.Image, &decoded.Image)
+		var value bool
+		if err := unmarshalJSON(raw.Image, &value); err == nil {
+			decoded.Image = value
+		}
 	}
 	*c = PromptCapabilities(decoded)
 	return nil
@@ -3799,6 +7825,30 @@ func (r PromptRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *PromptRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId", "prompt"}, []string{"prompt", "sessionId"}); err != nil {
+		return err
+	}
+	type alias PromptRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = PromptRequest(decoded)
+	return nil
+}
+
 // PromptResponse: Response from processing a user prompt.
 //
 // See protocol docs: [Check for Completion](https://agentclientprotocol.com/protocol/v1/draft/prompt-turn#4-check-for-completion)
@@ -3810,17 +7860,30 @@ type PromptResponse struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (r *PromptResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"stopReason"}, []string{"stopReason"}); err != nil {
+		return err
+	}
 	type alias PromptResponse
 	decoded := alias{}
 	raw := struct {
+		Meta  json.RawMessage `json:"_meta"`
 		Usage json.RawMessage `json:"usage"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Usage) > 0 {
-		_ = unmarshalJSON(raw.Usage, &decoded.Usage)
+		var value *Usage
+		if err := unmarshalJSON(raw.Usage, &value); err == nil {
+			decoded.Usage = value
+		}
 	}
 	*r = PromptResponse(decoded)
 	return nil
@@ -3841,6 +7904,30 @@ type ProviderCurrentConfig struct {
 	Meta    Meta        `json:"_meta,omitzero"`
 	ApiType LlmProtocol `json:"apiType"`
 	BaseUrl string      `json:"baseUrl"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *ProviderCurrentConfig) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"apiType", "baseUrl"}, []string{"apiType", "baseUrl"}); err != nil {
+		return err
+	}
+	type alias ProviderCurrentConfig
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = ProviderCurrentConfig(decoded)
+	return nil
 }
 
 // ProviderId: **UNSTABLE**
@@ -3874,6 +7961,27 @@ type ProvidersCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *ProvidersCapabilities) UnmarshalJSON(data []byte) error {
+	type alias ProvidersCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = ProvidersCapabilities(decoded)
+	return nil
+}
+
 // ProxySuccessorNotification: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -3891,10 +7999,28 @@ type ProxySuccessorNotification struct {
 	Params any    `json:"params,omitempty"`
 }
 
-// UnmarshalJSON preserves unstructured numbers as json.Number.
+// UnmarshalJSON implements json.Unmarshaler.
 func (n *ProxySuccessorNotification) UnmarshalJSON(data []byte) error {
-	type plain ProxySuccessorNotification
-	return unmarshalJSON(data, (*plain)(n))
+	if err := requireJSONProperties(data, []string{"method"}, []string{"method"}); err != nil {
+		return err
+	}
+	type alias ProxySuccessorNotification
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*n = ProxySuccessorNotification(decoded)
+	return nil
 }
 
 // ProxySuccessorRequest: **UNSTABLE**
@@ -3921,10 +8047,28 @@ type ProxySuccessorRequest struct {
 	Params any    `json:"params,omitempty"`
 }
 
-// UnmarshalJSON preserves unstructured numbers as json.Number.
+// UnmarshalJSON implements json.Unmarshaler.
 func (r *ProxySuccessorRequest) UnmarshalJSON(data []byte) error {
-	type plain ProxySuccessorRequest
-	return unmarshalJSON(data, (*plain)(r))
+	if err := requireJSONProperties(data, []string{"method"}, []string{"method"}); err != nil {
+		return err
+	}
+	type alias ProxySuccessorRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = ProxySuccessorRequest(decoded)
+	return nil
 }
 
 // ProxySuccessorResponse: **UNSTABLE**
@@ -3945,10 +8089,58 @@ type ReadTextFileRequest struct {
 	SessionID SessionId `json:"sessionId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ReadTextFileRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId", "path"}, []string{"path", "sessionId"}); err != nil {
+		return err
+	}
+	type alias ReadTextFileRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = ReadTextFileRequest(decoded)
+	return nil
+}
+
 // ReadTextFileResponse: Response containing the contents of a text file.
 type ReadTextFileResponse struct {
 	Meta    Meta   `json:"_meta,omitzero"`
 	Content string `json:"content"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ReadTextFileResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"content"}, []string{"content"}); err != nil {
+		return err
+	}
+	type alias ReadTextFileResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = ReadTextFileResponse(decoded)
+	return nil
 }
 
 // ReleaseTerminalRequest: Request to release a terminal and free its resources.
@@ -3958,9 +8150,54 @@ type ReleaseTerminalRequest struct {
 	TerminalID TerminalId `json:"terminalId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ReleaseTerminalRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId", "terminalId"}, []string{"sessionId", "terminalId"}); err != nil {
+		return err
+	}
+	type alias ReleaseTerminalRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = ReleaseTerminalRequest(decoded)
+	return nil
+}
+
 // ReleaseTerminalResponse: Response to terminal/release method
 type ReleaseTerminalResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ReleaseTerminalResponse) UnmarshalJSON(data []byte) error {
+	type alias ReleaseTerminalResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = ReleaseTerminalResponse(decoded)
+	return nil
 }
 
 // RequestId: JSON RPC Request Id
@@ -4030,6 +8267,72 @@ func (o RequestPermissionOutcome) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
+// UnmarshalJSON decodes the selected schema variant.
+func (o *RequestPermissionOutcome) UnmarshalJSON(data []byte) error {
+	type alias RequestPermissionOutcome
+	var decoded alias
+	var raw struct {
+		Outcome  json.RawMessage `json:"outcome"`
+		Meta     json.RawMessage `json:"_meta"`
+		OptionID json.RawMessage `json:"optionId"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag RequestPermissionOutcomeType
+	var tagErr error
+	if len(raw.Outcome) > 0 {
+		tagErr = unmarshalJSON(raw.Outcome, &tag)
+	}
+	var err error
+	switch tag {
+	case "cancelled":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Outcome = tag
+			if err := requireJSONProperties(data, []string{"outcome"}, []string{"outcome"}); err != nil {
+				return err
+			}
+			return nil
+		}()
+	case "selected":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Outcome = tag
+			if err := requireJSONProperties(data, []string{"outcome", "optionId"}, []string{"optionId", "outcome"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.OptionID) > 0 {
+				var value PermissionOptionId
+				if err := unmarshalJSON(raw.OptionID, &value); err != nil {
+					return err
+				}
+				decoded.OptionID = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("RequestPermissionOutcome: unknown outcome %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*o = RequestPermissionOutcome(decoded)
+	return nil
+}
+
 // RequestPermissionRequest: Request for user permission to execute a tool call.
 //
 // Sent when the agent needs authorization before performing a sensitive operation.
@@ -4052,15 +8355,84 @@ func (r RequestPermissionRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *RequestPermissionRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId", "toolCall", "options"}, []string{"options", "sessionId", "toolCall"}); err != nil {
+		return err
+	}
+	type alias RequestPermissionRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = RequestPermissionRequest(decoded)
+	return nil
+}
+
 // RequestPermissionResponse: Response to a permission request.
 type RequestPermissionResponse struct {
 	Meta    Meta                     `json:"_meta,omitzero"`
 	Outcome RequestPermissionOutcome `json:"outcome"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *RequestPermissionResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"outcome"}, []string{"outcome"}); err != nil {
+		return err
+	}
+	type alias RequestPermissionResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = RequestPermissionResponse(decoded)
+	return nil
+}
+
 // RequiresActionStateUpdate: Foreground work is blocked on user action.
 type RequiresActionStateUpdate struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *RequiresActionStateUpdate) UnmarshalJSON(data []byte) error {
+	type alias RequiresActionStateUpdate
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*u = RequiresActionStateUpdate(decoded)
+	return nil
 }
 
 // ResourceLink: A resource that the server is capable of reading, included in a prompt or tool call result.
@@ -4077,9 +8449,13 @@ type ResourceLink struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (l *ResourceLink) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "uri"}, []string{"name", "uri"}); err != nil {
+		return err
+	}
 	type alias ResourceLink
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Annotations json.RawMessage `json:"annotations"`
 		Description json.RawMessage `json:"description"`
 		MimeType    json.RawMessage `json:"mimeType"`
@@ -4090,20 +8466,41 @@ func (l *ResourceLink) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Annotations) > 0 {
-		_ = unmarshalJSON(raw.Annotations, &decoded.Annotations)
+		var value *Annotations
+		if err := unmarshalJSON(raw.Annotations, &value); err == nil {
+			decoded.Annotations = value
+		}
 	}
 	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+		var value *string
+		if err := unmarshalJSON(raw.Description, &value); err == nil {
+			decoded.Description = value
+		}
 	}
 	if len(raw.MimeType) > 0 {
-		_ = unmarshalJSON(raw.MimeType, &decoded.MimeType)
+		var value *string
+		if err := unmarshalJSON(raw.MimeType, &value); err == nil {
+			decoded.MimeType = value
+		}
 	}
 	if len(raw.Size) > 0 {
-		_ = unmarshalJSON(raw.Size, &decoded.Size)
+		var value *int64
+		if err := unmarshalJSON(raw.Size, &value); err == nil {
+			decoded.Size = value
+		}
 	}
 	if len(raw.Title) > 0 {
-		_ = unmarshalJSON(raw.Title, &decoded.Title)
+		var value *string
+		if err := unmarshalJSON(raw.Title, &value); err == nil {
+			decoded.Title = value
+		}
 	}
 	*l = ResourceLink(decoded)
 	return nil
@@ -4124,6 +8521,30 @@ type ResumeSessionRequest struct {
 	SystemPrompt          *SystemPrompt `json:"systemPrompt,omitempty"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ResumeSessionRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId", "cwd"}, []string{"cwd", "sessionId"}); err != nil {
+		return err
+	}
+	type alias ResumeSessionRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = ResumeSessionRequest(decoded)
+	return nil
+}
+
 // ResumeSessionResponse: Response from resuming an existing session.
 type ResumeSessionResponse struct {
 	Meta          Meta                   `json:"_meta,omitzero"`
@@ -4136,6 +8557,7 @@ func (r *ResumeSessionResponse) UnmarshalJSON(data []byte) error {
 	type alias ResumeSessionResponse
 	decoded := alias{}
 	raw := struct {
+		Meta          json.RawMessage `json:"_meta"`
 		ConfigOptions json.RawMessage `json:"configOptions"`
 		Modes         json.RawMessage `json:"modes"`
 		*alias
@@ -4143,13 +8565,19 @@ func (r *ResumeSessionResponse) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.ConfigOptions) > 0 {
 		var values []json.RawMessage
 		if err := unmarshalJSON(raw.ConfigOptions, &values); err == nil && values != nil {
 			items := []SessionConfigOption{}
 			for _, value := range values {
 				var item SessionConfigOption
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
 						items = append(items, item)
@@ -4160,7 +8588,10 @@ func (r *ResumeSessionResponse) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.Modes) > 0 {
-		_ = unmarshalJSON(raw.Modes, &decoded.Modes)
+		var value *SessionModeState
+		if err := unmarshalJSON(raw.Modes, &value); err == nil {
+			decoded.Modes = value
+		}
 	}
 	*r = ResumeSessionResponse(decoded)
 	return nil
@@ -4176,15 +8607,77 @@ const (
 	RoleUser Role = "user"
 )
 
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *Role) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("Role must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "assistant", "user":
+		*v = Role(value)
+		return nil
+	}
+	return fmt.Errorf("invalid Role value %q", value)
+}
+
 // RunningStateUpdate: Foreground work is in progress.
 type RunningStateUpdate struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *RunningStateUpdate) UnmarshalJSON(data []byte) error {
+	type alias RunningStateUpdate
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*u = RunningStateUpdate(decoded)
+	return nil
 }
 
 // SelectedPermissionOutcome: The user selected one of the provided options.
 type SelectedPermissionOutcome struct {
 	Meta     Meta               `json:"_meta,omitzero"`
 	OptionID PermissionOptionId `json:"optionId"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *SelectedPermissionOutcome) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"optionId"}, []string{"optionId"}); err != nil {
+		return err
+	}
+	type alias SelectedPermissionOutcome
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*o = SelectedPermissionOutcome(decoded)
+	return nil
 }
 
 // SessionAdditionalDirectoriesCapabilities: Capabilities for additional session directories support.
@@ -4197,6 +8690,27 @@ type SessionAdditionalDirectoriesCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionAdditionalDirectoriesCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SessionAdditionalDirectoriesCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = SessionAdditionalDirectoriesCapabilities(decoded)
+	return nil
+}
+
 // SessionArchiveCapabilities: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -4207,6 +8721,27 @@ type SessionAdditionalDirectoriesCapabilities struct {
 // `session/list`, and `SessionInfo.archived`.
 type SessionArchiveCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionArchiveCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SessionArchiveCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = SessionArchiveCapabilities(decoded)
+	return nil
 }
 
 // SessionArchiveFilter: **UNSTABLE**
@@ -4239,6 +8774,27 @@ type SessionCancelCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionCancelCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SessionCancelCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = SessionCancelCapabilities(decoded)
+	return nil
+}
+
 // SessionCapabilities: Session capabilities supported by the agent.
 //
 // As a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
@@ -4267,6 +8823,7 @@ func (c *SessionCapabilities) UnmarshalJSON(data []byte) error {
 	type alias SessionCapabilities
 	decoded := alias{}
 	raw := struct {
+		Meta                  json.RawMessage `json:"_meta"`
 		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
 		Archive               json.RawMessage `json:"archive"`
 		Close                 json.RawMessage `json:"close"`
@@ -4282,35 +8839,71 @@ func (c *SessionCapabilities) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.AdditionalDirectories) > 0 {
-		_ = unmarshalJSON(raw.AdditionalDirectories, &decoded.AdditionalDirectories)
+		var value *SessionAdditionalDirectoriesCapabilities
+		if err := unmarshalJSON(raw.AdditionalDirectories, &value); err == nil {
+			decoded.AdditionalDirectories = value
+		}
 	}
 	if len(raw.Archive) > 0 {
-		_ = unmarshalJSON(raw.Archive, &decoded.Archive)
+		var value *SessionArchiveCapabilities
+		if err := unmarshalJSON(raw.Archive, &value); err == nil {
+			decoded.Archive = value
+		}
 	}
 	if len(raw.Close) > 0 {
-		_ = unmarshalJSON(raw.Close, &decoded.Close)
+		var value *SessionCloseCapabilities
+		if err := unmarshalJSON(raw.Close, &value); err == nil {
+			decoded.Close = value
+		}
 	}
 	if len(raw.Delete) > 0 {
-		_ = unmarshalJSON(raw.Delete, &decoded.Delete)
+		var value *SessionDeleteCapabilities
+		if err := unmarshalJSON(raw.Delete, &value); err == nil {
+			decoded.Delete = value
+		}
 	}
 	if len(raw.Fork) > 0 {
-		_ = unmarshalJSON(raw.Fork, &decoded.Fork)
+		var value *SessionForkCapabilities
+		if err := unmarshalJSON(raw.Fork, &value); err == nil {
+			decoded.Fork = value
+		}
 	}
 	if len(raw.List) > 0 {
-		_ = unmarshalJSON(raw.List, &decoded.List)
+		var value *SessionListCapabilities
+		if err := unmarshalJSON(raw.List, &value); err == nil {
+			decoded.List = value
+		}
 	}
 	if len(raw.Resume) > 0 {
-		_ = unmarshalJSON(raw.Resume, &decoded.Resume)
+		var value *SessionResumeCapabilities
+		if err := unmarshalJSON(raw.Resume, &value); err == nil {
+			decoded.Resume = value
+		}
 	}
 	if len(raw.Status) > 0 {
-		_ = unmarshalJSON(raw.Status, &decoded.Status)
+		var value *SessionStatusCapabilities
+		if err := unmarshalJSON(raw.Status, &value); err == nil {
+			decoded.Status = value
+		}
 	}
 	if len(raw.SystemPrompt) > 0 {
-		_ = unmarshalJSON(raw.SystemPrompt, &decoded.SystemPrompt)
+		var value *SessionSystemPromptCapabilities
+		if err := unmarshalJSON(raw.SystemPrompt, &value); err == nil {
+			decoded.SystemPrompt = value
+		}
 	}
 	if len(raw.Title) > 0 {
-		_ = unmarshalJSON(raw.Title, &decoded.Title)
+		var value *SessionTitleCapabilities
+		if err := unmarshalJSON(raw.Title, &value); err == nil {
+			decoded.Title = value
+		}
 	}
 	*c = SessionCapabilities(decoded)
 	return nil
@@ -4323,9 +8916,47 @@ type SessionCloseCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionCloseCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SessionCloseCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = SessionCloseCapabilities(decoded)
+	return nil
+}
+
 // SessionConfigBoolean: A boolean on/off toggle session configuration option payload.
 type SessionConfigBoolean struct {
 	CurrentValue bool `json:"currentValue"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (b *SessionConfigBoolean) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"currentValue"}, []string{"currentValue"}); err != nil {
+		return err
+	}
+	type alias SessionConfigBoolean
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*b = SessionConfigBoolean(decoded)
+	return nil
 }
 
 // SessionConfigGroupId: Unique identifier for a session configuration option value group.
@@ -4343,7 +8974,7 @@ type SessionConfigOption struct {
 	Description  *string                      `json:"description,omitempty"`
 	ID           SessionConfigId              `json:"id"`
 	Name         string                       `json:"name"`
-	Options      SessionConfigSelectOptions   `json:"options,omitempty,omitzero"`
+	Options      SessionConfigSelectOptions   `json:"options,omitzero"`
 }
 
 // SessionConfigOptionType is the discriminator for SessionConfigOption variants.
@@ -4403,23 +9034,144 @@ func (o SessionConfigOption) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the selected schema variant.
 func (o *SessionConfigOption) UnmarshalJSON(data []byte) error {
 	type alias SessionConfigOption
-	decoded := alias{}
-	raw := struct {
-		Category    json.RawMessage `json:"category"`
-		Description json.RawMessage `json:"description"`
-		*alias
-	}{alias: &decoded}
+	var decoded alias
+	var raw struct {
+		Type         json.RawMessage `json:"type"`
+		Meta         json.RawMessage `json:"_meta"`
+		Category     json.RawMessage `json:"category"`
+		CurrentValue json.RawMessage `json:"currentValue"`
+		Description  json.RawMessage `json:"description"`
+		ID           json.RawMessage `json:"id"`
+		Name         json.RawMessage `json:"name"`
+		Options      json.RawMessage `json:"options"`
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Category) > 0 {
-		_ = unmarshalJSON(raw.Category, &decoded.Category)
+	var tag SessionConfigOptionType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
 	}
-	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+	var err error
+	switch tag {
+	case "select":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"id", "name", "type", "currentValue", "options"}, []string{"currentValue", "id", "name", "options", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Category) > 0 {
+				var value *SessionConfigOptionCategory
+				if err := unmarshalJSON(raw.Category, &value); err == nil {
+					decoded.Category = value
+				}
+			}
+			if len(raw.CurrentValue) > 0 {
+				var value SessionConfigValueId
+				if err := unmarshalJSON(raw.CurrentValue, &value); err != nil {
+					return err
+				}
+				decoded.CurrentValue = value
+			}
+			if len(raw.Description) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Description, &value); err == nil {
+					decoded.Description = value
+				}
+			}
+			if len(raw.ID) > 0 {
+				var value SessionConfigId
+				if err := unmarshalJSON(raw.ID, &value); err != nil {
+					return err
+				}
+				decoded.ID = value
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			if len(raw.Options) > 0 {
+				var value SessionConfigSelectOptions
+				if err := unmarshalJSON(raw.Options, &value); err != nil {
+					return err
+				}
+				decoded.Options = value
+			}
+			return nil
+		}()
+	case "boolean":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"id", "name", "type", "currentValue"}, []string{"currentValue", "id", "name", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Category) > 0 {
+				var value *SessionConfigOptionCategory
+				if err := unmarshalJSON(raw.Category, &value); err == nil {
+					decoded.Category = value
+				}
+			}
+			if len(raw.CurrentValue) > 0 {
+				var value bool
+				if err := unmarshalJSON(raw.CurrentValue, &value); err != nil {
+					return err
+				}
+				decoded.CurrentValue = value
+			}
+			if len(raw.Description) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Description, &value); err == nil {
+					decoded.Description = value
+				}
+			}
+			if len(raw.ID) > 0 {
+				var value SessionConfigId
+				if err := unmarshalJSON(raw.ID, &value); err != nil {
+					return err
+				}
+				decoded.ID = value
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("SessionConfigOption: unknown type %q", tag)
+	}
+	if err != nil {
+		return err
 	}
 	*o = SessionConfigOption(decoded)
 	return nil
@@ -4458,14 +9210,24 @@ func (c *SessionConfigOptionsCapabilities) UnmarshalJSON(data []byte) error {
 	type alias SessionConfigOptionsCapabilities
 	decoded := alias{}
 	raw := struct {
+		Meta    json.RawMessage `json:"_meta"`
 		Boolean json.RawMessage `json:"boolean"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Boolean) > 0 {
-		_ = unmarshalJSON(raw.Boolean, &decoded.Boolean)
+		var value *BooleanConfigOptionCapabilities
+		if err := unmarshalJSON(raw.Boolean, &value); err == nil {
+			decoded.Boolean = value
+		}
 	}
 	*c = SessionConfigOptionsCapabilities(decoded)
 	return nil
@@ -4488,6 +9250,23 @@ func (s SessionConfigSelect) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *SessionConfigSelect) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"currentValue", "options"}, []string{"currentValue", "options"}); err != nil {
+		return err
+	}
+	type alias SessionConfigSelect
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*s = SessionConfigSelect(decoded)
+	return nil
+}
+
 // SessionConfigSelectGroup: A group of possible values for a session configuration option.
 type SessionConfigSelectGroup struct {
 	Meta    Meta                        `json:"_meta,omitzero"`
@@ -4508,14 +9287,24 @@ func (g SessionConfigSelectGroup) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (g *SessionConfigSelectGroup) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"group", "name", "options"}, []string{"group", "name"}); err != nil {
+		return err
+	}
 	type alias SessionConfigSelectGroup
 	decoded := alias{}
 	raw := struct {
+		Meta    json.RawMessage `json:"_meta"`
 		Options json.RawMessage `json:"options"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
 	}
 	if len(raw.Options) > 0 {
 		var values []json.RawMessage
@@ -4523,7 +9312,7 @@ func (g *SessionConfigSelectGroup) UnmarshalJSON(data []byte) error {
 			decoded.Options = []SessionConfigSelectOption{}
 			for _, value := range values {
 				var item SessionConfigSelectOption
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Options = append(decoded.Options, item)
 				}
 			}
@@ -4543,17 +9332,30 @@ type SessionConfigSelectOption struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (o *SessionConfigSelectOption) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"value", "name"}, []string{"name", "value"}); err != nil {
+		return err
+	}
 	type alias SessionConfigSelectOption
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Description json.RawMessage `json:"description"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+		var value *string
+		if err := unmarshalJSON(raw.Description, &value); err == nil {
+			decoded.Description = value
+		}
 	}
 	*o = SessionConfigSelectOption(decoded)
 	return nil
@@ -4629,6 +9431,27 @@ type SessionDeleteCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionDeleteCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SessionDeleteCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = SessionDeleteCapabilities(decoded)
+	return nil
+}
+
 // SessionForkCapabilities: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -4638,6 +9461,27 @@ type SessionDeleteCapabilities struct {
 // Supplying `{}` means the agent supports forking sessions.
 type SessionForkCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionForkCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SessionForkCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = SessionForkCapabilities(decoded)
+	return nil
 }
 
 // SessionId: A unique identifier for a conversation session between a client and agent.
@@ -4661,9 +9505,13 @@ type SessionInfo struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (i *SessionInfo) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId", "cwd"}, []string{"cwd", "sessionId"}); err != nil {
+		return err
+	}
 	type alias SessionInfo
 	decoded := alias{}
 	raw := struct {
+		Meta                  json.RawMessage `json:"_meta"`
 		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
 		Archived              json.RawMessage `json:"archived"`
 		Title                 json.RawMessage `json:"title"`
@@ -4673,26 +9521,41 @@ func (i *SessionInfo) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.AdditionalDirectories) > 0 {
 		var values []json.RawMessage
 		if err := unmarshalJSON(raw.AdditionalDirectories, &values); err == nil {
 			decoded.AdditionalDirectories = []string{}
 			for _, value := range values {
 				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.AdditionalDirectories = append(decoded.AdditionalDirectories, item)
 				}
 			}
 		}
 	}
 	if len(raw.Archived) > 0 {
-		_ = unmarshalJSON(raw.Archived, &decoded.Archived)
+		var value *bool
+		if err := unmarshalJSON(raw.Archived, &value); err == nil {
+			decoded.Archived = value
+		}
 	}
 	if len(raw.Title) > 0 {
-		_ = unmarshalJSON(raw.Title, &decoded.Title)
+		var value *string
+		if err := unmarshalJSON(raw.Title, &value); err == nil {
+			decoded.Title = value
+		}
 	}
 	if len(raw.UpdatedAt) > 0 {
-		_ = unmarshalJSON(raw.UpdatedAt, &decoded.UpdatedAt)
+		var value *string
+		if err := unmarshalJSON(raw.UpdatedAt, &value); err == nil {
+			decoded.UpdatedAt = value
+		}
 	}
 	*i = SessionInfo(decoded)
 	return nil
@@ -4706,28 +9569,9 @@ type SessionInfoUpdate struct {
 	Meta      Meta    `json:"_meta,omitzero"`
 	Title     *string `json:"title,omitempty"`
 	UpdatedAt *string `json:"updatedAt,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *SessionInfoUpdate) UnmarshalJSON(data []byte) error {
-	type alias SessionInfoUpdate
-	decoded := alias{}
-	raw := struct {
-		Title     json.RawMessage `json:"title"`
-		UpdatedAt json.RawMessage `json:"updatedAt"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Title) > 0 {
-		_ = unmarshalJSON(raw.Title, &decoded.Title)
-	}
-	if len(raw.UpdatedAt) > 0 {
-		_ = unmarshalJSON(raw.UpdatedAt, &decoded.UpdatedAt)
-	}
-	*u = SessionInfoUpdate(decoded)
-	return nil
+	// NullFields lists JSON field names to send as explicit null, regardless of their values.
+	// Decoding records explicit nulls here, separately from omitted fields.
+	NullFields []string `json:"-"`
 }
 
 // SessionListCapabilities: Capabilities for the `session/list` method.
@@ -4735,6 +9579,27 @@ func (u *SessionInfoUpdate) UnmarshalJSON(data []byte) error {
 // Supplying `{}` means the agent supports listing sessions.
 type SessionListCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionListCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SessionListCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = SessionListCapabilities(decoded)
+	return nil
 }
 
 // SessionMessage: **UNSTABLE**
@@ -4769,6 +9634,30 @@ type SessionMessageChunk struct {
 	MessageID MessageId    `json:"messageId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionMessageChunk) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"messageId", "content"}, []string{"content", "messageId"}); err != nil {
+		return err
+	}
+	type alias SessionMessageChunk
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = SessionMessageChunk(decoded)
+	return nil
+}
+
 // SessionMode: A mode the agent can operate in.
 //
 // See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/v1/draft/session-modes)
@@ -4781,17 +9670,30 @@ type SessionMode struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (m *SessionMode) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"id", "name"}, []string{"id", "name"}); err != nil {
+		return err
+	}
 	type alias SessionMode
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Description json.RawMessage `json:"description"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+		var value *string
+		if err := unmarshalJSON(raw.Description, &value); err == nil {
+			decoded.Description = value
+		}
 	}
 	*m = SessionMode(decoded)
 	return nil
@@ -4819,14 +9721,24 @@ func (s SessionModeState) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *SessionModeState) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"currentModeId", "availableModes"}, []string{"currentModeId"}); err != nil {
+		return err
+	}
 	type alias SessionModeState
 	decoded := alias{}
 	raw := struct {
+		Meta           json.RawMessage `json:"_meta"`
 		AvailableModes json.RawMessage `json:"availableModes"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
 	}
 	if len(raw.AvailableModes) > 0 {
 		var values []json.RawMessage
@@ -4834,7 +9746,7 @@ func (s *SessionModeState) UnmarshalJSON(data []byte) error {
 			decoded.AvailableModes = []SessionMode{}
 			for _, value := range values {
 				var item SessionMode
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.AvailableModes = append(decoded.AvailableModes, item)
 				}
 			}
@@ -4855,11 +9767,56 @@ type SessionNotification struct {
 	Update    SessionUpdate `json:"update"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (n *SessionNotification) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId", "update"}, []string{"sessionId", "update"}); err != nil {
+		return err
+	}
+	type alias SessionNotification
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*n = SessionNotification(decoded)
+	return nil
+}
+
 // SessionResumeCapabilities: Capabilities for the `session/resume` method.
 //
 // Supplying `{}` means the agent supports resuming sessions.
 type SessionResumeCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionResumeCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SessionResumeCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = SessionResumeCapabilities(decoded)
+	return nil
 }
 
 // SessionStatus: **UNSTABLE**
@@ -4894,6 +9851,27 @@ type SessionStatusCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionStatusCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SessionStatusCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = SessionStatusCapabilities(decoded)
+	return nil
+}
+
 // SessionStatusRequest: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -4910,6 +9888,30 @@ type SessionStatusRequest struct {
 	SessionID SessionId `json:"sessionId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *SessionStatusRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId"}, []string{"sessionId"}); err != nil {
+		return err
+	}
+	type alias SessionStatusRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = SessionStatusRequest(decoded)
+	return nil
+}
+
 // SessionStatusResponse: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -4921,6 +9923,30 @@ type SessionStatusRequest struct {
 type SessionStatusResponse struct {
 	Meta   Meta          `json:"_meta,omitzero"`
 	Status SessionStatus `json:"status"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *SessionStatusResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"status"}, []string{"status"}); err != nil {
+		return err
+	}
+	type alias SessionStatusResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = SessionStatusResponse(decoded)
+	return nil
 }
 
 // SessionSystemPromptCapabilities: **UNSTABLE**
@@ -4941,14 +9967,24 @@ func (c *SessionSystemPromptCapabilities) UnmarshalJSON(data []byte) error {
 	type alias SessionSystemPromptCapabilities
 	decoded := alias{}
 	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
 		Mode json.RawMessage `json:"mode"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Mode) > 0 {
-		_ = unmarshalJSON(raw.Mode, &decoded.Mode)
+		var value *SessionSystemPromptModeCapabilities
+		if err := unmarshalJSON(raw.Mode, &value); err == nil {
+			decoded.Mode = value
+		}
 	}
 	*c = SessionSystemPromptCapabilities(decoded)
 	return nil
@@ -4972,14 +10008,24 @@ func (c *SessionSystemPromptModeCapabilities) UnmarshalJSON(data []byte) error {
 	type alias SessionSystemPromptModeCapabilities
 	decoded := alias{}
 	raw := struct {
+		Meta     json.RawMessage `json:"_meta"`
 		Override json.RawMessage `json:"override"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Override) > 0 {
-		_ = unmarshalJSON(raw.Override, &decoded.Override)
+		var value *SessionSystemPromptOverrideCapabilities
+		if err := unmarshalJSON(raw.Override, &value); err == nil {
+			decoded.Override = value
+		}
 	}
 	*c = SessionSystemPromptModeCapabilities(decoded)
 	return nil
@@ -4997,6 +10043,27 @@ type SessionSystemPromptOverrideCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionSystemPromptOverrideCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SessionSystemPromptOverrideCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = SessionSystemPromptOverrideCapabilities(decoded)
+	return nil
+}
+
 // SessionTitleCapabilities: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -5007,6 +10074,27 @@ type SessionSystemPromptOverrideCapabilities struct {
 // through `session/list` and `session_info_update` without this capability.
 type SessionTitleCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionTitleCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SessionTitleCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = SessionTitleCapabilities(decoded)
+	return nil
 }
 
 // SessionUpdate: Different types of updates that can be sent during session processing.
@@ -5033,7 +10121,7 @@ type SessionUpdate struct {
 	Locations             *[]ToolCallLocation          `json:"locations,omitempty"`
 	MessageID             *MessageId                   `json:"messageId,omitempty"`
 	Name                  *string                      `json:"name,omitempty"`
-	Plan                  PlanUpdateContent            `json:"plan,omitempty,omitzero"`
+	Plan                  PlanUpdateContent            `json:"plan,omitzero"`
 	PlanID                PlanId                       `json:"planId,omitempty"`
 	RawInput              any                          `json:"rawInput,omitempty"`
 	RawOutput             any                          `json:"rawOutput,omitempty"`
@@ -5301,11 +10389,14 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 		Capabilities          **SubagentSessionCapabilities `json:"capabilities,omitempty"`
 		Cwd                   **string                      `json:"cwd,omitempty"`
 		Description           **string                      `json:"description,omitempty"`
+		Error                 **string                      `json:"error,omitempty"`
 		RecipientMessageID    **MessageId                   `json:"recipientMessageId,omitempty"`
 		RecipientSessionID    **SessionId                   `json:"recipientSessionId,omitempty"`
 		SenderMessageID       **MessageId                   `json:"senderMessageId,omitempty"`
 		SenderSessionID       **SessionId                   `json:"senderSessionId,omitempty"`
 		State                 **StateUpdate                 `json:"state,omitempty"`
+		Summary               **[]ContentBlock              `json:"summary,omitempty"`
+		UpdatedAt             **string                      `json:"updatedAt,omitempty"`
 	}
 	w := wire{alias: (*alias)(&u)}
 	if u.Content != nil {
@@ -5392,6 +10483,10 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 		Description := u.Description
 		w.Description = &Description
 	}
+	if u.Error != nil {
+		Error := u.Error
+		w.Error = &Error
+	}
 	if u.RecipientMessageID != nil {
 		RecipientMessageID := u.RecipientMessageID
 		w.RecipientMessageID = &RecipientMessageID
@@ -5411,6 +10506,14 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 	if u.State != nil {
 		State := u.State
 		w.State = &State
+	}
+	if u.Summary != nil {
+		Summary := u.Summary
+		w.Summary = &Summary
+	}
+	if u.UpdatedAt != nil {
+		UpdatedAt := u.UpdatedAt
+		w.UpdatedAt = &UpdatedAt
 	}
 	switch u.SessionUpdate {
 	case SessionUpdateTypeUserMessageChunk:
@@ -5490,6 +10593,23 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 		w.MessageID = &MessageID
 	}
 	switch u.SessionUpdate {
+	case SessionUpdateTypeSessionInfoUpdate:
+		if slices.Contains(u.NullFields, "title") {
+			w.Title = new(*string)
+		}
+		if slices.Contains(u.NullFields, "updatedAt") {
+			w.UpdatedAt = new(*string)
+		}
+	case SessionUpdateTypeCompactionUpdate:
+		if slices.Contains(u.NullFields, "_meta") {
+			w.Meta = new(Meta)
+		}
+		if slices.Contains(u.NullFields, "error") {
+			w.Error = new(*string)
+		}
+		if slices.Contains(u.NullFields, "summary") {
+			w.Summary = new(*[]ContentBlock)
+		}
 	case SessionUpdateTypeSubagentUpdate:
 		if slices.Contains(u.NullFields, "_meta") {
 			w.Meta = new(Meta)
@@ -5535,18 +10655,21 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the selected schema variant.
 func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 	type alias SessionUpdate
-	decoded := alias{}
-	raw := struct {
+	var decoded alias
+	var raw struct {
+		SessionUpdate         json.RawMessage `json:"sessionUpdate"`
 		Meta                  json.RawMessage `json:"_meta"`
 		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
 		AvailableCommands     json.RawMessage `json:"availableCommands"`
 		Capabilities          json.RawMessage `json:"capabilities"`
+		CompactionID          json.RawMessage `json:"compactionId"`
 		ConfigOptions         json.RawMessage `json:"configOptions"`
 		Content               json.RawMessage `json:"content"`
 		Cost                  json.RawMessage `json:"cost"`
+		CurrentModeID         json.RawMessage `json:"currentModeId"`
 		Cwd                   json.RawMessage `json:"cwd"`
 		Description           json.RawMessage `json:"description"`
 		Entries               json.RawMessage `json:"entries"`
@@ -5555,268 +10678,262 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		Locations             json.RawMessage `json:"locations"`
 		MessageID             json.RawMessage `json:"messageId"`
 		Name                  json.RawMessage `json:"name"`
+		Plan                  json.RawMessage `json:"plan"`
+		PlanID                json.RawMessage `json:"planId"`
 		RawInput              json.RawMessage `json:"rawInput"`
 		RawOutput             json.RawMessage `json:"rawOutput"`
 		RecipientMessageID    json.RawMessage `json:"recipientMessageId"`
 		RecipientSessionID    json.RawMessage `json:"recipientSessionId"`
 		SenderMessageID       json.RawMessage `json:"senderMessageId"`
 		SenderSessionID       json.RawMessage `json:"senderSessionId"`
+		SessionID             json.RawMessage `json:"sessionId"`
+		Severity              json.RawMessage `json:"severity"`
+		Size                  json.RawMessage `json:"size"`
 		State                 json.RawMessage `json:"state"`
 		Status                json.RawMessage `json:"status"`
 		Summary               json.RawMessage `json:"summary"`
 		Title                 json.RawMessage `json:"title"`
+		ToolCallID            json.RawMessage `json:"toolCallId"`
 		UpdatedAt             json.RawMessage `json:"updatedAt"`
-		*alias
-	}{alias: &decoded}
+		Used                  json.RawMessage `json:"used"`
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Meta) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeUserMessageChunk:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypeAgentMessageChunk:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypeAgentThoughtChunk:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypeToolCall:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypeToolCallUpdate:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypePlan:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypePlanUpdate:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypePlanRemoved:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypeAvailableCommandsUpdate:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypeCurrentModeUpdate:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypeConfigOptionUpdate:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypeSessionInfoUpdate:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypeUsageUpdate:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypeNotice:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypeCompactionUpdate:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypeCompactionSummaryChunk:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		case SessionUpdateTypeSubagentUpdate:
-			if isJSONNull(raw.Meta) {
-				decoded.NullFields = append(decoded.NullFields, "_meta")
-			} else {
-				var value Meta
-				if err := unmarshalJSON(raw.Meta, &value); err == nil {
-					decoded.Meta = value
-				}
-			}
-		case SessionUpdateTypeSessionMessage:
-			if isJSONNull(raw.Meta) {
-				decoded.NullFields = append(decoded.NullFields, "_meta")
-			} else {
-				var value Meta
-				if err := unmarshalJSON(raw.Meta, &value); err == nil {
-					decoded.Meta = value
-				}
-			}
-		case SessionUpdateTypeSessionMessageChunk:
-			var value Meta
-			if err := unmarshalJSON(raw.Meta, &value); err != nil {
-				return err
-			}
-			decoded.Meta = value
-		}
+	var tag SessionUpdateType
+	var tagErr error
+	if len(raw.SessionUpdate) > 0 {
+		tagErr = unmarshalJSON(raw.SessionUpdate, &tag)
 	}
-	if len(raw.AdditionalDirectories) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeSubagentUpdate:
-			if isJSONNull(raw.AdditionalDirectories) {
-				decoded.NullFields = append(decoded.NullFields, "additionalDirectories")
-			} else {
-				var value *[]string
-				if err := unmarshalJSON(raw.AdditionalDirectories, &value); err != nil {
+	var err error
+	switch tag {
+	case "user_message_chunk":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "content"}, []string{"content", "sessionUpdate"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Content) > 0 {
+				var value ContentBlock
+				if err := unmarshalJSON(raw.Content, &value); err != nil {
 					return err
 				}
-				decoded.AdditionalDirectories = value
+				decoded.Content = value
 			}
-		}
-	}
-	if len(raw.AvailableCommands) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.AvailableCommands, &values); err == nil {
-			decoded.AvailableCommands = []AvailableCommand{}
-			for _, value := range values {
-				var item AvailableCommand
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.AvailableCommands = append(decoded.AvailableCommands, item)
+			if len(raw.MessageID) > 0 {
+				var value *MessageId
+				if err := unmarshalJSON(raw.MessageID, &value); err == nil {
+					decoded.MessageID = value
 				}
 			}
-		}
-	}
-	if len(raw.Capabilities) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeSubagentUpdate:
-			if isJSONNull(raw.Capabilities) {
-				decoded.NullFields = append(decoded.NullFields, "capabilities")
-			} else {
-				var value *SubagentSessionCapabilities
-				if err := unmarshalJSON(raw.Capabilities, &value); err == nil {
-					decoded.Capabilities = value
+			return nil
+		}()
+	case "agent_message_chunk":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "content"}, []string{"content", "sessionUpdate"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
 				}
 			}
-		}
-	}
-	if len(raw.ConfigOptions) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.ConfigOptions, &values); err == nil {
-			decoded.ConfigOptions = []SessionConfigOption{}
-			for _, value := range values {
-				var item SessionConfigOption
-				if err := unmarshalJSON(value, &item); err == nil {
-					switch item.Type {
-					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
-						decoded.ConfigOptions = append(decoded.ConfigOptions, item)
+			if len(raw.Content) > 0 {
+				var value ContentBlock
+				if err := unmarshalJSON(raw.Content, &value); err != nil {
+					return err
+				}
+				decoded.Content = value
+			}
+			if len(raw.MessageID) > 0 {
+				var value *MessageId
+				if err := unmarshalJSON(raw.MessageID, &value); err == nil {
+					decoded.MessageID = value
+				}
+			}
+			return nil
+		}()
+	case "agent_thought_chunk":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "content"}, []string{"content", "sessionUpdate"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Content) > 0 {
+				var value ContentBlock
+				if err := unmarshalJSON(raw.Content, &value); err != nil {
+					return err
+				}
+				decoded.Content = value
+			}
+			if len(raw.MessageID) > 0 {
+				var value *MessageId
+				if err := unmarshalJSON(raw.MessageID, &value); err == nil {
+					decoded.MessageID = value
+				}
+			}
+			return nil
+		}()
+	case "tool_call":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "toolCallId", "title"}, []string{"sessionUpdate", "title", "toolCallId"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Content) > 0 {
+				var values []json.RawMessage
+				if err := unmarshalJSON(raw.Content, &values); err == nil {
+					items := []ToolCallContent{}
+					for _, rawItem := range values {
+						var item ToolCallContent
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
+							switch item.Type {
+							case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
+								items = append(items, item)
+							}
+						}
+					}
+					decoded.Content = items
+				}
+			}
+			if len(raw.Kind) > 0 {
+				var value ToolKind
+				if err := unmarshalJSON(raw.Kind, &value); err == nil {
+					switch string(value) {
+					case "read", "edit", "delete", "move", "search", "execute", "think", "fetch", "switch_mode", "other":
+						decoded.Kind = func(v ToolKind) *ToolKind {
+							converted := ToolKind(v)
+							return &converted
+						}(value)
 					}
 				}
 			}
-		}
-	}
-	if len(raw.Content) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeUserMessageChunk:
-			var value ContentBlock
-			if err := unmarshalJSON(raw.Content, &value); err != nil {
-				return err
-			}
-			decoded.Content = value
-		case SessionUpdateTypeAgentMessageChunk:
-			var value ContentBlock
-			if err := unmarshalJSON(raw.Content, &value); err != nil {
-				return err
-			}
-			decoded.Content = value
-		case SessionUpdateTypeAgentThoughtChunk:
-			var value ContentBlock
-			if err := unmarshalJSON(raw.Content, &value); err != nil {
-				return err
-			}
-			decoded.Content = value
-		case SessionUpdateTypeToolCall:
-			var values []json.RawMessage
-			if err := unmarshalJSON(raw.Content, &values); err == nil {
-				items := []ToolCallContent{}
-				for _, rawItem := range values {
-					var item ToolCallContent
-					if err := unmarshalJSON(rawItem, &item); err == nil {
-						switch item.Type {
-						case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
+			if len(raw.Locations) > 0 {
+				var values []json.RawMessage
+				if err := unmarshalJSON(raw.Locations, &values); err == nil {
+					items := []ToolCallLocation{}
+					for _, rawItem := range values {
+						var item ToolCallLocation
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							items = append(items, item)
 						}
 					}
+					decoded.Locations = func(v []ToolCallLocation) *[]ToolCallLocation {
+						converted := []ToolCallLocation(v)
+						return &converted
+					}(items)
 				}
-				decoded.Content = items
 			}
-		case SessionUpdateTypeToolCallUpdate:
-			var values []json.RawMessage
-			if err := unmarshalJSON(raw.Content, &values); err == nil && values != nil {
-				items := []ToolCallContent{}
-				for _, rawItem := range values {
-					var item ToolCallContent
-					if err := unmarshalJSON(rawItem, &item); err == nil {
-						switch item.Type {
-						case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
-							items = append(items, item)
-						}
+			if len(raw.Name) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Name, &value); err == nil {
+					decoded.Name = value
+				}
+			}
+			if len(raw.RawInput) > 0 {
+				var value any
+				if err := unmarshalJSON(raw.RawInput, &value); err == nil {
+					decoded.RawInput = value
+				}
+			}
+			if len(raw.RawOutput) > 0 {
+				var value any
+				if err := unmarshalJSON(raw.RawOutput, &value); err == nil {
+					decoded.RawOutput = value
+				}
+			}
+			if len(raw.Status) > 0 {
+				var value ToolCallStatus
+				if err := unmarshalJSON(raw.Status, &value); err == nil {
+					switch string(value) {
+					case "pending", "in_progress", "completed", "failed":
+						decoded.Status = func(v ToolCallStatus) *ToolCallStatus {
+							converted := ToolCallStatus(v)
+							return &converted
+						}(value)
 					}
 				}
-				decoded.Content = &items
 			}
-		case SessionUpdateTypeCompactionSummaryChunk:
-			var value ContentBlock
-			if err := unmarshalJSON(raw.Content, &value); err != nil {
+			if len(raw.Title) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Title, &value); err != nil {
+					return err
+				}
+				decoded.Title = func(v string) *string {
+					converted := string(v)
+					return &converted
+				}(value)
+			}
+			if len(raw.ToolCallID) > 0 {
+				var value ToolCallId
+				if err := unmarshalJSON(raw.ToolCallID, &value); err != nil {
+					return err
+				}
+				decoded.ToolCallID = value
+			}
+			return nil
+		}()
+	case "tool_call_update":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "toolCallId"}, []string{"sessionUpdate", "toolCallId"}); err != nil {
 				return err
 			}
-			decoded.Content = value
-		case SessionUpdateTypeSessionMessage:
-			if isJSONNull(raw.Content) {
-				decoded.NullFields = append(decoded.NullFields, "content")
-			} else {
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Content) > 0 {
 				var values []json.RawMessage
 				if err := unmarshalJSON(raw.Content, &values); err == nil && values != nil {
-					items := []ContentBlock{}
+					items := []ToolCallContent{}
 					for _, rawItem := range values {
-						var item ContentBlock
-						if err := unmarshalJSON(rawItem, &item); err == nil {
+						var item ToolCallContent
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							switch item.Type {
-							case ContentBlockTypeText, ContentBlockTypeImage, ContentBlockTypeAudio, ContentBlockTypeResourceLink, ContentBlockTypeResource:
+							case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
 								items = append(items, item)
 							}
 						}
@@ -5824,320 +10941,682 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 					decoded.Content = &items
 				}
 			}
-		case SessionUpdateTypeSessionMessageChunk:
-			var value ContentBlock
-			if err := unmarshalJSON(raw.Content, &value); err != nil {
-				return err
+			if len(raw.Kind) > 0 {
+				var value ToolKind
+				if err := unmarshalJSON(raw.Kind, &value); err == nil {
+					switch string(value) {
+					case "read", "edit", "delete", "move", "search", "execute", "think", "fetch", "switch_mode", "other":
+						decoded.Kind = &value
+					}
+				}
 			}
-			decoded.Content = value
-		}
-	}
-	if len(raw.Cost) > 0 {
-		_ = unmarshalJSON(raw.Cost, &decoded.Cost)
-	}
-	if len(raw.Cwd) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeSubagentUpdate:
-			if isJSONNull(raw.Cwd) {
-				decoded.NullFields = append(decoded.NullFields, "cwd")
-			} else {
+			if len(raw.Locations) > 0 {
+				var values []json.RawMessage
+				if err := unmarshalJSON(raw.Locations, &values); err == nil && values != nil {
+					items := []ToolCallLocation{}
+					for _, rawItem := range values {
+						var item ToolCallLocation
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
+							items = append(items, item)
+						}
+					}
+					decoded.Locations = &items
+				}
+			}
+			if len(raw.Name) > 0 {
 				var value *string
-				if err := unmarshalJSON(raw.Cwd, &value); err != nil {
-					return err
-				}
-				decoded.Cwd = value
-			}
-		}
-	}
-	if len(raw.Description) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeNotice:
-			var value *string
-			if err := unmarshalJSON(raw.Description, &value); err == nil {
-				decoded.Description = value
-			}
-		case SessionUpdateTypeSubagentUpdate:
-			if isJSONNull(raw.Description) {
-				decoded.NullFields = append(decoded.NullFields, "description")
-			} else {
-				var value *string
-				if err := unmarshalJSON(raw.Description, &value); err == nil {
-					decoded.Description = value
+				if err := unmarshalJSON(raw.Name, &value); err == nil {
+					decoded.Name = value
 				}
 			}
-		}
-	}
-	if len(raw.Entries) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.Entries, &values); err == nil {
-			decoded.Entries = []PlanEntry{}
-			for _, value := range values {
-				var item PlanEntry
-				if err := unmarshalJSON(value, &item); err == nil {
-					decoded.Entries = append(decoded.Entries, item)
+			if len(raw.RawInput) > 0 {
+				var value any
+				if err := unmarshalJSON(raw.RawInput, &value); err == nil {
+					decoded.RawInput = value
 				}
 			}
-		}
-	}
-	if len(raw.Error) > 0 {
-		_ = unmarshalJSON(raw.Error, &decoded.Error)
-	}
-	if len(raw.Kind) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeToolCall:
-			var value ToolKind
-			if err := unmarshalJSON(raw.Kind, &value); err == nil {
-				switch string(value) {
-				case "read", "edit", "delete", "move", "search", "execute", "think", "fetch", "switch_mode", "other":
-					decoded.Kind = func(v ToolKind) *ToolKind {
-						converted := ToolKind(v)
-						return &converted
-					}(value)
+			if len(raw.RawOutput) > 0 {
+				var value any
+				if err := unmarshalJSON(raw.RawOutput, &value); err == nil {
+					decoded.RawOutput = value
 				}
 			}
-		case SessionUpdateTypeToolCallUpdate:
-			var value ToolKind
-			if err := unmarshalJSON(raw.Kind, &value); err == nil {
-				switch string(value) {
-				case "read", "edit", "delete", "move", "search", "execute", "think", "fetch", "switch_mode", "other":
-					decoded.Kind = &value
-				}
-			}
-		}
-	}
-	if len(raw.Locations) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeToolCall:
-			var values []json.RawMessage
-			if err := unmarshalJSON(raw.Locations, &values); err == nil {
-				items := []ToolCallLocation{}
-				for _, rawItem := range values {
-					var item ToolCallLocation
-					if err := unmarshalJSON(rawItem, &item); err == nil {
-						items = append(items, item)
-					}
-				}
-				decoded.Locations = func(v []ToolCallLocation) *[]ToolCallLocation {
-					converted := []ToolCallLocation(v)
-					return &converted
-				}(items)
-			}
-		case SessionUpdateTypeToolCallUpdate:
-			var values []json.RawMessage
-			if err := unmarshalJSON(raw.Locations, &values); err == nil && values != nil {
-				items := []ToolCallLocation{}
-				for _, rawItem := range values {
-					var item ToolCallLocation
-					if err := unmarshalJSON(rawItem, &item); err == nil {
-						items = append(items, item)
-					}
-				}
-				decoded.Locations = &items
-			}
-		}
-	}
-	if len(raw.MessageID) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeUserMessageChunk:
-			var value *MessageId
-			if err := unmarshalJSON(raw.MessageID, &value); err == nil {
-				decoded.MessageID = value
-			}
-		case SessionUpdateTypeAgentMessageChunk:
-			var value *MessageId
-			if err := unmarshalJSON(raw.MessageID, &value); err == nil {
-				decoded.MessageID = value
-			}
-		case SessionUpdateTypeAgentThoughtChunk:
-			var value *MessageId
-			if err := unmarshalJSON(raw.MessageID, &value); err == nil {
-				decoded.MessageID = value
-			}
-		case SessionUpdateTypeSessionMessage:
-			var value MessageId
-			if err := unmarshalJSON(raw.MessageID, &value); err != nil {
-				return err
-			}
-			decoded.MessageID = func(v MessageId) *MessageId {
-				converted := MessageId(v)
-				return &converted
-			}(value)
-		case SessionUpdateTypeSessionMessageChunk:
-			var value MessageId
-			if err := unmarshalJSON(raw.MessageID, &value); err != nil {
-				return err
-			}
-			decoded.MessageID = func(v MessageId) *MessageId {
-				converted := MessageId(v)
-				return &converted
-			}(value)
-		}
-	}
-	if len(raw.Name) > 0 {
-		_ = unmarshalJSON(raw.Name, &decoded.Name)
-	}
-	if len(raw.RawInput) > 0 {
-		_ = unmarshalJSON(raw.RawInput, &decoded.RawInput)
-	}
-	if len(raw.RawOutput) > 0 {
-		_ = unmarshalJSON(raw.RawOutput, &decoded.RawOutput)
-	}
-	if len(raw.RecipientMessageID) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeSessionMessage:
-			if isJSONNull(raw.RecipientMessageID) {
-				decoded.NullFields = append(decoded.NullFields, "recipientMessageId")
-			} else {
-				var value *MessageId
-				if err := unmarshalJSON(raw.RecipientMessageID, &value); err == nil {
-					decoded.RecipientMessageID = value
-				}
-			}
-		}
-	}
-	if len(raw.RecipientSessionID) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeSessionMessage:
-			if isJSONNull(raw.RecipientSessionID) {
-				decoded.NullFields = append(decoded.NullFields, "recipientSessionId")
-			} else {
-				var value *SessionId
-				if err := unmarshalJSON(raw.RecipientSessionID, &value); err == nil {
-					decoded.RecipientSessionID = value
-				}
-			}
-		}
-	}
-	if len(raw.SenderMessageID) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeSessionMessage:
-			if isJSONNull(raw.SenderMessageID) {
-				decoded.NullFields = append(decoded.NullFields, "senderMessageId")
-			} else {
-				var value *MessageId
-				if err := unmarshalJSON(raw.SenderMessageID, &value); err == nil {
-					decoded.SenderMessageID = value
-				}
-			}
-		}
-	}
-	if len(raw.SenderSessionID) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeSessionMessage:
-			if isJSONNull(raw.SenderSessionID) {
-				decoded.NullFields = append(decoded.NullFields, "senderSessionId")
-			} else {
-				var value *SessionId
-				if err := unmarshalJSON(raw.SenderSessionID, &value); err == nil {
-					decoded.SenderSessionID = value
-				}
-			}
-		}
-	}
-	if len(raw.State) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeSubagentUpdate:
-			if isJSONNull(raw.State) {
-				decoded.NullFields = append(decoded.NullFields, "state")
-			} else {
-				var value *StateUpdate
-				if err := unmarshalJSON(raw.State, &value); err == nil {
-					decoded.State = value
-				}
-			}
-		}
-	}
-	if len(raw.Status) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeToolCall:
-			var value ToolCallStatus
-			if err := unmarshalJSON(raw.Status, &value); err == nil {
-				switch string(value) {
-				case "pending", "in_progress", "completed", "failed":
-					decoded.Status = func(v ToolCallStatus) *ToolCallStatus {
-						converted := ToolCallStatus(v)
-						return &converted
-					}(value)
-				}
-			}
-		case SessionUpdateTypeToolCallUpdate:
-			var value ToolCallStatus
-			if err := unmarshalJSON(raw.Status, &value); err == nil {
-				switch string(value) {
-				case "pending", "in_progress", "completed", "failed":
-					decoded.Status = &value
-				}
-			}
-		case SessionUpdateTypeCompactionUpdate:
-			var value CompactionStatus
-			if err := unmarshalJSON(raw.Status, &value); err != nil {
-				return err
-			}
-			decoded.Status = func(v CompactionStatus) *ToolCallStatus {
-				converted := ToolCallStatus(v)
-				return &converted
-			}(value)
-		}
-	}
-	if len(raw.Summary) > 0 {
-		var values []json.RawMessage
-		if err := unmarshalJSON(raw.Summary, &values); err == nil && values != nil {
-			items := []ContentBlock{}
-			for _, value := range values {
-				var item ContentBlock
-				if err := unmarshalJSON(value, &item); err == nil {
-					switch item.Type {
-					case ContentBlockTypeText, ContentBlockTypeImage, ContentBlockTypeAudio, ContentBlockTypeResourceLink, ContentBlockTypeResource:
-						items = append(items, item)
+			if len(raw.Status) > 0 {
+				var value ToolCallStatus
+				if err := unmarshalJSON(raw.Status, &value); err == nil {
+					switch string(value) {
+					case "pending", "in_progress", "completed", "failed":
+						decoded.Status = &value
 					}
 				}
 			}
-			decoded.Summary = &items
-		}
-	}
-	if len(raw.Title) > 0 {
-		switch decoded.SessionUpdate {
-		case SessionUpdateTypeToolCall:
-			var value string
-			if err := unmarshalJSON(raw.Title, &value); err != nil {
-				return err
-			}
-			decoded.Title = func(v string) *string {
-				converted := string(v)
-				return &converted
-			}(value)
-		case SessionUpdateTypeToolCallUpdate:
-			var value *string
-			if err := unmarshalJSON(raw.Title, &value); err == nil {
-				decoded.Title = value
-			}
-		case SessionUpdateTypeSessionInfoUpdate:
-			var value *string
-			if err := unmarshalJSON(raw.Title, &value); err == nil {
-				decoded.Title = value
-			}
-		case SessionUpdateTypeNotice:
-			var value string
-			if err := unmarshalJSON(raw.Title, &value); err != nil {
-				return err
-			}
-			decoded.Title = func(v string) *string {
-				converted := string(v)
-				return &converted
-			}(value)
-		case SessionUpdateTypeSubagentUpdate:
-			if isJSONNull(raw.Title) {
-				decoded.NullFields = append(decoded.NullFields, "title")
-			} else {
+			if len(raw.Title) > 0 {
 				var value *string
 				if err := unmarshalJSON(raw.Title, &value); err == nil {
 					decoded.Title = value
 				}
 			}
-		}
+			if len(raw.ToolCallID) > 0 {
+				var value ToolCallId
+				if err := unmarshalJSON(raw.ToolCallID, &value); err != nil {
+					return err
+				}
+				decoded.ToolCallID = value
+			}
+			return nil
+		}()
+	case "plan":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "entries"}, []string{"sessionUpdate"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Entries) > 0 {
+				var values []json.RawMessage
+				if err := unmarshalJSON(raw.Entries, &values); err == nil {
+					items := []PlanEntry{}
+					for _, rawItem := range values {
+						var item PlanEntry
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
+							items = append(items, item)
+						}
+					}
+					decoded.Entries = items
+				}
+			}
+			return nil
+		}()
+	case "plan_update":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "plan"}, []string{"plan", "sessionUpdate"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Plan) > 0 {
+				var value PlanUpdateContent
+				if err := unmarshalJSON(raw.Plan, &value); err != nil {
+					return err
+				}
+				decoded.Plan = value
+			}
+			return nil
+		}()
+	case "plan_removed":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "planId"}, []string{"planId", "sessionUpdate"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.PlanID) > 0 {
+				var value PlanId
+				if err := unmarshalJSON(raw.PlanID, &value); err != nil {
+					return err
+				}
+				decoded.PlanID = value
+			}
+			return nil
+		}()
+	case "available_commands_update":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "availableCommands"}, []string{"sessionUpdate"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.AvailableCommands) > 0 {
+				var values []json.RawMessage
+				if err := unmarshalJSON(raw.AvailableCommands, &values); err == nil {
+					items := []AvailableCommand{}
+					for _, rawItem := range values {
+						var item AvailableCommand
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
+							items = append(items, item)
+						}
+					}
+					decoded.AvailableCommands = items
+				}
+			}
+			return nil
+		}()
+	case "current_mode_update":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "currentModeId"}, []string{"currentModeId", "sessionUpdate"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.CurrentModeID) > 0 {
+				var value SessionModeId
+				if err := unmarshalJSON(raw.CurrentModeID, &value); err != nil {
+					return err
+				}
+				decoded.CurrentModeID = value
+			}
+			return nil
+		}()
+	case "config_option_update":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "configOptions"}, []string{"sessionUpdate"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.ConfigOptions) > 0 {
+				var values []json.RawMessage
+				if err := unmarshalJSON(raw.ConfigOptions, &values); err == nil {
+					items := []SessionConfigOption{}
+					for _, rawItem := range values {
+						var item SessionConfigOption
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
+							switch item.Type {
+							case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
+								items = append(items, item)
+							}
+						}
+					}
+					decoded.ConfigOptions = items
+				}
+			}
+			return nil
+		}()
+	case "session_info_update":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate"}, []string{"sessionUpdate"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Title) > 0 {
+				if isJSONNull(raw.Title) {
+					decoded.NullFields = append(decoded.NullFields, "title")
+				} else {
+					var value *string
+					if err := unmarshalJSON(raw.Title, &value); err == nil {
+						decoded.Title = value
+					}
+				}
+			}
+			if len(raw.UpdatedAt) > 0 {
+				if isJSONNull(raw.UpdatedAt) {
+					decoded.NullFields = append(decoded.NullFields, "updatedAt")
+				} else {
+					var value *string
+					if err := unmarshalJSON(raw.UpdatedAt, &value); err == nil {
+						decoded.UpdatedAt = value
+					}
+				}
+			}
+			return nil
+		}()
+	case "usage_update":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "used", "size"}, []string{"sessionUpdate", "size", "used"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Cost) > 0 {
+				var value *Cost
+				if err := unmarshalJSON(raw.Cost, &value); err == nil {
+					decoded.Cost = value
+				}
+			}
+			if len(raw.Size) > 0 {
+				var value uint64
+				if err := unmarshalJSON(raw.Size, &value); err != nil {
+					return err
+				}
+				decoded.Size = value
+			}
+			if len(raw.Used) > 0 {
+				var value uint64
+				if err := unmarshalJSON(raw.Used, &value); err != nil {
+					return err
+				}
+				decoded.Used = value
+			}
+			return nil
+		}()
+	case "notice":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "severity", "title"}, []string{"sessionUpdate", "severity", "title"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Description) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Description, &value); err == nil {
+					decoded.Description = value
+				}
+			}
+			if len(raw.Severity) > 0 {
+				var value NoticeSeverity
+				if err := unmarshalJSON(raw.Severity, &value); err != nil {
+					return err
+				}
+				decoded.Severity = value
+			}
+			if len(raw.Title) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Title, &value); err != nil {
+					return err
+				}
+				decoded.Title = func(v string) *string {
+					converted := string(v)
+					return &converted
+				}(value)
+			}
+			return nil
+		}()
+	case "compaction_update":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "compactionId", "status"}, []string{"compactionId", "sessionUpdate", "status"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				if isJSONNull(raw.Meta) {
+					decoded.NullFields = append(decoded.NullFields, "_meta")
+				} else {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+			}
+			if len(raw.CompactionID) > 0 {
+				var value CompactionId
+				if err := unmarshalJSON(raw.CompactionID, &value); err != nil {
+					return err
+				}
+				decoded.CompactionID = value
+			}
+			if len(raw.Error) > 0 {
+				if isJSONNull(raw.Error) {
+					decoded.NullFields = append(decoded.NullFields, "error")
+				} else {
+					var value *string
+					if err := unmarshalJSON(raw.Error, &value); err == nil {
+						decoded.Error = value
+					}
+				}
+			}
+			if len(raw.Status) > 0 {
+				var value CompactionStatus
+				if err := unmarshalJSON(raw.Status, &value); err != nil {
+					return err
+				}
+				decoded.Status = func(v CompactionStatus) *ToolCallStatus {
+					converted := ToolCallStatus(v)
+					return &converted
+				}(value)
+			}
+			if len(raw.Summary) > 0 {
+				if isJSONNull(raw.Summary) {
+					decoded.NullFields = append(decoded.NullFields, "summary")
+				} else {
+					var values []json.RawMessage
+					if err := unmarshalJSON(raw.Summary, &values); err == nil && values != nil {
+						items := []ContentBlock{}
+						for _, rawItem := range values {
+							var item ContentBlock
+							if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
+								switch item.Type {
+								case ContentBlockTypeText, ContentBlockTypeImage, ContentBlockTypeAudio, ContentBlockTypeResourceLink, ContentBlockTypeResource:
+									items = append(items, item)
+								}
+							}
+						}
+						decoded.Summary = &items
+					}
+				}
+			}
+			return nil
+		}()
+	case "compaction_summary_chunk":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "compactionId", "content"}, []string{"compactionId", "content", "sessionUpdate"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.CompactionID) > 0 {
+				var value CompactionId
+				if err := unmarshalJSON(raw.CompactionID, &value); err != nil {
+					return err
+				}
+				decoded.CompactionID = value
+			}
+			if len(raw.Content) > 0 {
+				var value ContentBlock
+				if err := unmarshalJSON(raw.Content, &value); err != nil {
+					return err
+				}
+				decoded.Content = value
+			}
+			return nil
+		}()
+	case "subagent_update":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "sessionId"}, []string{"sessionId", "sessionUpdate"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				if isJSONNull(raw.Meta) {
+					decoded.NullFields = append(decoded.NullFields, "_meta")
+				} else {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+			}
+			if len(raw.AdditionalDirectories) > 0 {
+				if isJSONNull(raw.AdditionalDirectories) {
+					decoded.NullFields = append(decoded.NullFields, "additionalDirectories")
+				} else {
+					var value *[]string
+					if err := unmarshalJSON(raw.AdditionalDirectories, &value); err != nil {
+						return err
+					}
+					decoded.AdditionalDirectories = value
+				}
+			}
+			if len(raw.Capabilities) > 0 {
+				if isJSONNull(raw.Capabilities) {
+					decoded.NullFields = append(decoded.NullFields, "capabilities")
+				} else {
+					var value *SubagentSessionCapabilities
+					if err := unmarshalJSON(raw.Capabilities, &value); err == nil {
+						decoded.Capabilities = value
+					}
+				}
+			}
+			if len(raw.Cwd) > 0 {
+				if isJSONNull(raw.Cwd) {
+					decoded.NullFields = append(decoded.NullFields, "cwd")
+				} else {
+					var value *string
+					if err := unmarshalJSON(raw.Cwd, &value); err != nil {
+						return err
+					}
+					decoded.Cwd = value
+				}
+			}
+			if len(raw.Description) > 0 {
+				if isJSONNull(raw.Description) {
+					decoded.NullFields = append(decoded.NullFields, "description")
+				} else {
+					var value *string
+					if err := unmarshalJSON(raw.Description, &value); err == nil {
+						decoded.Description = value
+					}
+				}
+			}
+			if len(raw.SessionID) > 0 {
+				var value SessionId
+				if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+					return err
+				}
+				decoded.SessionID = value
+			}
+			if len(raw.State) > 0 {
+				if isJSONNull(raw.State) {
+					decoded.NullFields = append(decoded.NullFields, "state")
+				} else {
+					var value *StateUpdate
+					if err := unmarshalJSON(raw.State, &value); err == nil {
+						decoded.State = value
+					}
+				}
+			}
+			if len(raw.Title) > 0 {
+				if isJSONNull(raw.Title) {
+					decoded.NullFields = append(decoded.NullFields, "title")
+				} else {
+					var value *string
+					if err := unmarshalJSON(raw.Title, &value); err == nil {
+						decoded.Title = value
+					}
+				}
+			}
+			return nil
+		}()
+	case "session_message":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "messageId"}, []string{"messageId", "sessionUpdate"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				if isJSONNull(raw.Meta) {
+					decoded.NullFields = append(decoded.NullFields, "_meta")
+				} else {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+			}
+			if len(raw.Content) > 0 {
+				if isJSONNull(raw.Content) {
+					decoded.NullFields = append(decoded.NullFields, "content")
+				} else {
+					var values []json.RawMessage
+					if err := unmarshalJSON(raw.Content, &values); err == nil && values != nil {
+						items := []ContentBlock{}
+						for _, rawItem := range values {
+							var item ContentBlock
+							if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
+								switch item.Type {
+								case ContentBlockTypeText, ContentBlockTypeImage, ContentBlockTypeAudio, ContentBlockTypeResourceLink, ContentBlockTypeResource:
+									items = append(items, item)
+								}
+							}
+						}
+						decoded.Content = &items
+					}
+				}
+			}
+			if len(raw.MessageID) > 0 {
+				var value MessageId
+				if err := unmarshalJSON(raw.MessageID, &value); err != nil {
+					return err
+				}
+				decoded.MessageID = func(v MessageId) *MessageId {
+					converted := MessageId(v)
+					return &converted
+				}(value)
+			}
+			if len(raw.RecipientMessageID) > 0 {
+				if isJSONNull(raw.RecipientMessageID) {
+					decoded.NullFields = append(decoded.NullFields, "recipientMessageId")
+				} else {
+					var value *MessageId
+					if err := unmarshalJSON(raw.RecipientMessageID, &value); err == nil {
+						decoded.RecipientMessageID = value
+					}
+				}
+			}
+			if len(raw.RecipientSessionID) > 0 {
+				if isJSONNull(raw.RecipientSessionID) {
+					decoded.NullFields = append(decoded.NullFields, "recipientSessionId")
+				} else {
+					var value *SessionId
+					if err := unmarshalJSON(raw.RecipientSessionID, &value); err == nil {
+						decoded.RecipientSessionID = value
+					}
+				}
+			}
+			if len(raw.SenderMessageID) > 0 {
+				if isJSONNull(raw.SenderMessageID) {
+					decoded.NullFields = append(decoded.NullFields, "senderMessageId")
+				} else {
+					var value *MessageId
+					if err := unmarshalJSON(raw.SenderMessageID, &value); err == nil {
+						decoded.SenderMessageID = value
+					}
+				}
+			}
+			if len(raw.SenderSessionID) > 0 {
+				if isJSONNull(raw.SenderSessionID) {
+					decoded.NullFields = append(decoded.NullFields, "senderSessionId")
+				} else {
+					var value *SessionId
+					if err := unmarshalJSON(raw.SenderSessionID, &value); err == nil {
+						decoded.SenderSessionID = value
+					}
+				}
+			}
+			return nil
+		}()
+	case "session_message_chunk":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "messageId", "content"}, []string{"content", "messageId", "sessionUpdate"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Content) > 0 {
+				var value ContentBlock
+				if err := unmarshalJSON(raw.Content, &value); err != nil {
+					return err
+				}
+				decoded.Content = value
+			}
+			if len(raw.MessageID) > 0 {
+				var value MessageId
+				if err := unmarshalJSON(raw.MessageID, &value); err != nil {
+					return err
+				}
+				decoded.MessageID = func(v MessageId) *MessageId {
+					converted := MessageId(v)
+					return &converted
+				}(value)
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("SessionUpdate: unknown sessionUpdate %q", tag)
 	}
-	if len(raw.UpdatedAt) > 0 {
-		_ = unmarshalJSON(raw.UpdatedAt, &decoded.UpdatedAt)
+	if err != nil {
+		return err
 	}
 	*u = SessionUpdate(decoded)
 	return nil
@@ -6158,6 +11637,30 @@ type SetProviderRequest struct {
 	ProviderID ProviderId        `json:"providerId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *SetProviderRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"providerId", "apiType", "baseUrl"}, []string{"apiType", "baseUrl", "headers", "providerId"}); err != nil {
+		return err
+	}
+	type alias SetProviderRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = SetProviderRequest(decoded)
+	return nil
+}
+
 // SetProviderResponse: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -6165,6 +11668,27 @@ type SetProviderRequest struct {
 // Response to `providers/set`.
 type SetProviderResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *SetProviderResponse) UnmarshalJSON(data []byte) error {
+	type alias SetProviderResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = SetProviderResponse(decoded)
+	return nil
 }
 
 // SetSessionConfigOptionRequest: Request parameters for setting a session configuration option.
@@ -6206,10 +11730,143 @@ func ValueIdSetSessionConfigOptionRequest(sessionID SessionId, configID SessionC
 	}
 }
 
-// UnmarshalJSON preserves unstructured numbers as json.Number.
+// UnmarshalJSON decodes the selected schema variant.
 func (r *SetSessionConfigOptionRequest) UnmarshalJSON(data []byte) error {
-	type plain SetSessionConfigOptionRequest
-	return unmarshalJSON(data, (*plain)(r))
+	type alias SetSessionConfigOptionRequest
+	var decoded alias
+	var raw struct {
+		Type      json.RawMessage `json:"type"`
+		Meta      json.RawMessage `json:"_meta"`
+		ConfigID  json.RawMessage `json:"configId"`
+		SessionID json.RawMessage `json:"sessionId"`
+		Value     json.RawMessage `json:"value"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag SetSessionConfigOptionRequestType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "boolean":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"sessionId", "configId", "type", "value"}, []string{"configId", "sessionId", "type", "value"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.ConfigID) > 0 {
+				var value SessionConfigId
+				if err := unmarshalJSON(raw.ConfigID, &value); err != nil {
+					return err
+				}
+				decoded.ConfigID = value
+			}
+			if len(raw.SessionID) > 0 {
+				var value SessionId
+				if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+					return err
+				}
+				decoded.SessionID = value
+			}
+			if len(raw.Value) > 0 {
+				var value bool
+				if err := unmarshalJSON(raw.Value, &value); err != nil {
+					return err
+				}
+				decoded.Value = value
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"sessionId", "configId", "value"}, []string{"configId", "sessionId", "value"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.ConfigID) > 0 {
+					var value SessionConfigId
+					if err := unmarshalJSON(raw.ConfigID, &value); err != nil {
+						return err
+					}
+					decoded.ConfigID = value
+				}
+				if len(raw.SessionID) > 0 {
+					var value SessionId
+					if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+						return err
+					}
+					decoded.SessionID = value
+				}
+				if len(raw.Value) > 0 {
+					var value SessionConfigValueId
+					if err := unmarshalJSON(raw.Value, &value); err != nil {
+						return err
+					}
+					decoded.Value = value
+				}
+				return nil
+			}()
+		}
+	default:
+		err = func() error {
+			decoded = alias{}
+			if err := requireJSONProperties(data, []string{"sessionId", "configId", "value"}, []string{"configId", "sessionId", "value"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.ConfigID) > 0 {
+				var value SessionConfigId
+				if err := unmarshalJSON(raw.ConfigID, &value); err != nil {
+					return err
+				}
+				decoded.ConfigID = value
+			}
+			if len(raw.SessionID) > 0 {
+				var value SessionId
+				if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+					return err
+				}
+				decoded.SessionID = value
+			}
+			if len(raw.Value) > 0 {
+				var value SessionConfigValueId
+				if err := unmarshalJSON(raw.Value, &value); err != nil {
+					return err
+				}
+				decoded.Value = value
+			}
+			return nil
+		}()
+	}
+	if err != nil {
+		return err
+	}
+	*r = SetSessionConfigOptionRequest(decoded)
+	return nil
 }
 
 // SetSessionConfigOptionResponse: Response to `session/set_config_option` method.
@@ -6230,14 +11887,24 @@ func (r SetSessionConfigOptionResponse) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (r *SetSessionConfigOptionResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"configOptions"}, []string{}); err != nil {
+		return err
+	}
 	type alias SetSessionConfigOptionResponse
 	decoded := alias{}
 	raw := struct {
+		Meta          json.RawMessage `json:"_meta"`
 		ConfigOptions json.RawMessage `json:"configOptions"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
 	}
 	if len(raw.ConfigOptions) > 0 {
 		var values []json.RawMessage
@@ -6245,7 +11912,7 @@ func (r *SetSessionConfigOptionResponse) UnmarshalJSON(data []byte) error {
 			decoded.ConfigOptions = []SessionConfigOption{}
 			for _, value := range values {
 				var item SessionConfigOption
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
 						decoded.ConfigOptions = append(decoded.ConfigOptions, item)
@@ -6265,9 +11932,54 @@ type SetSessionModeRequest struct {
 	SessionID SessionId     `json:"sessionId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *SetSessionModeRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId", "modeId"}, []string{"modeId", "sessionId"}); err != nil {
+		return err
+	}
+	type alias SetSessionModeRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = SetSessionModeRequest(decoded)
+	return nil
+}
+
 // SetSessionModeResponse: Response to `session/set_mode` method.
 type SetSessionModeResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *SetSessionModeResponse) UnmarshalJSON(data []byte) error {
+	type alias SetSessionModeResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = SetSessionModeResponse(decoded)
+	return nil
 }
 
 // SetSessionTitleRequest: **UNSTABLE**
@@ -6289,6 +12001,30 @@ type SetSessionTitleRequest struct {
 	Title     string    `json:"title"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *SetSessionTitleRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId", "title"}, []string{"sessionId", "title"}); err != nil {
+		return err
+	}
+	type alias SetSessionTitleRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = SetSessionTitleRequest(decoded)
+	return nil
+}
+
 // SetSessionTitleResponse: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -6297,6 +12033,30 @@ type SetSessionTitleRequest struct {
 type SetSessionTitleResponse struct {
 	Meta  Meta   `json:"_meta,omitzero"`
 	Title string `json:"title"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *SetSessionTitleResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"title"}, []string{"title"}); err != nil {
+		return err
+	}
+	type alias SetSessionTitleResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = SetSessionTitleResponse(decoded)
+	return nil
 }
 
 // StateUpdate: **UNSTABLE**
@@ -6314,6 +12074,9 @@ type StateUpdate struct {
 	Error      *Error          `json:"error,omitempty"`
 	StopReason any             `json:"stopReason,omitempty"`
 	Usage      *Usage          `json:"usage,omitempty"`
+	// ExtraFields retains extension properties explicitly permitted by the schema.
+	// Known properties take precedence when encoding.
+	ExtraFields map[string]json.RawMessage `json:"-"`
 }
 
 // StateUpdateType is the discriminator for StateUpdate variants.
@@ -6366,23 +12129,342 @@ func OtherStateUpdate(state string) StateUpdate {
 	}
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// MarshalJSON retains explicit extension fields for open variants.
+func (u StateUpdate) MarshalJSON() ([]byte, error) {
+	type alias StateUpdate
+	switch u.State {
+	case "running":
+		return json.Marshal(alias(u))
+	case "idle":
+		return json.Marshal(alias(u))
+	case "requires_action":
+		return json.Marshal(alias(u))
+	case "unknown":
+		return json.Marshal(alias(u))
+	default:
+		return marshalJSONWithExtraFields(alias(u), u.ExtraFields, []string{"state"})
+	}
+}
+
+// UnmarshalJSON decodes the selected schema variant.
 func (u *StateUpdate) UnmarshalJSON(data []byte) error {
 	type alias StateUpdate
-	decoded := alias{}
-	raw := struct {
-		Error json.RawMessage `json:"error"`
-		Usage json.RawMessage `json:"usage"`
-		*alias
-	}{alias: &decoded}
+	var decoded alias
+	var raw struct {
+		State      json.RawMessage `json:"state"`
+		Meta       json.RawMessage `json:"_meta"`
+		Error      json.RawMessage `json:"error"`
+		StopReason json.RawMessage `json:"stopReason"`
+		Usage      json.RawMessage `json:"usage"`
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Error) > 0 {
-		_ = unmarshalJSON(raw.Error, &decoded.Error)
+	var tag StateUpdateType
+	var tagErr error
+	if len(raw.State) > 0 {
+		tagErr = unmarshalJSON(raw.State, &tag)
 	}
-	if len(raw.Usage) > 0 {
-		_ = unmarshalJSON(raw.Usage, &decoded.Usage)
+	var err error
+	switch tag {
+	case "running":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.State = tag
+			if err := requireJSONProperties(data, []string{"state"}, []string{"state"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			return nil
+		}()
+	case "idle":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.State = tag
+			if err := requireJSONProperties(data, []string{"state", "stopReason"}, []string{"state", "stopReason"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Usage) > 0 {
+				var value *Usage
+				if err := unmarshalJSON(raw.Usage, &value); err == nil {
+					decoded.Usage = value
+				}
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.State = tag
+				if err := requireJSONProperties(data, []string{"state", "stopReason"}, []string{"state", "stopReason"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Usage) > 0 {
+					var value *Usage
+					if err := unmarshalJSON(raw.Usage, &value); err == nil {
+						decoded.Usage = value
+					}
+				}
+				return nil
+			}()
+		}
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.State = tag
+				if err := requireJSONProperties(data, []string{"state", "stopReason"}, []string{"state", "stopReason"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Usage) > 0 {
+					var value *Usage
+					if err := unmarshalJSON(raw.Usage, &value); err == nil {
+						decoded.Usage = value
+					}
+				}
+				return nil
+			}()
+		}
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.State = tag
+				if err := requireJSONProperties(data, []string{"state", "stopReason"}, []string{"state", "stopReason"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Usage) > 0 {
+					var value *Usage
+					if err := unmarshalJSON(raw.Usage, &value); err == nil {
+						decoded.Usage = value
+					}
+				}
+				return nil
+			}()
+		}
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.State = tag
+				if err := requireJSONProperties(data, []string{"state", "stopReason"}, []string{"state", "stopReason"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Usage) > 0 {
+					var value *Usage
+					if err := unmarshalJSON(raw.Usage, &value); err == nil {
+						decoded.Usage = value
+					}
+				}
+				return nil
+			}()
+		}
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.State = tag
+				if err := requireJSONProperties(data, []string{"state", "stopReason"}, []string{"state", "stopReason"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.Error) > 0 {
+					var value *Error
+					if err := unmarshalJSON(raw.Error, &value); err == nil {
+						decoded.Error = value
+					}
+				}
+				if len(raw.Usage) > 0 {
+					var value *Usage
+					if err := unmarshalJSON(raw.Usage, &value); err == nil {
+						decoded.Usage = value
+					}
+				}
+				return nil
+			}()
+		}
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.State = tag
+				if err := requireJSONProperties(data, []string{"state", "stopReason"}, []string{"state", "stopReason"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.StopReason) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.StopReason, &value); err != nil {
+						return err
+					}
+					decoded.StopReason = value
+				}
+				if len(raw.Usage) > 0 {
+					var value *Usage
+					if err := unmarshalJSON(raw.Usage, &value); err == nil {
+						decoded.Usage = value
+					}
+				}
+				extra, err := captureJSONExtraFields(data, []string{"_meta", "state", "stopReason", "usage"})
+				if err != nil {
+					return err
+				}
+				decoded.ExtraFields = extra
+				return nil
+			}()
+		}
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if tagErr != nil {
+					return tagErr
+				}
+				decoded.State = tag
+				if err := requireJSONProperties(data, []string{"state"}, []string{"state"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.StopReason) > 0 {
+					var value any
+					if err := unmarshalJSON(raw.StopReason, &value); err != nil {
+						return err
+					}
+					decoded.StopReason = value
+				}
+				if len(raw.Usage) > 0 {
+					var value *Usage
+					if err := unmarshalJSON(raw.Usage, &value); err == nil {
+						decoded.Usage = value
+					}
+				}
+				return nil
+			}()
+		}
+	case "requires_action":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.State = tag
+			if err := requireJSONProperties(data, []string{"state"}, []string{"state"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			return nil
+		}()
+	case "unknown":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.State = tag
+			if err := requireJSONProperties(data, []string{"state"}, []string{"state"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			return nil
+		}()
+	default:
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.State = tag
+			if err := requireJSONProperties(data, []string{"state"}, []string{"state"}); err != nil {
+				return err
+			}
+			extra, err := captureJSONExtraFields(data, []string{"state"})
+			if err != nil {
+				return err
+			}
+			decoded.ExtraFields = extra
+			return nil
+		}()
+	}
+	if err != nil {
+		return err
 	}
 	*u = StateUpdate(decoded)
 	return nil
@@ -6414,6 +12496,23 @@ const (
 	StopReasonCancelled StopReason = "cancelled"
 )
 
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *StopReason) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("StopReason must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "end_turn", "max_tokens", "max_turn_requests", "refusal", "cancelled":
+		*v = StopReason(value)
+		return nil
+	}
+	return fmt.Errorf("invalid StopReason value %q", value)
+}
+
 // StringFormat: String format types for string properties in elicitation schemas.
 type StringFormat string
 
@@ -6427,6 +12526,23 @@ const (
 	// StringFormatDateTime: Date-time format (ISO 8601).
 	StringFormatDateTime StringFormat = "date-time"
 )
+
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *StringFormat) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("StringFormat must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "email", "uri", "date", "date-time":
+		*v = StringFormat(value)
+		return nil
+	}
+	return fmt.Errorf("invalid StringFormat value %q", value)
+}
 
 // StringMultiSelectItems: String item schema for multi-select enum properties.
 type StringMultiSelectItems struct {
@@ -6442,6 +12558,30 @@ func (i StringMultiSelectItems) MarshalJSON() ([]byte, error) {
 		a.Enum = []string{}
 	}
 	return json.Marshal(a)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (i *StringMultiSelectItems) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"enum"}, []string{"enum"}); err != nil {
+		return err
+	}
+	type alias StringMultiSelectItems
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*i = StringMultiSelectItems(decoded)
+	return nil
 }
 
 // StringPropertySchema: Schema for string properties in an elicitation form.
@@ -6466,6 +12606,7 @@ func (s *StringPropertySchema) UnmarshalJSON(data []byte) error {
 	type alias StringPropertySchema
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Default     json.RawMessage `json:"default"`
 		Description json.RawMessage `json:"description"`
 		Title       json.RawMessage `json:"title"`
@@ -6474,14 +12615,29 @@ func (s *StringPropertySchema) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Default) > 0 {
-		_ = unmarshalJSON(raw.Default, &decoded.Default)
+		var value *string
+		if err := unmarshalJSON(raw.Default, &value); err == nil {
+			decoded.Default = value
+		}
 	}
 	if len(raw.Description) > 0 {
-		_ = unmarshalJSON(raw.Description, &decoded.Description)
+		var value *string
+		if err := unmarshalJSON(raw.Description, &value); err == nil {
+			decoded.Description = value
+		}
 	}
 	if len(raw.Title) > 0 {
-		_ = unmarshalJSON(raw.Title, &decoded.Title)
+		var value *string
+		if err := unmarshalJSON(raw.Title, &value); err == nil {
+			decoded.Title = value
+		}
 	}
 	*s = StringPropertySchema(decoded)
 	return nil
@@ -6499,6 +12655,27 @@ func (s *StringPropertySchema) UnmarshalJSON(data []byte) error {
 // session-directed messages.
 type SubagentCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SubagentCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SubagentCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = SubagentCapabilities(decoded)
+	return nil
 }
 
 // SubagentSessionCapabilities: **UNSTABLE**
@@ -6519,14 +12696,24 @@ func (c *SubagentSessionCapabilities) UnmarshalJSON(data []byte) error {
 	type alias SubagentSessionCapabilities
 	decoded := alias{}
 	raw := struct {
+		Meta   json.RawMessage `json:"_meta"`
 		Cancel json.RawMessage `json:"cancel"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Cancel) > 0 {
-		_ = unmarshalJSON(raw.Cancel, &decoded.Cancel)
+		var value *SessionCancelCapabilities
+		if err := unmarshalJSON(raw.Cancel, &value); err == nil {
+			decoded.Cancel = value
+		}
 	}
 	*c = SubagentSessionCapabilities(decoded)
 	return nil
@@ -6598,6 +12785,30 @@ func (p SystemPrompt) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *SystemPrompt) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"mode", "content"}, []string{"content", "mode"}); err != nil {
+		return err
+	}
+	type alias SystemPrompt
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*p = SystemPrompt(decoded)
+	return nil
+}
+
 // SystemPromptMode: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -6638,6 +12849,30 @@ type Terminal struct {
 	TerminalID TerminalId `json:"terminalId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (t *Terminal) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"terminalId"}, []string{"terminalId"}); err != nil {
+		return err
+	}
+	type alias Terminal
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*t = Terminal(decoded)
+	return nil
+}
+
 // TerminalExitStatus: Exit status of a terminal command.
 type TerminalExitStatus struct {
 	Meta     Meta    `json:"_meta,omitzero"`
@@ -6650,6 +12885,7 @@ func (s *TerminalExitStatus) UnmarshalJSON(data []byte) error {
 	type alias TerminalExitStatus
 	decoded := alias{}
 	raw := struct {
+		Meta     json.RawMessage `json:"_meta"`
 		ExitCode json.RawMessage `json:"exitCode"`
 		Signal   json.RawMessage `json:"signal"`
 		*alias
@@ -6657,11 +12893,23 @@ func (s *TerminalExitStatus) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.ExitCode) > 0 {
-		_ = unmarshalJSON(raw.ExitCode, &decoded.ExitCode)
+		var value *uint32
+		if err := unmarshalJSON(raw.ExitCode, &value); err == nil {
+			decoded.ExitCode = value
+		}
 	}
 	if len(raw.Signal) > 0 {
-		_ = unmarshalJSON(raw.Signal, &decoded.Signal)
+		var value *string
+		if err := unmarshalJSON(raw.Signal, &value); err == nil {
+			decoded.Signal = value
+		}
 	}
 	*s = TerminalExitStatus(decoded)
 	return nil
@@ -6677,6 +12925,30 @@ type TerminalOutputRequest struct {
 	TerminalID TerminalId `json:"terminalId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *TerminalOutputRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId", "terminalId"}, []string{"sessionId", "terminalId"}); err != nil {
+		return err
+	}
+	type alias TerminalOutputRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = TerminalOutputRequest(decoded)
+	return nil
+}
+
 // TerminalOutputResponse: Response containing the terminal output and exit status.
 type TerminalOutputResponse struct {
 	Meta       Meta                `json:"_meta,omitzero"`
@@ -6687,17 +12959,30 @@ type TerminalOutputResponse struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (r *TerminalOutputResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"output", "truncated"}, []string{"output", "truncated"}); err != nil {
+		return err
+	}
 	type alias TerminalOutputResponse
 	decoded := alias{}
 	raw := struct {
+		Meta       json.RawMessage `json:"_meta"`
 		ExitStatus json.RawMessage `json:"exitStatus"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.ExitStatus) > 0 {
-		_ = unmarshalJSON(raw.ExitStatus, &decoded.ExitStatus)
+		var value *TerminalExitStatus
+		if err := unmarshalJSON(raw.ExitStatus, &value); err == nil {
+			decoded.ExitStatus = value
+		}
 	}
 	*r = TerminalOutputResponse(decoded)
 	return nil
@@ -6712,17 +12997,30 @@ type TextContent struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (c *TextContent) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"text"}, []string{"text"}); err != nil {
+		return err
+	}
 	type alias TextContent
 	decoded := alias{}
 	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
 		Annotations json.RawMessage `json:"annotations"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Annotations) > 0 {
-		_ = unmarshalJSON(raw.Annotations, &decoded.Annotations)
+		var value *Annotations
+		if err := unmarshalJSON(raw.Annotations, &value); err == nil {
+			decoded.Annotations = value
+		}
 	}
 	*c = TextContent(decoded)
 	return nil
@@ -6738,17 +13036,30 @@ type TextResourceContents struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (c *TextResourceContents) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"text", "uri"}, []string{"text", "uri"}); err != nil {
+		return err
+	}
 	type alias TextResourceContents
 	decoded := alias{}
 	raw := struct {
+		Meta     json.RawMessage `json:"_meta"`
 		MimeType json.RawMessage `json:"mimeType"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.MimeType) > 0 {
-		_ = unmarshalJSON(raw.MimeType, &decoded.MimeType)
+		var value *string
+		if err := unmarshalJSON(raw.MimeType, &value); err == nil {
+			decoded.MimeType = value
+		}
 	}
 	*c = TextResourceContents(decoded)
 	return nil
@@ -6768,6 +13079,30 @@ func (i TitledMultiSelectItems) MarshalJSON() ([]byte, error) {
 		a.AnyOf = []EnumOption{}
 	}
 	return json.Marshal(a)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (i *TitledMultiSelectItems) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"anyOf"}, []string{"anyOf"}); err != nil {
+		return err
+	}
+	type alias TitledMultiSelectItems
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*i = TitledMultiSelectItems(decoded)
+	return nil
 }
 
 // ToolCall: Represents a tool call that the language model has requested.
@@ -6791,9 +13126,13 @@ type ToolCall struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (c *ToolCall) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"toolCallId", "title"}, []string{"title", "toolCallId"}); err != nil {
+		return err
+	}
 	type alias ToolCall
 	decoded := alias{}
 	raw := struct {
+		Meta      json.RawMessage `json:"_meta"`
 		Content   json.RawMessage `json:"content"`
 		Kind      json.RawMessage `json:"kind"`
 		Locations json.RawMessage `json:"locations"`
@@ -6806,13 +13145,19 @@ func (c *ToolCall) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Content) > 0 {
 		var values []json.RawMessage
 		if err := unmarshalJSON(raw.Content, &values); err == nil {
 			decoded.Content = []ToolCallContent{}
 			for _, value := range values {
 				var item ToolCallContent
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
 						decoded.Content = append(decoded.Content, item)
@@ -6836,20 +13181,29 @@ func (c *ToolCall) UnmarshalJSON(data []byte) error {
 			decoded.Locations = []ToolCallLocation{}
 			for _, value := range values {
 				var item ToolCallLocation
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Locations = append(decoded.Locations, item)
 				}
 			}
 		}
 	}
 	if len(raw.Name) > 0 {
-		_ = unmarshalJSON(raw.Name, &decoded.Name)
+		var value *string
+		if err := unmarshalJSON(raw.Name, &value); err == nil {
+			decoded.Name = value
+		}
 	}
 	if len(raw.RawInput) > 0 {
-		_ = unmarshalJSON(raw.RawInput, &decoded.RawInput)
+		var value any
+		if err := unmarshalJSON(raw.RawInput, &value); err == nil {
+			decoded.RawInput = value
+		}
 	}
 	if len(raw.RawOutput) > 0 {
-		_ = unmarshalJSON(raw.RawOutput, &decoded.RawOutput)
+		var value any
+		if err := unmarshalJSON(raw.RawOutput, &value); err == nil {
+			decoded.RawOutput = value
+		}
 	}
 	if len(raw.Status) > 0 {
 		var value ToolCallStatus
@@ -6873,7 +13227,7 @@ func (c *ToolCall) UnmarshalJSON(data []byte) error {
 type ToolCallContent struct {
 	Type       ToolCallContentType `json:"type"`
 	Meta       Meta                `json:"_meta,omitzero"`
-	Content    ContentBlock        `json:"content,omitempty,omitzero"`
+	Content    ContentBlock        `json:"content,omitzero"`
 	NewText    string              `json:"newText,omitempty"`
 	OldText    *string             `json:"oldText,omitempty"`
 	Path       string              `json:"path,omitempty"`
@@ -6961,19 +13315,122 @@ func (c ToolCallContent) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the selected schema variant.
 func (c *ToolCallContent) UnmarshalJSON(data []byte) error {
 	type alias ToolCallContent
-	decoded := alias{}
-	raw := struct {
-		OldText json.RawMessage `json:"oldText"`
-		*alias
-	}{alias: &decoded}
+	var decoded alias
+	var raw struct {
+		Type       json.RawMessage `json:"type"`
+		Meta       json.RawMessage `json:"_meta"`
+		Content    json.RawMessage `json:"content"`
+		NewText    json.RawMessage `json:"newText"`
+		OldText    json.RawMessage `json:"oldText"`
+		Path       json.RawMessage `json:"path"`
+		TerminalID json.RawMessage `json:"terminalId"`
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.OldText) > 0 {
-		_ = unmarshalJSON(raw.OldText, &decoded.OldText)
+	var tag ToolCallContentType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "content":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "content"}, []string{"content", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Content) > 0 {
+				var value ContentBlock
+				if err := unmarshalJSON(raw.Content, &value); err != nil {
+					return err
+				}
+				decoded.Content = value
+			}
+			return nil
+		}()
+	case "diff":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "path", "newText"}, []string{"newText", "path", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.NewText) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.NewText, &value); err != nil {
+					return err
+				}
+				decoded.NewText = value
+			}
+			if len(raw.OldText) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.OldText, &value); err == nil {
+					decoded.OldText = value
+				}
+			}
+			if len(raw.Path) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Path, &value); err != nil {
+					return err
+				}
+				decoded.Path = value
+			}
+			return nil
+		}()
+	case "terminal":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "terminalId"}, []string{"terminalId", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.TerminalID) > 0 {
+				var value TerminalId
+				if err := unmarshalJSON(raw.TerminalID, &value); err != nil {
+					return err
+				}
+				decoded.TerminalID = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("ToolCallContent: unknown type %q", tag)
+	}
+	if err != nil {
+		return err
 	}
 	*c = ToolCallContent(decoded)
 	return nil
@@ -6996,17 +13453,30 @@ type ToolCallLocation struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (l *ToolCallLocation) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"path"}, []string{"path"}); err != nil {
+		return err
+	}
 	type alias ToolCallLocation
 	decoded := alias{}
 	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
 		Line json.RawMessage `json:"line"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Line) > 0 {
-		_ = unmarshalJSON(raw.Line, &decoded.Line)
+		var value *uint32
+		if err := unmarshalJSON(raw.Line, &value); err == nil {
+			decoded.Line = value
+		}
 	}
 	*l = ToolCallLocation(decoded)
 	return nil
@@ -7031,6 +13501,23 @@ const (
 	ToolCallStatusFailed ToolCallStatus = "failed"
 )
 
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *ToolCallStatus) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("ToolCallStatus must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "pending", "in_progress", "completed", "failed":
+		*v = ToolCallStatus(value)
+		return nil
+	}
+	return fmt.Errorf("invalid ToolCallStatus value %q", value)
+}
+
 // ToolCallUpdate: An update to an existing tool call.
 //
 // Used to report progress and results as tools execute. All fields except
@@ -7052,9 +13539,13 @@ type ToolCallUpdate struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (u *ToolCallUpdate) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"toolCallId"}, []string{"toolCallId"}); err != nil {
+		return err
+	}
 	type alias ToolCallUpdate
 	decoded := alias{}
 	raw := struct {
+		Meta      json.RawMessage `json:"_meta"`
 		Content   json.RawMessage `json:"content"`
 		Kind      json.RawMessage `json:"kind"`
 		Locations json.RawMessage `json:"locations"`
@@ -7068,13 +13559,19 @@ func (u *ToolCallUpdate) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Content) > 0 {
 		var values []json.RawMessage
 		if err := unmarshalJSON(raw.Content, &values); err == nil && values != nil {
 			items := []ToolCallContent{}
 			for _, value := range values {
 				var item ToolCallContent
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
 						items = append(items, item)
@@ -7099,7 +13596,7 @@ func (u *ToolCallUpdate) UnmarshalJSON(data []byte) error {
 			items := []ToolCallLocation{}
 			for _, value := range values {
 				var item ToolCallLocation
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					items = append(items, item)
 				}
 			}
@@ -7107,13 +13604,22 @@ func (u *ToolCallUpdate) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.Name) > 0 {
-		_ = unmarshalJSON(raw.Name, &decoded.Name)
+		var value *string
+		if err := unmarshalJSON(raw.Name, &value); err == nil {
+			decoded.Name = value
+		}
 	}
 	if len(raw.RawInput) > 0 {
-		_ = unmarshalJSON(raw.RawInput, &decoded.RawInput)
+		var value any
+		if err := unmarshalJSON(raw.RawInput, &value); err == nil {
+			decoded.RawInput = value
+		}
 	}
 	if len(raw.RawOutput) > 0 {
-		_ = unmarshalJSON(raw.RawOutput, &decoded.RawOutput)
+		var value any
+		if err := unmarshalJSON(raw.RawOutput, &value); err == nil {
+			decoded.RawOutput = value
+		}
 	}
 	if len(raw.Status) > 0 {
 		var value ToolCallStatus
@@ -7125,7 +13631,10 @@ func (u *ToolCallUpdate) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(raw.Title) > 0 {
-		_ = unmarshalJSON(raw.Title, &decoded.Title)
+		var value *string
+		if err := unmarshalJSON(raw.Title, &value); err == nil {
+			decoded.Title = value
+		}
 	}
 	*u = ToolCallUpdate(decoded)
 	return nil
@@ -7162,6 +13671,23 @@ const (
 	ToolKindOther ToolKind = "other"
 )
 
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *ToolKind) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("ToolKind must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "read", "edit", "delete", "move", "search", "execute", "think", "fetch", "switch_mode", "other":
+		*v = ToolKind(value)
+		return nil
+	}
+	return fmt.Errorf("invalid ToolKind value %q", value)
+}
+
 // UnarchiveSessionRequest: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -7180,6 +13706,30 @@ type UnarchiveSessionRequest struct {
 	SessionID SessionId `json:"sessionId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *UnarchiveSessionRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId"}, []string{"sessionId"}); err != nil {
+		return err
+	}
+	type alias UnarchiveSessionRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = UnarchiveSessionRequest(decoded)
+	return nil
+}
+
 // UnarchiveSessionResponse: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -7187,6 +13737,27 @@ type UnarchiveSessionRequest struct {
 // Response from unarchiving a session.
 type UnarchiveSessionResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *UnarchiveSessionResponse) UnmarshalJSON(data []byte) error {
+	type alias UnarchiveSessionResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = UnarchiveSessionResponse(decoded)
+	return nil
 }
 
 // UnknownStateUpdate: **UNSTABLE**
@@ -7206,10 +13777,55 @@ type UnknownStateUpdate struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *UnknownStateUpdate) UnmarshalJSON(data []byte) error {
+	type alias UnknownStateUpdate
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*u = UnknownStateUpdate(decoded)
+	return nil
+}
+
 // UnstructuredCommandInput: All text that was typed after the command name is provided as input.
 type UnstructuredCommandInput struct {
 	Meta Meta   `json:"_meta,omitzero"`
 	Hint string `json:"hint"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (i *UnstructuredCommandInput) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"hint"}, []string{"hint"}); err != nil {
+		return err
+	}
+	type alias UnstructuredCommandInput
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*i = UnstructuredCommandInput(decoded)
+	return nil
 }
 
 // Usage: **UNSTABLE**
@@ -7229,9 +13845,13 @@ type Usage struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (u *Usage) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"totalTokens", "inputTokens", "outputTokens"}, []string{"inputTokens", "outputTokens", "totalTokens"}); err != nil {
+		return err
+	}
 	type alias Usage
 	decoded := alias{}
 	raw := struct {
+		Meta              json.RawMessage `json:"_meta"`
 		CachedReadTokens  json.RawMessage `json:"cachedReadTokens"`
 		CachedWriteTokens json.RawMessage `json:"cachedWriteTokens"`
 		ThoughtTokens     json.RawMessage `json:"thoughtTokens"`
@@ -7240,14 +13860,29 @@ func (u *Usage) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.CachedReadTokens) > 0 {
-		_ = unmarshalJSON(raw.CachedReadTokens, &decoded.CachedReadTokens)
+		var value *uint64
+		if err := unmarshalJSON(raw.CachedReadTokens, &value); err == nil {
+			decoded.CachedReadTokens = value
+		}
 	}
 	if len(raw.CachedWriteTokens) > 0 {
-		_ = unmarshalJSON(raw.CachedWriteTokens, &decoded.CachedWriteTokens)
+		var value *uint64
+		if err := unmarshalJSON(raw.CachedWriteTokens, &value); err == nil {
+			decoded.CachedWriteTokens = value
+		}
 	}
 	if len(raw.ThoughtTokens) > 0 {
-		_ = unmarshalJSON(raw.ThoughtTokens, &decoded.ThoughtTokens)
+		var value *uint64
+		if err := unmarshalJSON(raw.ThoughtTokens, &value); err == nil {
+			decoded.ThoughtTokens = value
+		}
 	}
 	*u = Usage(decoded)
 	return nil
@@ -7263,17 +13898,30 @@ type UsageUpdate struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (u *UsageUpdate) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"used", "size"}, []string{"size", "used"}); err != nil {
+		return err
+	}
 	type alias UsageUpdate
 	decoded := alias{}
 	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
 		Cost json.RawMessage `json:"cost"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.Cost) > 0 {
-		_ = unmarshalJSON(raw.Cost, &decoded.Cost)
+		var value *Cost
+		if err := unmarshalJSON(raw.Cost, &value); err == nil {
+			decoded.Cost = value
+		}
 	}
 	*u = UsageUpdate(decoded)
 	return nil
@@ -7284,6 +13932,30 @@ type WaitForTerminalExitRequest struct {
 	Meta       Meta       `json:"_meta,omitzero"`
 	SessionID  SessionId  `json:"sessionId"`
 	TerminalID TerminalId `json:"terminalId"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *WaitForTerminalExitRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId", "terminalId"}, []string{"sessionId", "terminalId"}); err != nil {
+		return err
+	}
+	type alias WaitForTerminalExitRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = WaitForTerminalExitRequest(decoded)
+	return nil
 }
 
 // WaitForTerminalExitResponse: Response containing the exit status of a terminal command.
@@ -7298,6 +13970,7 @@ func (r *WaitForTerminalExitResponse) UnmarshalJSON(data []byte) error {
 	type alias WaitForTerminalExitResponse
 	decoded := alias{}
 	raw := struct {
+		Meta     json.RawMessage `json:"_meta"`
 		ExitCode json.RawMessage `json:"exitCode"`
 		Signal   json.RawMessage `json:"signal"`
 		*alias
@@ -7305,11 +13978,23 @@ func (r *WaitForTerminalExitResponse) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.ExitCode) > 0 {
-		_ = unmarshalJSON(raw.ExitCode, &decoded.ExitCode)
+		var value *uint32
+		if err := unmarshalJSON(raw.ExitCode, &value); err == nil {
+			decoded.ExitCode = value
+		}
 	}
 	if len(raw.Signal) > 0 {
-		_ = unmarshalJSON(raw.Signal, &decoded.Signal)
+		var value *string
+		if err := unmarshalJSON(raw.Signal, &value); err == nil {
+			decoded.Signal = value
+		}
 	}
 	*r = WaitForTerminalExitResponse(decoded)
 	return nil
@@ -7325,9 +14010,149 @@ type WriteTextFileRequest struct {
 	SessionID SessionId `json:"sessionId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *WriteTextFileRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId", "path", "content"}, []string{"content", "path", "sessionId"}); err != nil {
+		return err
+	}
+	type alias WriteTextFileRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = WriteTextFileRequest(decoded)
+	return nil
+}
+
 // WriteTextFileResponse: Response to `fs/write_text_file`
 type WriteTextFileResponse struct {
 	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *WriteTextFileResponse) UnmarshalJSON(data []byte) error {
+	type alias WriteTextFileResponse
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = WriteTextFileResponse(decoded)
+	return nil
+}
+
+// MarshalJSON implements json.Marshaler.
+func (u CompactionUpdate) MarshalJSON() ([]byte, error) {
+	type alias CompactionUpdate
+	a := alias(u)
+	type wire struct {
+		*alias
+		Meta    *Meta            `json:"_meta,omitempty"`
+		Error   **string         `json:"error,omitempty"`
+		Summary **[]ContentBlock `json:"summary,omitempty"`
+	}
+	w := wire{alias: &a}
+	if a.Meta != nil {
+		Meta := a.Meta
+		w.Meta = &Meta
+	}
+	if a.Error != nil {
+		Error := a.Error
+		w.Error = &Error
+	}
+	if a.Summary != nil {
+		Summary := a.Summary
+		w.Summary = &Summary
+	}
+	if slices.Contains(a.NullFields, "_meta") {
+		w.Meta = new(Meta)
+	}
+	if slices.Contains(a.NullFields, "error") {
+		w.Error = new(*string)
+	}
+	if slices.Contains(a.NullFields, "summary") {
+		w.Summary = new(*[]ContentBlock)
+	}
+	return json.Marshal(w)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *CompactionUpdate) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"compactionId", "status"}, []string{"compactionId", "status"}); err != nil {
+		return err
+	}
+	type alias CompactionUpdate
+	decoded := alias{}
+	raw := struct {
+		Meta    json.RawMessage `json:"_meta"`
+		Error   json.RawMessage `json:"error"`
+		Summary json.RawMessage `json:"summary"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		if isJSONNull(raw.Meta) {
+			decoded.NullFields = append(decoded.NullFields, "_meta")
+		} else {
+			var value Meta
+			if err := unmarshalJSON(raw.Meta, &value); err == nil {
+				decoded.Meta = value
+			}
+		}
+	}
+	if len(raw.Error) > 0 {
+		if isJSONNull(raw.Error) {
+			decoded.NullFields = append(decoded.NullFields, "error")
+		} else {
+			var value *string
+			if err := unmarshalJSON(raw.Error, &value); err == nil {
+				decoded.Error = value
+			}
+		}
+	}
+	if len(raw.Summary) > 0 {
+		if isJSONNull(raw.Summary) {
+			decoded.NullFields = append(decoded.NullFields, "summary")
+		} else {
+			var values []json.RawMessage
+			if err := unmarshalJSON(raw.Summary, &values); err == nil && values != nil {
+				items := []ContentBlock{}
+				for _, rawItem := range values {
+					var item ContentBlock
+					if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
+						switch item.Type {
+						case ContentBlockTypeText, ContentBlockTypeImage, ContentBlockTypeAudio, ContentBlockTypeResourceLink, ContentBlockTypeResource:
+							items = append(items, item)
+						}
+					}
+				}
+				decoded.Summary = &items
+			}
+		}
+	}
+	*u = CompactionUpdate(decoded)
+	return nil
 }
 
 // MarshalJSON implements json.Marshaler.
@@ -7342,9 +14167,13 @@ func (r ListSessionsResponse) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (r *ListSessionsResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessions"}, []string{}); err != nil {
+		return err
+	}
 	type alias ListSessionsResponse
 	decoded := alias{}
 	raw := struct {
+		Meta       json.RawMessage `json:"_meta"`
 		NextCursor json.RawMessage `json:"nextCursor"`
 		Sessions   json.RawMessage `json:"sessions"`
 		*alias
@@ -7352,8 +14181,17 @@ func (r *ListSessionsResponse) UnmarshalJSON(data []byte) error {
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
 	if len(raw.NextCursor) > 0 {
-		_ = unmarshalJSON(raw.NextCursor, &decoded.NextCursor)
+		var value *string
+		if err := unmarshalJSON(raw.NextCursor, &value); err == nil {
+			decoded.NextCursor = value
+		}
 	}
 	if len(raw.Sessions) > 0 {
 		var values []json.RawMessage
@@ -7361,7 +14199,7 @@ func (r *ListSessionsResponse) UnmarshalJSON(data []byte) error {
 			decoded.Sessions = []SessionInfo{}
 			for _, value := range values {
 				var item SessionInfo
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Sessions = append(decoded.Sessions, item)
 				}
 			}
@@ -7381,6 +14219,30 @@ func (r LoadSessionRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *LoadSessionRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"mcpServers", "cwd", "sessionId"}, []string{"cwd", "sessionId"}); err != nil {
+		return err
+	}
+	type alias LoadSessionRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = LoadSessionRequest(decoded)
+	return nil
+}
+
 // MarshalJSON implements json.Marshaler.
 func (r NewSessionRequest) MarshalJSON() ([]byte, error) {
 	type alias NewSessionRequest
@@ -7389,6 +14251,30 @@ func (r NewSessionRequest) MarshalJSON() ([]byte, error) {
 		a.McpServers = []McpServer{}
 	}
 	return json.Marshal(a)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *NewSessionRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"cwd", "mcpServers"}, []string{"cwd"}); err != nil {
+		return err
+	}
+	type alias NewSessionRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = NewSessionRequest(decoded)
+	return nil
 }
 
 // MarshalJSON implements json.Marshaler.
@@ -7403,14 +14289,24 @@ func (i ProviderInfo) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (i *ProviderInfo) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"providerId", "supported", "required"}, []string{"providerId", "required"}); err != nil {
+		return err
+	}
 	type alias ProviderInfo
 	decoded := alias{}
 	raw := struct {
+		Meta      json.RawMessage `json:"_meta"`
 		Supported json.RawMessage `json:"supported"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
 	}
 	if len(raw.Supported) > 0 {
 		var values []json.RawMessage
@@ -7418,13 +14314,83 @@ func (i *ProviderInfo) UnmarshalJSON(data []byte) error {
 			decoded.Supported = []LlmProtocol{}
 			for _, value := range values {
 				var item LlmProtocol
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Supported = append(decoded.Supported, item)
 				}
 			}
 		}
 	}
 	*i = ProviderInfo(decoded)
+	return nil
+}
+
+// MarshalJSON implements json.Marshaler.
+func (u SessionInfoUpdate) MarshalJSON() ([]byte, error) {
+	type alias SessionInfoUpdate
+	a := alias(u)
+	type wire struct {
+		*alias
+		Title     **string `json:"title,omitempty"`
+		UpdatedAt **string `json:"updatedAt,omitempty"`
+	}
+	w := wire{alias: &a}
+	if a.Title != nil {
+		Title := a.Title
+		w.Title = &Title
+	}
+	if a.UpdatedAt != nil {
+		UpdatedAt := a.UpdatedAt
+		w.UpdatedAt = &UpdatedAt
+	}
+	if slices.Contains(a.NullFields, "title") {
+		w.Title = new(*string)
+	}
+	if slices.Contains(a.NullFields, "updatedAt") {
+		w.UpdatedAt = new(*string)
+	}
+	return json.Marshal(w)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *SessionInfoUpdate) UnmarshalJSON(data []byte) error {
+	type alias SessionInfoUpdate
+	decoded := alias{}
+	raw := struct {
+		Meta      json.RawMessage `json:"_meta"`
+		Title     json.RawMessage `json:"title"`
+		UpdatedAt json.RawMessage `json:"updatedAt"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	if len(raw.Title) > 0 {
+		if isJSONNull(raw.Title) {
+			decoded.NullFields = append(decoded.NullFields, "title")
+		} else {
+			var value *string
+			if err := unmarshalJSON(raw.Title, &value); err == nil {
+				decoded.Title = value
+			}
+		}
+	}
+	if len(raw.UpdatedAt) > 0 {
+		if isJSONNull(raw.UpdatedAt) {
+			decoded.NullFields = append(decoded.NullFields, "updatedAt")
+		} else {
+			var value *string
+			if err := unmarshalJSON(raw.UpdatedAt, &value); err == nil {
+				decoded.UpdatedAt = value
+			}
+		}
+	}
+	*u = SessionInfoUpdate(decoded)
 	return nil
 }
 
@@ -7489,6 +14455,9 @@ func (m SessionMessage) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (m *SessionMessage) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"messageId"}, []string{"messageId"}); err != nil {
+		return err
+	}
 	type alias SessionMessage
 	decoded := alias{}
 	raw := struct {
@@ -7522,7 +14491,7 @@ func (m *SessionMessage) UnmarshalJSON(data []byte) error {
 				items := []ContentBlock{}
 				for _, rawItem := range values {
 					var item ContentBlock
-					if err := unmarshalJSON(rawItem, &item); err == nil {
+					if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 						switch item.Type {
 						case ContentBlockTypeText, ContentBlockTypeImage, ContentBlockTypeAudio, ContentBlockTypeResourceLink, ContentBlockTypeResource:
 							items = append(items, item)
@@ -7646,6 +14615,9 @@ func (u SubagentUpdate) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (u *SubagentUpdate) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId"}, []string{"sessionId"}); err != nil {
+		return err
+	}
 	type alias SubagentUpdate
 	decoded := alias{}
 	raw := struct {

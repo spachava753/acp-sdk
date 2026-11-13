@@ -8,7 +8,6 @@ package acp
 
 import (
 	"context"
-	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
@@ -180,94 +179,121 @@ func (c *AgentConnection) TerminalWaitForExit(ctx context.Context, params *WaitF
 }
 
 func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
-	jsonrpc2.Async(ctx)
+	beginHandler(ctx, req)
 	switch req.Method {
 	case MethodAuthStatus:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(AuthStatusHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[AuthStatusRequest](req)
+		params, err := decodeProtocolParams[AuthStatusRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.AuthStatus(ctx, params))
 	case MethodAuthenticate:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(AuthenticateHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[AuthenticateRequest](req)
+		params, err := decodeProtocolParams[AuthenticateRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.Authenticate(ctx, params))
 	case MethodInitialize:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(InitializeHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[InitializeRequest](req)
+		params, err := decodeProtocolParams[InitializeRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.Initialize(ctx, params))
 	case MethodLogout:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(LogoutHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[LogoutRequest](req)
+		params, err := decodeProtocolParams[LogoutRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.Logout(ctx, params))
 	case MethodMcpMessage:
+		if req.IsCall() {
+			return nil, methodNotFound(req.Method)
+		}
 		h, ok := handler.(McpMessageNotificationHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[MessageMcpNotification](req)
+		params, err := decodeProtocolParams[MessageMcpNotification](req)
 		if err != nil {
 			return nil, err
 		}
 		return nil, h.McpMessageNotification(ctx, params)
 	case MethodProvidersDisable:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(ProvidersDisableHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[DisableProviderRequest](req)
+		params, err := decodeProtocolParams[DisableProviderRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.ProvidersDisable(ctx, params))
 	case MethodProvidersList:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(ProvidersListHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[ListProvidersRequest](req)
+		params, err := decodeProtocolParams[ListProvidersRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.ProvidersList(ctx, params))
 	case MethodProvidersSet:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(ProvidersSetHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[SetProviderRequest](req)
+		params, err := decodeProtocolParams[SetProviderRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.ProvidersSet(ctx, params))
 	case MethodProxyInitialize:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(ProxyInitializeHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[InitializeProxyRequest](req)
+		params, err := decodeProtocolParams[InitializeProxyRequest](req)
 		if err != nil {
 			return nil, err
 		}
@@ -278,7 +304,7 @@ func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) 
 			if !ok {
 				return nil, methodNotFound(req.Method)
 			}
-			params, err := decodeParams[ProxySuccessorRequest](req)
+			params, err := decodeProtocolParams[ProxySuccessorRequest](req)
 			if err != nil {
 				return nil, err
 			}
@@ -288,157 +314,202 @@ func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) 
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[ProxySuccessorNotification](req)
+		params, err := decodeProtocolParams[ProxySuccessorNotification](req)
 		if err != nil {
 			return nil, err
 		}
 		return nil, h.ProxySuccessorNotification(ctx, params)
 	case MethodSessionArchive:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(SessionArchiveHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[ArchiveSessionRequest](req)
+		params, err := decodeProtocolParams[ArchiveSessionRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.SessionArchive(ctx, params))
 	case MethodSessionCancel:
+		if req.IsCall() {
+			return nil, methodNotFound(req.Method)
+		}
 		h, ok := handler.(SessionCancelHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[CancelNotification](req)
+		params, err := decodeProtocolParams[CancelNotification](req)
 		if err != nil {
 			return nil, err
 		}
 		return nil, h.SessionCancel(ctx, params)
 	case MethodSessionClose:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(SessionCloseHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[CloseSessionRequest](req)
+		params, err := decodeProtocolParams[CloseSessionRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.SessionClose(ctx, params))
 	case MethodSessionDelete:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(SessionDeleteHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[DeleteSessionRequest](req)
+		params, err := decodeProtocolParams[DeleteSessionRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.SessionDelete(ctx, params))
 	case MethodSessionFork:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(SessionForkHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[ForkSessionRequest](req)
+		params, err := decodeProtocolParams[ForkSessionRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.SessionFork(ctx, params))
 	case MethodSessionList:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(SessionListHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[ListSessionsRequest](req)
+		params, err := decodeProtocolParams[ListSessionsRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.SessionList(ctx, params))
 	case MethodSessionLoad:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(SessionLoadHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[LoadSessionRequest](req)
+		params, err := decodeProtocolParams[LoadSessionRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.SessionLoad(ctx, params))
 	case MethodSessionNew:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(SessionNewHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[NewSessionRequest](req)
+		params, err := decodeProtocolParams[NewSessionRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.SessionNew(ctx, params))
 	case MethodSessionPrompt:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(SessionPromptHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[PromptRequest](req)
+		params, err := decodeProtocolParams[PromptRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.SessionPrompt(ctx, params))
 	case MethodSessionResume:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(SessionResumeHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[ResumeSessionRequest](req)
+		params, err := decodeProtocolParams[ResumeSessionRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.SessionResume(ctx, params))
 	case MethodSessionSetConfigOption:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(SessionSetConfigOptionHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[SetSessionConfigOptionRequest](req)
+		params, err := decodeProtocolParams[SetSessionConfigOptionRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.SessionSetConfigOption(ctx, params))
 	case MethodSessionSetMode:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(SessionSetModeHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[SetSessionModeRequest](req)
+		params, err := decodeProtocolParams[SetSessionModeRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.SessionSetMode(ctx, params))
 	case MethodSessionSetTitle:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(SessionSetTitleHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[SetSessionTitleRequest](req)
+		params, err := decodeProtocolParams[SetSessionTitleRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.SessionSetTitle(ctx, params))
 	case MethodSessionStatus:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(SessionStatusHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[SessionStatusRequest](req)
+		params, err := decodeProtocolParams[SessionStatusRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.SessionStatus(ctx, params))
 	case MethodSessionUnarchive:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(SessionUnarchiveHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[UnarchiveSessionRequest](req)
+		params, err := decodeProtocolParams[UnarchiveSessionRequest](req)
 		if err != nil {
 			return nil, err
 		}
@@ -446,4 +517,9 @@ func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) 
 	default:
 		return handleExtension(ctx, handler, req)
 	}
+}
+
+func hasAgentInitializeHandler(handler any) bool {
+	_, ok := handler.(InitializeHandler)
+	return ok
 }

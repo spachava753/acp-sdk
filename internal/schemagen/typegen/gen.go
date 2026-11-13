@@ -87,7 +87,7 @@ func definition(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 	default:
 		typ, text := schemaType(defs, schema, false)
 		decl := jen.Type().Id(name)
-		if text == "json.RawMessage" {
+		if text == "json.RawMessage" || aliasesCodecType(defs, schema) {
 			decl.Op("=")
 		}
 		decl.Add(typ)
@@ -97,6 +97,22 @@ func definition(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 		}
 		return codes, false, nil
 	}
+}
+
+// aliasesCodecType reports whether schema only names an object or union
+// definition. Such a definition is the same payload, so it is emitted as an
+// alias: a defined type would drop the referenced type's JSON methods and with
+// them its validation and recovery rules.
+func aliasesCodecType(defs map[string]*jsonschema.Schema, schema *jsonschema.Schema) bool {
+	ref := schema.Ref
+	if ref == "" && len(schema.AllOf) == 1 {
+		ref = schema.AllOf[0].Ref
+	}
+	if ref == "" {
+		return false
+	}
+	def := defs[refName(ref)]
+	return def != nil && (isObjectSchema(def) || isDiscriminatorUnion(defs, def) || isArrayUnion(def))
 }
 
 func commented(name, description string, code jen.Code) jen.Code {
@@ -247,13 +263,4 @@ func collectRefs(schema *jsonschema.Schema, defs map[string]*jsonschema.Schema, 
 	}
 	collectRefs(schema.Items, defs, refs, seen)
 	collectRefs(schema.AdditionalProperties, defs, refs, seen)
-}
-
-func contains[S ~[]E, E comparable](slice S, value E) bool {
-	for _, v := range slice {
-		if v == value {
-			return true
-		}
-	}
-	return false
 }

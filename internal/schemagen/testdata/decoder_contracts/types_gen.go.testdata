@@ -1,0 +1,151 @@
+package acp
+
+import (
+	"encoding/json"
+	"fmt"
+)
+
+// Meta: Reserved metadata for protocol extensions. Decoded numbers are json.Number values.
+type Meta map[string]any
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (m *Meta) UnmarshalJSON(data []byte) error {
+	type plain Meta
+	return unmarshalJSON(data, (*plain)(m))
+}
+
+type ClosedMode string
+
+const (
+	ClosedModeFast ClosedMode = "fast"
+	ClosedModeSlow ClosedMode = "slow"
+)
+
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *ClosedMode) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("ClosedMode must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "fast", "slow":
+		*v = ClosedMode(value)
+		return nil
+	}
+	return fmt.Errorf("invalid ClosedMode value %q", value)
+}
+
+type ClosedReason string
+
+const (
+	ClosedReasonEndTurn   ClosedReason = "end_turn"
+	ClosedReasonCancelled ClosedReason = "cancelled"
+)
+
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *ClosedReason) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("ClosedReason must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "end_turn", "cancelled":
+		*v = ClosedReason(value)
+		return nil
+	}
+	return fmt.Errorf("invalid ClosedReason value %q", value)
+}
+
+type Envelope struct {
+	Meta   Meta         `json:"_meta,omitzero"`
+	Mode   ClosedMode   `json:"mode,omitempty"`
+	Name   OpenName     `json:"name,omitempty"`
+	Packet *Packet      `json:"packet,omitempty"`
+	Reason ClosedReason `json:"reason,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (e *Envelope) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{}, []string{"mode", "name"}); err != nil {
+		return err
+	}
+	type alias Envelope
+	decoded := alias{}
+	raw := struct {
+		Meta   json.RawMessage `json:"_meta"`
+		Packet json.RawMessage `json:"packet"`
+		Reason json.RawMessage `json:"reason"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	if len(raw.Packet) > 0 {
+		var value *Packet
+		if err := unmarshalJSON(raw.Packet, &value); err == nil {
+			decoded.Packet = value
+		}
+	}
+	if len(raw.Reason) > 0 {
+		var value ClosedReason
+		if err := unmarshalJSON(raw.Reason, &value); err == nil {
+			switch string(value) {
+			case "end_turn", "cancelled":
+				decoded.Reason = value
+			}
+		}
+	}
+	*e = Envelope(decoded)
+	return nil
+}
+
+type OpenName string
+
+const (
+	OpenNameKnown OpenName = "known"
+)
+
+type Packet struct {
+	Count int64    `json:"count"`
+	ID    string   `json:"id"`
+	Items []string `json:"items"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (p Packet) MarshalJSON() ([]byte, error) {
+	type alias Packet
+	a := alias(p)
+	if a.Items == nil {
+		a.Items = []string{}
+	}
+	return json.Marshal(a)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *Packet) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"id", "count", "items"}, []string{"count", "id"}); err != nil {
+		return err
+	}
+	type alias Packet
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*p = Packet(decoded)
+	return nil
+}

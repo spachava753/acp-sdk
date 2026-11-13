@@ -7,3 +7,35 @@ type Choice struct {
 	Nullable *string         `json:"nullable,omitempty"`
 	Value    json.RawMessage `json:"value"`
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *Choice) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"value"}, []string{"value"}); err != nil {
+		return err
+	}
+	type alias Choice
+	decoded := alias{}
+	raw := struct {
+		Value json.RawMessage `json:"value"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Value) > 0 {
+		var value json.RawMessage
+		if err := func() error {
+			if err := func(data []byte) error {
+				return validateJSONUnion(data, validateJSONType[string], validateJSONType[int32])
+			}(raw.Value); err != nil {
+				return err
+			}
+			return unmarshalJSON(raw.Value, &value)
+		}(); err != nil {
+			return err
+		}
+		decoded.Value = value
+	}
+	*c = Choice(decoded)
+	return nil
+}

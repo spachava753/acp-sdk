@@ -22,10 +22,44 @@ func (g SelectGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (g *SelectGroup) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "group", "options"}, []string{"group", "name", "options"}); err != nil {
+		return err
+	}
+	type alias SelectGroup
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*g = SelectGroup(decoded)
+	return nil
+}
+
 // SelectOption: A selectable option.
 type SelectOption struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *SelectOption) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "value"}, []string{"name", "value"}); err != nil {
+		return err
+	}
+	type alias SelectOption
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*o = SelectOption(decoded)
+	return nil
 }
 
 // SelectOptions: Select options represented by one of two array shapes.

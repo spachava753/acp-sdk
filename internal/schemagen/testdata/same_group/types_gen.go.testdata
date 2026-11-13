@@ -6,14 +6,65 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (e *Error) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"code", "message"}, []string{"code", "message"}); err != nil {
+		return err
+	}
+	type alias Error
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*e = Error(decoded)
+	return nil
+}
+
 // ReadTaskRequest: Parameters for reading a task.
 type ReadTaskRequest struct {
 	TaskID string `json:"taskId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ReadTaskRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"taskId"}, []string{"taskId"}); err != nil {
+		return err
+	}
+	type alias ReadTaskRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = ReadTaskRequest(decoded)
+	return nil
+}
+
 // ReadTaskResponse: Result from reading a task.
 type ReadTaskResponse struct {
 	Summary string `json:"summary"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ReadTaskResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"summary"}, []string{"summary"}); err != nil {
+		return err
+	}
+	type alias ReadTaskResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = ReadTaskResponse(decoded)
+	return nil
 }
 
 // RequestId: A JSON-RPC request identifier.
@@ -24,9 +75,43 @@ type StartTaskRequest struct {
 	TaskID string `json:"taskId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *StartTaskRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"taskId"}, []string{"taskId"}); err != nil {
+		return err
+	}
+	type alias StartTaskRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = StartTaskRequest(decoded)
+	return nil
+}
+
 // StartTaskResponse: Result from starting a task.
 type StartTaskResponse struct {
 	Started bool `json:"started"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *StartTaskResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"started"}, []string{"started"}); err != nil {
+		return err
+	}
+	type alias StartTaskResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = StartTaskResponse(decoded)
+	return nil
 }
 
 // StopTaskRequest: Parameters for stopping a task.
@@ -34,9 +119,43 @@ type StopTaskRequest struct {
 	TaskID string `json:"taskId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *StopTaskRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"taskId"}, []string{"taskId"}); err != nil {
+		return err
+	}
+	type alias StopTaskRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = StopTaskRequest(decoded)
+	return nil
+}
+
 // StopTaskResponse: Result from stopping a task.
 type StopTaskResponse struct {
 	Stopped bool `json:"stopped"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *StopTaskResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"stopped"}, []string{"stopped"}); err != nil {
+		return err
+	}
+	type alias StopTaskResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = StopTaskResponse(decoded)
+	return nil
 }
 
 // WriteTaskRequest: Parameters for writing a task.
@@ -45,7 +164,41 @@ type WriteTaskRequest struct {
 	TaskID  string `json:"taskId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *WriteTaskRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"taskId", "content"}, []string{"content", "taskId"}); err != nil {
+		return err
+	}
+	type alias WriteTaskRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = WriteTaskRequest(decoded)
+	return nil
+}
+
 // WriteTaskResponse: Result from writing a task.
 type WriteTaskResponse struct {
 	Version int64 `json:"version"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *WriteTaskResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"version"}, []string{"version"}); err != nil {
+		return err
+	}
+	type alias WriteTaskResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = WriteTaskResponse(decoded)
+	return nil
 }

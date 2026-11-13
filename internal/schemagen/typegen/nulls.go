@@ -3,15 +3,19 @@ package typegen
 import (
 	"github.com/dave/jennifer/jen"
 	"github.com/google/jsonschema-go/jsonschema"
+	"slices"
 )
 
 // These upstream fields distinguish null from omission in prose, but do not
 // expose a schema keyword for that distinction. Keep those semantic overrides
 // here rather than changing the downloaded schema or all optional field types.
 var nullSensitiveFields = map[string][]string{
-	"SubagentUpdate": {"title", "description", "capabilities", "state", "cwd", "additionalDirectories", "_meta"},
-	"SessionMessage": {"content", "senderSessionId", "recipientSessionId", "senderMessageId", "recipientMessageId", "_meta"},
-	"McpError":       {"data"},
+	"SubagentUpdate":    {"title", "description", "capabilities", "state", "cwd", "additionalDirectories", "_meta"},
+	"SessionMessage":    {"content", "senderSessionId", "recipientSessionId", "senderMessageId", "recipientMessageId", "_meta"},
+	"McpError":          {"data"},
+	"Error":             {"data"},
+	"SessionInfoUpdate": {"title", "updatedAt"},
+	"CompactionUpdate":  {"summary", "error", "_meta"},
 }
 
 func preservesJSONNull(defs map[string]*jsonschema.Schema, jsonName string, prop *jsonschema.Schema) bool {
@@ -19,7 +23,7 @@ func preservesJSONNull(defs map[string]*jsonschema.Schema, jsonName string, prop
 		return true
 	}
 	for name, fields := range nullSensitiveFields {
-		if def := defs[name]; def != nil && def.Properties[jsonName] == prop && contains(fields, jsonName) {
+		if def := defs[name]; def != nil && def.Properties[jsonName] == prop && slices.Contains(fields, jsonName) {
 			return true
 		}
 	}

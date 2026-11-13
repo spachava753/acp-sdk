@@ -2,6 +2,7 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -62,6 +63,83 @@ func (i FallbackItem) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
+// UnmarshalJSON decodes the selected schema variant.
+func (i *FallbackItem) UnmarshalJSON(data []byte) error {
+	type alias FallbackItem
+	var decoded alias
+	var raw struct {
+		Type json.RawMessage `json:"type"`
+		Path json.RawMessage `json:"path"`
+		Url  json.RawMessage `json:"url"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag FallbackItemType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "remote":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "url"}, []string{"type", "url"}); err != nil {
+				return err
+			}
+			if len(raw.Url) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Url, &value); err != nil {
+					return err
+				}
+				decoded.Url = value
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"path"}, []string{"path"}); err != nil {
+					return err
+				}
+				if len(raw.Path) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Path, &value); err != nil {
+						return err
+					}
+					decoded.Path = value
+				}
+				return nil
+			}()
+		}
+	default:
+		err = func() error {
+			decoded = alias{}
+			if err := requireJSONProperties(data, []string{"path"}, []string{"path"}); err != nil {
+				return err
+			}
+			if len(raw.Path) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Path, &value); err != nil {
+					return err
+				}
+				decoded.Path = value
+			}
+			return nil
+		}()
+	}
+	if err != nil {
+		return err
+	}
+	*i = FallbackItem(decoded)
+	return nil
+}
+
 // Payload: Object with tolerant arrays of union items.
 type Payload struct {
 	FallbackItems []FallbackItem `json:"fallbackItems,omitempty"`
@@ -86,11 +164,8 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 			decoded.FallbackItems = []FallbackItem{}
 			for _, value := range values {
 				var item FallbackItem
-				if err := unmarshalJSON(value, &item); err == nil {
-					switch item.Type {
-					case FallbackItemTypeRemote, "":
-						decoded.FallbackItems = append(decoded.FallbackItems, item)
-					}
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
+					decoded.FallbackItems = append(decoded.FallbackItems, item)
 				}
 			}
 		}
@@ -101,7 +176,7 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 			decoded.Items = []TaggedItem{}
 			for _, value := range values {
 				var item TaggedItem
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Kind {
 					case TaggedItemTypeText, TaggedItemTypeImage:
 						decoded.Items = append(decoded.Items, item)
@@ -171,4 +246,71 @@ func (i TaggedItem) MarshalJSON() ([]byte, error) {
 		w.URI = &URI
 	}
 	return json.Marshal(w)
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (i *TaggedItem) UnmarshalJSON(data []byte) error {
+	type alias TaggedItem
+	var decoded alias
+	var raw struct {
+		Kind json.RawMessage `json:"kind"`
+		Text json.RawMessage `json:"text"`
+		URI  json.RawMessage `json:"uri"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag TaggedItemType
+	var tagErr error
+	if len(raw.Kind) > 0 {
+		tagErr = unmarshalJSON(raw.Kind, &tag)
+	}
+	var err error
+	switch tag {
+	case "text":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "text"}, []string{"kind", "text"}); err != nil {
+				return err
+			}
+			if len(raw.Text) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Text, &value); err != nil {
+					return err
+				}
+				decoded.Text = value
+			}
+			return nil
+		}()
+	case "image":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "uri"}, []string{"kind", "uri"}); err != nil {
+				return err
+			}
+			if len(raw.URI) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.URI, &value); err != nil {
+					return err
+				}
+				decoded.URI = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("TaggedItem: unknown kind %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*i = TaggedItem(decoded)
+	return nil
 }

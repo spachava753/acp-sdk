@@ -1,0 +1,77 @@
+package acp
+
+import (
+	"context"
+	"github.com/spachava753/acp-sdk/jsonrpc"
+)
+
+func (c *Client) BothMessage(ctx context.Context, params *BothMessageRequest) (*BothMessageResponse, error) {
+	return call[BothMessageResponse](ctx, c.rpc.conn, MethodBothMessage, params)
+}
+
+func (c *Client) BothMessageNotification(ctx context.Context, params *BothMessageNotification) error {
+	return notify(ctx, c.rpc.conn, MethodBothMessage, params)
+}
+
+func (c *Client) Initialize(ctx context.Context, params *InitializeRequest) (*InitializeResponse, error) {
+	return call[InitializeResponse](ctx, c.rpc.conn, MethodInitialize, params)
+}
+
+func (c *Client) SessionStop(ctx context.Context, params *StopNotification) error {
+	return notify(ctx, c.rpc.conn, MethodSessionStop, params)
+}
+
+func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
+	beginHandler(ctx, req)
+	switch req.Method {
+	case MethodBothMessage:
+		if req.IsCall() {
+			h, ok := handler.(BothMessageHandler)
+			if !ok {
+				return nil, methodNotFound(req.Method)
+			}
+			params, err := decodeProtocolParams[BothMessageRequest](req)
+			if err != nil {
+				return nil, err
+			}
+			return rpcResult(h.BothMessage(ctx, params))
+		}
+		h, ok := handler.(BothMessageNotificationHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeProtocolParams[BothMessageNotification](req)
+		if err != nil {
+			return nil, err
+		}
+		return nil, h.BothMessageNotification(ctx, params)
+	case MethodFsFetch:
+		if !req.IsCall() {
+			return nil, nil
+		}
+		h, ok := handler.(FsFetchHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeProtocolParams[FetchRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(h.FsFetch(ctx, params))
+	case MethodSessionUpdate:
+		if req.IsCall() {
+			return nil, methodNotFound(req.Method)
+		}
+		h, ok := handler.(SessionUpdateHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeProtocolParams[SessionNotification](req)
+		if err != nil {
+			return nil, err
+		}
+		return nil, h.SessionUpdate(ctx, params)
+	default:
+		return handleExtension(ctx, handler, req)
+	}
+}

@@ -2,6 +2,7 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -71,4 +72,79 @@ func (u CollisionUnion) MarshalJSON() ([]byte, error) {
 		w.Kind2 = &Kind2
 	}
 	return json.Marshal(w)
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (u *CollisionUnion) UnmarshalJSON(data []byte) error {
+	type alias CollisionUnion
+	var decoded alias
+	var raw struct {
+		Kind    json.RawMessage `json:"kind"`
+		FooBar  json.RawMessage `json:"foo-bar"`
+		FooBar2 json.RawMessage `json:"foo_bar"`
+		Kind2   json.RawMessage `json:"kind_"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag CollisionUnionType
+	var tagErr error
+	if len(raw.Kind) > 0 {
+		tagErr = unmarshalJSON(raw.Kind, &tag)
+	}
+	var err error
+	switch tag {
+	case "pair":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "foo-bar", "foo_bar"}, []string{"foo-bar", "foo_bar", "kind"}); err != nil {
+				return err
+			}
+			if len(raw.FooBar) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.FooBar, &value); err != nil {
+					return err
+				}
+				decoded.FooBar = value
+			}
+			if len(raw.FooBar2) > 0 {
+				var value int32
+				if err := unmarshalJSON(raw.FooBar2, &value); err != nil {
+					return err
+				}
+				decoded.FooBar2 = value
+			}
+			return nil
+		}()
+	case "alias":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "kind_"}, []string{"kind", "kind_"}); err != nil {
+				return err
+			}
+			if len(raw.Kind2) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Kind2, &value); err != nil {
+					return err
+				}
+				decoded.Kind2 = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("CollisionUnion: unknown kind %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*u = CollisionUnion(decoded)
+	return nil
 }

@@ -5,8 +5,42 @@ type SharedPayload struct {
 	ID string `json:"id"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *SharedPayload) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"id"}, []string{"id"}); err != nil {
+		return err
+	}
+	type alias SharedPayload
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*p = SharedPayload(decoded)
+	return nil
+}
+
 // VisiblePayload: Public payload that references the shared payload.
 type VisiblePayload struct {
 	Name   string        `json:"name"`
 	Shared SharedPayload `json:"shared"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *VisiblePayload) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "shared"}, []string{"name", "shared"}); err != nil {
+		return err
+	}
+	type alias VisiblePayload
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*p = VisiblePayload(decoded)
+	return nil
 }

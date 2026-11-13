@@ -21,6 +21,7 @@ func TestConformanceCancelReachesAgentDuringPendingPrompt(t *testing.T) {
 		return agent
 	})
 	defer closeConformanceClient(t, client, done)
+	initializeConformanceClient(t, client)
 
 	promptDone := make(chan promptResult, 1)
 	go func() {

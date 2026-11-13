@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 
 	internaljson "github.com/spachava753/acp-sdk/internal/json"
 )
@@ -17,26 +18,36 @@ import (
 // https://www.jsonrpc.org/specification#request_object
 type ID struct {
 	value any
+	null  bool
 }
 
-// MakeID coerces the given Go value to an ID. The value should be the
-// default JSON marshaling of a Request identifier: nil, float64, or string.
+// MakeID constructs a present request ID. A nil value denotes explicit JSON
+// null, not an absent ID. Use the zero ID value for a notification.
 //
-// Returns an error if the value type was not a valid Request ID type.
-//
-// TODO: ID can't be a json.Marshaler/Unmarshaler, because we want to omitzero.
-// Simplify this package by making ID json serializable once we can rely on
-// omitzero.
+// Integers are accepted as int, int64, or json.Number. Legacy float64 values
+// must be finite integral int64 values; precision already lost by a caller's
+// float64 conversion cannot be recovered. Prefer json.Number for decoded IDs.
 func MakeID(v any) (ID, error) {
 	switch v := v.(type) {
 	case nil:
-		return ID{}, nil
-	case float64:
+		return ID{null: true}, nil
+	case int:
 		return Int64ID(int64(v)), nil
+	case int64:
+		return Int64ID(v), nil
+	case json.Number:
+		n, err := v.Int64()
+		if err == nil {
+			return Int64ID(n), nil
+		}
+	case float64:
+		if !math.IsNaN(v) && !math.IsInf(v, 0) && math.Trunc(v) == v && v >= -0x1p63 && v < 0x1p63 {
+			return Int64ID(int64(v)), nil
+		}
 	case string:
 		return StringID(v), nil
 	}
-	return ID{}, fmt.Errorf("%w: invalid ID type %T", ErrParse, v)
+	return ID{}, fmt.Errorf("%w: invalid ID %v (%T)", ErrInvalidRequest, v, v)
 }
 
 // Message is the interface to all jsonrpc2 message types.
@@ -53,7 +64,7 @@ type Message interface {
 // If it has an ID it is a call, otherwise it is a notification.
 type Request struct {
 	// ID of this request, used to tie the Response back to the request.
-	// This will be nil for notifications.
+	// This is the zero ID for notifications; explicit null is a valid call ID.
 	ID ID
 	// Method is a string containing the method name to invoke.
 	Method string
@@ -86,10 +97,15 @@ func Int64ID(i int64) ID { return ID{value: i} }
 
 // IsValid returns true if the ID is a valid identifier.
 // The default value for ID will return false.
-func (id ID) IsValid() bool { return id.value != nil }
+func (id ID) IsValid() bool { return id.value != nil || id.null }
 
-// Raw returns the underlying value of the ID.
+// Raw returns the underlying string, int64, or nil value. Use IsValid to
+// distinguish an explicit null ID from an absent ID.
 func (id ID) Raw() any { return id.value }
+
+// MarshalJSON encodes both an explicit null and a zero/absent ID as null.
+// The message envelope decides whether an absent ID member is omitted.
+func (id ID) MarshalJSON() ([]byte, error) { return jsonMarshal(id.Raw()) }
 
 // NewNotification constructs a new Notification message for the supplied
 // method and parameters.
@@ -108,22 +124,35 @@ func NewCall(id ID, method string, params any) (*Request, error) {
 func (msg *Request) IsCall() bool { return msg.ID.IsValid() }
 
 func (msg *Request) marshal(to *wireCombined) {
-	to.ID = msg.ID.value
-	to.Method = msg.Method
+	if msg.IsCall() {
+		to.ID = &msg.ID
+	}
+	to.Method = &msg.Method
 	to.Params = msg.Params
 }
 
 // NewResponse constructs a new Response message that is a reply to the
 // supplied. If err is set result may be ignored.
 func NewResponse(id ID, result any, rerr error) (*Response, error) {
+	if rerr != nil {
+		return &Response{ID: id, Error: rerr}, nil
+	}
 	r, merr := marshalToRaw(result)
-	return &Response{ID: id, Result: r, Error: rerr}, merr
+	if merr == nil && len(r) == 0 {
+		r = json.RawMessage("null")
+	}
+	return &Response{ID: id, Result: r}, merr
 }
 
 func (msg *Response) marshal(to *wireCombined) {
-	to.ID = msg.ID.value
+	to.ID = &msg.ID
 	to.Error = toWireError(msg.Error)
-	to.Result = msg.Result
+	if to.Error == nil {
+		to.Result = msg.Result
+		if len(to.Result) == 0 {
+			to.Result = json.RawMessage("null")
+		}
+	}
 }
 
 func toWireError(err error) *WireError {
@@ -135,14 +164,15 @@ func toWireError(err error) *WireError {
 		// already a wire error, just use it
 		return err
 	}
-	result := &WireError{Message: err.Error()}
 	var wrapped *WireError
-	if errors.As(err, &wrapped) {
-		// if we wrapped a wire error, keep the code from the wrapped error
-		// but the message from the outer error
-		result.Code = wrapped.Code
+	if errors.As(err, &wrapped) && wrapped != nil {
+		// Preserve the structured payload and raw extras, while retaining the
+		// caller's outer context message exactly as Error() presents it.
+		result := *wrapped
+		result.Message = err.Error()
+		return &result
 	}
-	return result
+	return &WireError{Message: err.Error()}
 }
 
 func EncodeMessage(msg Message) ([]byte, error) {
@@ -171,39 +201,104 @@ func EncodeIndent(msg Message, prefix, indent string) ([]byte, error) {
 	return bytes.TrimRight(buf.Bytes(), "\n"), nil
 }
 
+// DecodeError is a rejected JSON-RPC frame, distinct from a transport failure.
+// Unwrap exposes its structured protocol error. Response returns the error
+// frame to send, or nil for malformed responses/notifications that need no reply.
+// The connection can continue reading after either form of DecodeError.
+type DecodeError struct {
+	cause    *WireError
+	response *Response
+}
+
+func (err *DecodeError) Error() string       { return err.cause.Error() }
+func (err *DecodeError) Unwrap() error       { return err.cause }
+func (err *DecodeError) Response() *Response { return err.response }
+
+func decodeError(cause error, reply bool, data json.RawMessage) *DecodeError {
+	protocol := *toWireError(cause)
+	protocol.Data = data
+	err := &DecodeError{cause: &protocol}
+	if reply {
+		err.response = &Response{Error: &protocol}
+	}
+	return err
+}
+
+func isJSONString(raw json.RawMessage) bool {
+	raw = bytes.TrimSpace(raw)
+	return len(raw) > 0 && raw[0] == '"'
+}
+
 func DecodeMessage(data []byte) (Message, error) {
-	msg := wireCombined{}
-	if err := internaljson.Unmarshal(data, &msg); err != nil {
-		return nil, fmt.Errorf("unmarshaling jsonrpc message: %w", err)
+	// Validate the complete frame before decoding any prefix or choosing its
+	// kind. A second value or trailing garbage is a parse error, not a message.
+	if !json.Valid(data) {
+		diagnostic, _ := jsonMarshal(map[string]string{"line": string(data)})
+		return nil, decodeError(ErrParse, true, diagnostic)
 	}
-	if msg.VersionTag != wireVersion {
-		return nil, fmt.Errorf("invalid message version tag %q; expected %q", msg.VersionTag, wireVersion)
+	var fields map[string]json.RawMessage
+	if err := internaljson.Unmarshal(data, &fields); err != nil || fields == nil {
+		return nil, decodeError(ErrInvalidRequest, true, nil)
 	}
-	id, err := MakeID(msg.ID)
-	if err != nil {
-		return nil, err
+	methodRaw, hasMethod := fields["method"]
+	_, hasID := fields["id"]
+	result, hasResult := fields["result"]
+	errorRaw, hasError := fields["error"]
+	methodIsString := hasMethod && isJSONString(methodRaw)
+	// Shape, not successful validation, determines whether replying would
+	// create a response loop or answer a one-way notification.
+	responseShape := !hasMethod && (hasResult || hasError)
+	notificationShape := methodIsString && !hasID
+	invalid := func() (Message, error) {
+		return nil, decodeError(ErrInvalidRequest, !responseShape && !notificationShape, nil)
 	}
-	if msg.Method != "" {
-		// has a method, must be a call
-		return &Request{
-			Method: msg.Method,
-			ID:     id,
-			Params: msg.Params,
-		}, nil
+	var version string
+	if !isJSONString(fields["jsonrpc"]) || internaljson.Unmarshal(fields["jsonrpc"], &version) != nil || version != wireVersion {
+		return invalid()
 	}
-	// no method, should be a response
-	if !id.IsValid() {
-		return nil, ErrInvalidRequest
+	var id ID
+	if hasID {
+		// Payloads remain raw; UseNumber applies only to the envelope ID.
+		dec := internaljson.NewDecoder(bytes.NewReader(fields["id"]))
+		dec.UseNumber()
+		var value any
+		if err := dec.Decode(&value); err != nil {
+			return invalid()
+		}
+		var err error
+		id, err = MakeID(value)
+		if err != nil {
+			return invalid()
+		}
 	}
-	resp := &Response{
-		ID:     id,
-		Result: msg.Result,
+	if hasMethod {
+		if !methodIsString || hasResult || hasError {
+			return invalid()
+		}
+		var method string
+		if err := internaljson.Unmarshal(methodRaw, &method); err != nil {
+			return invalid()
+		}
+		params := fields["params"]
+		trimmed := bytes.TrimSpace(params)
+		if bytes.Equal(trimmed, []byte("null")) {
+			params = nil
+		} else if len(trimmed) > 0 && trimmed[0] != '{' && trimmed[0] != '[' {
+			return invalid()
+		}
+		return &Request{ID: id, Method: method, Params: params}, nil
 	}
-	// we have to check if msg.Error is nil to avoid a typed error
-	if msg.Error != nil {
-		resp.Error = msg.Error
+	if !hasID || hasResult == hasError {
+		return invalid()
 	}
-	return resp, nil
+	if hasError {
+		var protocol WireError
+		if err := internaljson.Unmarshal(errorRaw, &protocol); err != nil {
+			return invalid()
+		}
+		return &Response{ID: id, Error: &protocol}, nil
+	}
+	return &Response{ID: id, Result: result}, nil
 }
 
 func marshalToRaw(obj any) (json.RawMessage, error) {

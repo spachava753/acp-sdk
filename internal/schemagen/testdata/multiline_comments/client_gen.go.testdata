@@ -2,7 +2,6 @@ package acp
 
 import (
 	"context"
-	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
@@ -17,7 +16,7 @@ func (c *Client) DocsGenerate(ctx context.Context, params *GenerateDocsRequest) 
 }
 
 func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
-	jsonrpc2.Async(ctx)
+	beginHandler(ctx, req)
 	switch req.Method {
 	default:
 		return handleExtension(ctx, handler, req)

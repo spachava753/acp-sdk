@@ -13,7 +13,7 @@ The module path is `github.com/spachava753/acp-sdk`.
 - `internal/schemagen/`: JSON Schema to Go generator. The generator input is `schema.json`; `cmd/acpgen` writes generated files; `typegen` generates protocol types and `rpcgen` generates method constants, handler interfaces, connection methods, and dispatch for both sides; `testdata` contains golden fixtures.
 - `internal/jsonrpc2/`: Internal bidirectional JSON-RPC implementation used by the SDK.
 - `internal/json/`: Internal JSON helpers used by JSON-RPC.
-- `conformance/`: Wire-format and lifecycle conformance tests for the public ACP types and client/agent behavior.
+- `conformance/`: Black-box tests of the public ACP API against an independent peer. Subpackages group them by area: `wire` (JSON-RPC framing, IDs, errors, dispatch), `lifecycle` (cancellation, shutdown, transports), `session` (session methods, callbacks, ordering) and `schema` (typed payloads and routes). `conformance/internal/acptest` is the shared peer harness.
 - `examples/`: Minimal example agent and client programs.
 
 ## Schema And Code Generation
@@ -44,10 +44,12 @@ The project uses the standard Go toolchain.
 
 - **Build**: `go build ./...`
 - **Test**: `go test ./...`
+- **Lint**: `gopls check -severity=hint $(git ls-files '*.go' | grep -v '^internal/schemagen/testdata/')`. Use hint severity: the default (`warning`) hides modernize suggestions that editors show. Fix issues in `acp/*_gen.go` through the generator. `validateJSONNumber` in `acp/json.go` is reported as unused because the current schema does not need it, but generator fixtures call it, so keep it.
 
 ## Testing
 
 - **Unit Tests**: Run `go test ./...` to run all tests.
+- Put conformance tests in the `conformance/` subpackage for their area and drive the SDK through `acptest` rather than adding another peer. Write a custom transport only when the behavior under test depends on it, such as blocked writes or deadlines.
 - Identify the observable properties worth testing before writing tests. Test SDK behavior and integration boundaries, rather than rechecking the JSON library or trivial helpers.
 - Keep coverage focused. A representative regression case is preferable to a broad matrix of number formats, nulls, and malformed inputs unless those differences exercise SDK-specific behavior.
 - Extend an existing test's data and control flow when related properties fit naturally. Registration order and agent/client construction can establish the conditions needed for later assertions. Do not default to separate tests or `t.Run` subtests for every property; use them when scenarios need independent setup or cannot fit clearly into the existing flow.

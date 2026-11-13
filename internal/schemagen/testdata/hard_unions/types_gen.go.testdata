@@ -87,10 +87,190 @@ func (m AuthMethod) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
+// UnmarshalJSON decodes the selected schema variant.
+func (m *AuthMethod) UnmarshalJSON(data []byte) error {
+	type alias AuthMethod
+	var decoded alias
+	var raw struct {
+		Type    json.RawMessage `json:"type"`
+		Command json.RawMessage `json:"command"`
+		EnvName json.RawMessage `json:"envName"`
+		ID      json.RawMessage `json:"id"`
+		Name    json.RawMessage `json:"name"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag AuthMethodType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "env_var":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "id", "name", "envName"}, []string{"envName", "id", "name", "type"}); err != nil {
+				return err
+			}
+			if len(raw.EnvName) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.EnvName, &value); err != nil {
+					return err
+				}
+				decoded.EnvName = value
+			}
+			if len(raw.ID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.ID, &value); err != nil {
+					return err
+				}
+				decoded.ID = value
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"id", "name"}, []string{"id", "name"}); err != nil {
+					return err
+				}
+				if len(raw.ID) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.ID, &value); err != nil {
+						return err
+					}
+					decoded.ID = value
+				}
+				if len(raw.Name) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Name, &value); err != nil {
+						return err
+					}
+					decoded.Name = value
+				}
+				return nil
+			}()
+		}
+	case "terminal":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "id", "name", "command"}, []string{"command", "id", "name", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Command) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Command, &value); err != nil {
+					return err
+				}
+				decoded.Command = value
+			}
+			if len(raw.ID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.ID, &value); err != nil {
+					return err
+				}
+				decoded.ID = value
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"id", "name"}, []string{"id", "name"}); err != nil {
+					return err
+				}
+				if len(raw.ID) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.ID, &value); err != nil {
+						return err
+					}
+					decoded.ID = value
+				}
+				if len(raw.Name) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Name, &value); err != nil {
+						return err
+					}
+					decoded.Name = value
+				}
+				return nil
+			}()
+		}
+	default:
+		err = func() error {
+			decoded = alias{}
+			if err := requireJSONProperties(data, []string{"id", "name"}, []string{"id", "name"}); err != nil {
+				return err
+			}
+			if len(raw.ID) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.ID, &value); err != nil {
+					return err
+				}
+				decoded.ID = value
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			return nil
+		}()
+	}
+	if err != nil {
+		return err
+	}
+	*m = AuthMethod(decoded)
+	return nil
+}
+
 // AuthMethodAgent: Agent-managed authentication method.
 type AuthMethodAgent struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (a *AuthMethodAgent) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"id", "name"}, []string{"id", "name"}); err != nil {
+		return err
+	}
+	type alias AuthMethodAgent
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*a = AuthMethodAgent(decoded)
+	return nil
 }
 
 // AuthMethodEnvVar: Environment variable authentication method.
@@ -100,11 +280,45 @@ type AuthMethodEnvVar struct {
 	Name    string `json:"name"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (v *AuthMethodEnvVar) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"id", "name", "envName"}, []string{"envName", "id", "name"}); err != nil {
+		return err
+	}
+	type alias AuthMethodEnvVar
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*v = AuthMethodEnvVar(decoded)
+	return nil
+}
+
 // AuthMethodTerminal: Terminal authentication method.
 type AuthMethodTerminal struct {
 	Command string `json:"command"`
 	ID      string `json:"id"`
 	Name    string `json:"name"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (t *AuthMethodTerminal) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"id", "name", "command"}, []string{"command", "id", "name"}); err != nil {
+		return err
+	}
+	type alias AuthMethodTerminal
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*t = AuthMethodTerminal(decoded)
+	return nil
 }
 
 // Collision: Union whose constructor name would collide with a referenced variant type.
@@ -119,6 +333,38 @@ func NewSpecialCollision(value string) Collision {
 	}
 }
 
+// UnmarshalJSON decodes the first valid schema alternative.
+func (c *Collision) UnmarshalJSON(data []byte) error {
+	type alias Collision
+	var decoded alias
+	var raw struct {
+		Value json.RawMessage `json:"value"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var err error
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"value"}, []string{"value"}); err != nil {
+			return err
+		}
+		if len(raw.Value) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.Value, &value); err != nil {
+				return err
+			}
+			decoded.Value = value
+		}
+		return nil
+	}()
+	if err == nil {
+		*c = Collision(decoded)
+		return nil
+	}
+	return err
+}
+
 // ElicitationContentValue: Primitive or string-array elicitation content.
 type ElicitationContentValue = json.RawMessage
 
@@ -127,11 +373,28 @@ type NestedObject struct {
 	URI string `json:"uri"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *NestedObject) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"uri"}, []string{"uri"}); err != nil {
+		return err
+	}
+	type alias NestedObject
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*o = NestedObject(decoded)
+	return nil
+}
+
 // ObjectFieldUnion: Flattened union with an optional object-valued variant field.
 type ObjectFieldUnion struct {
 	Type   ObjectFieldUnionType `json:"type"`
 	Items  []string             `json:"items,omitempty"`
-	Nested NestedObject         `json:"nested,omitempty,omitzero"`
+	Nested NestedObject         `json:"nested,omitzero"`
 	Text   string               `json:"text,omitempty"`
 }
 
@@ -198,14 +461,123 @@ func (u ObjectFieldUnion) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
+// UnmarshalJSON decodes the selected schema variant.
+func (u *ObjectFieldUnion) UnmarshalJSON(data []byte) error {
+	type alias ObjectFieldUnion
+	var decoded alias
+	var raw struct {
+		Type   json.RawMessage `json:"type"`
+		Items  json.RawMessage `json:"items"`
+		Nested json.RawMessage `json:"nested"`
+		Text   json.RawMessage `json:"text"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag ObjectFieldUnionType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "text":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "text", "items"}, []string{"items", "text", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Items) > 0 {
+				var value []string
+				if err := unmarshalJSON(raw.Items, &value); err != nil {
+					return err
+				}
+				decoded.Items = value
+			}
+			if len(raw.Text) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Text, &value); err != nil {
+					return err
+				}
+				decoded.Text = value
+			}
+			return nil
+		}()
+	case "nested":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "nested"}, []string{"nested", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Nested) > 0 {
+				var value NestedObject
+				if err := unmarshalJSON(raw.Nested, &value); err != nil {
+					return err
+				}
+				decoded.Nested = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("ObjectFieldUnion: unknown type %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*u = ObjectFieldUnion(decoded)
+	return nil
+}
+
 // PlainLeft: Left variant without a discriminator.
 type PlainLeft struct {
 	Left string `json:"left"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (l *PlainLeft) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"left"}, []string{"left"}); err != nil {
+		return err
+	}
+	type alias PlainLeft
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*l = PlainLeft(decoded)
+	return nil
+}
+
 // PlainRight: Right variant without a discriminator.
 type PlainRight struct {
 	Right string `json:"right"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *PlainRight) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"right"}, []string{"right"}); err != nil {
+		return err
+	}
+	type alias PlainRight
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = PlainRight(decoded)
+	return nil
 }
 
 // PlainUnion: Titled referenced object union without a const discriminator.
@@ -299,10 +671,44 @@ func (g SelectGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (g *SelectGroup) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"group", "options"}, []string{"group", "options"}); err != nil {
+		return err
+	}
+	type alias SelectGroup
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*g = SelectGroup(decoded)
+	return nil
+}
+
 // SelectOption: A selectable option.
 type SelectOption struct {
 	Label string `json:"label"`
 	Value string `json:"value"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *SelectOption) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"label", "value"}, []string{"label", "value"}); err != nil {
+		return err
+	}
+	type alias SelectOption
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*o = SelectOption(decoded)
+	return nil
 }
 
 // SelectOptions: Select options represented by one of two array shapes.
@@ -404,15 +810,111 @@ func BooleanSharedFieldUnion(value bool) SharedFieldUnion {
 	}
 }
 
-// UnmarshalJSON preserves unstructured numbers as json.Number.
+// UnmarshalJSON decodes the selected schema variant.
 func (u *SharedFieldUnion) UnmarshalJSON(data []byte) error {
-	type plain SharedFieldUnion
-	return unmarshalJSON(data, (*plain)(u))
+	type alias SharedFieldUnion
+	var decoded alias
+	var raw struct {
+		Kind  json.RawMessage `json:"kind"`
+		Value json.RawMessage `json:"value"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag SharedFieldUnionType
+	var tagErr error
+	if len(raw.Kind) > 0 {
+		tagErr = unmarshalJSON(raw.Kind, &tag)
+	}
+	var err error
+	switch tag {
+	case "alias_one":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "value"}, []string{"kind", "value"}); err != nil {
+				return err
+			}
+			if len(raw.Value) > 0 {
+				var value AliasA
+				if err := unmarshalJSON(raw.Value, &value); err != nil {
+					return err
+				}
+				decoded.Value = value
+			}
+			return nil
+		}()
+	case "alias_two":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "value"}, []string{"kind", "value"}); err != nil {
+				return err
+			}
+			if len(raw.Value) > 0 {
+				var value AliasB
+				if err := unmarshalJSON(raw.Value, &value); err != nil {
+					return err
+				}
+				decoded.Value = value
+			}
+			return nil
+		}()
+	case "boolean":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "value"}, []string{"kind", "value"}); err != nil {
+				return err
+			}
+			if len(raw.Value) > 0 {
+				var value bool
+				if err := unmarshalJSON(raw.Value, &value); err != nil {
+					return err
+				}
+				decoded.Value = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("SharedFieldUnion: unknown kind %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*u = SharedFieldUnion(decoded)
+	return nil
 }
 
 // SpecialCollision: Referenced variant whose name would collide with the generated constructor.
 type SpecialCollision struct {
 	Value string `json:"value"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SpecialCollision) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"value"}, []string{"value"}); err != nil {
+		return err
+	}
+	type alias SpecialCollision
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*c = SpecialCollision(decoded)
+	return nil
 }
 
 // UnionContainer: Object that references hard union shapes.
@@ -425,4 +927,53 @@ type UnionContainer struct {
 	RequestID     RequestId               `json:"requestId"`
 	SelectOptions SelectOptions           `json:"selectOptions"`
 	Shared        *SharedFieldUnion       `json:"shared,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *UnionContainer) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"auth", "requestId", "selectOptions"}, []string{"auth", "collision", "content", "objectField", "plain", "selectOptions", "shared"}); err != nil {
+		return err
+	}
+	type alias UnionContainer
+	decoded := alias{}
+	raw := struct {
+		Content   json.RawMessage `json:"content"`
+		RequestID json.RawMessage `json:"requestId"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Content) > 0 {
+		var value ElicitationContentValue
+		if err := func() error {
+			if err := func(data []byte) error {
+				return validateJSONUnion(data, validateJSONType[string], validateJSONType[int64], validateJSONNumber, validateJSONType[bool], func(data []byte) error {
+					return validateJSONArrayValues(data, validateJSONType[string])
+				})
+			}(raw.Content); err != nil {
+				return err
+			}
+			return unmarshalJSON(raw.Content, &value)
+		}(); err != nil {
+			return err
+		}
+		decoded.Content = value
+	}
+	if len(raw.RequestID) > 0 {
+		var value RequestId
+		if err := func() error {
+			if err := func(data []byte) error {
+				return validateJSONUnion(data, validateJSONNull, validateJSONType[int64], validateJSONType[string])
+			}(raw.RequestID); err != nil {
+				return err
+			}
+			return unmarshalJSON(raw.RequestID, &value)
+		}(); err != nil {
+			return err
+		}
+		decoded.RequestID = value
+	}
+	*c = UnionContainer(decoded)
+	return nil
 }

@@ -2,7 +2,6 @@ package acp
 
 import (
 	"context"
-	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
@@ -22,7 +21,7 @@ func (c *Client) ProxySuccessorNotification(ctx context.Context, params *ProxySu
 }
 
 func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
-	jsonrpc2.Async(ctx)
+	beginHandler(ctx, req)
 	switch req.Method {
 	case MethodProxySuccessor:
 		if req.IsCall() {
@@ -30,7 +29,7 @@ func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request)
 			if !ok {
 				return nil, methodNotFound(req.Method)
 			}
-			params, err := decodeParams[ProxySuccessorRequest](req)
+			params, err := decodeProtocolParams[ProxySuccessorRequest](req)
 			if err != nil {
 				return nil, err
 			}
@@ -40,7 +39,7 @@ func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[ProxySuccessorNotification](req)
+		params, err := decodeProtocolParams[ProxySuccessorNotification](req)
 		if err != nil {
 			return nil, err
 		}

@@ -1,0 +1,41 @@
+package acp
+
+import "context"
+
+const (
+	MethodBothMessage   = "both/message"
+	MethodFsFetch       = "fs/fetch"
+	MethodInitialize    = "initialize"
+	MethodSessionStop   = "session/stop"
+	MethodSessionUpdate = "session/update"
+)
+
+// BothMessageHandler handles both/message requests.
+type BothMessageHandler interface {
+	BothMessage(context.Context, *BothMessageRequest) (*BothMessageResponse, error)
+}
+
+// BothMessageNotificationHandler handles both/message notifications.
+type BothMessageNotificationHandler interface {
+	BothMessageNotification(context.Context, *BothMessageNotification) error
+}
+
+// FsFetchHandler handles fs/fetch requests.
+type FsFetchHandler interface {
+	FsFetch(context.Context, *FetchRequest) (*FetchResponse, error)
+}
+
+// InitializeHandler handles initialize requests.
+type InitializeHandler interface {
+	Initialize(context.Context, *InitializeRequest) (*InitializeResponse, error)
+}
+
+// SessionStopHandler handles session/stop notifications.
+type SessionStopHandler interface {
+	SessionStop(context.Context, *StopNotification) error
+}
+
+// SessionUpdateHandler handles session/update notifications.
+type SessionUpdateHandler interface {
+	SessionUpdate(context.Context, *SessionNotification) error
+}

@@ -7,13 +7,41 @@ type MapContainer struct {
 	Name       string               `json:"name"`
 }
 
-// UnmarshalJSON preserves unstructured numbers as json.Number.
+// UnmarshalJSON implements json.Unmarshaler.
 func (c *MapContainer) UnmarshalJSON(data []byte) error {
-	type plain MapContainer
-	return unmarshalJSON(data, (*plain)(c))
+	if err := requireJSONProperties(data, []string{"name", "attributes"}, []string{"name"}); err != nil {
+		return err
+	}
+	type alias MapContainer
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*c = MapContainer(decoded)
+	return nil
 }
 
 // MapValue: Typed map value.
 type MapValue struct {
 	Value string `json:"value"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (v *MapValue) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"value"}, []string{"value"}); err != nil {
+		return err
+	}
+	type alias MapValue
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*v = MapValue(decoded)
+	return nil
 }

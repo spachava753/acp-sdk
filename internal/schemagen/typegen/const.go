@@ -30,6 +30,8 @@ func stringConstEnumCode(name string, schema *jsonschema.Schema) []jen.Code {
 		jen.Line(),
 		jen.Const().Defs(values...),
 		jen.Line(),
+		closedStringUnmarshalCode(name, stringEnumValues(nil, schema)),
+		jen.Line(),
 	}
 }
 
@@ -231,8 +233,8 @@ func fieldName(jsonName string) string {
 		return "URI"
 	}
 	name := PascalIdentifier(jsonName)
-	if strings.HasSuffix(name, "Id") {
-		name = strings.TrimSuffix(name, "Id") + "ID"
+	if base, ok := strings.CutSuffix(name, "Id"); ok {
+		name = base + "ID"
 	}
 	return name
 }

@@ -10,6 +10,23 @@ type GenerateDocsRequest struct {
 	Title string `json:"title"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *GenerateDocsRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"title"}, []string{"body", "title"}); err != nil {
+		return err
+	}
+	type alias GenerateDocsRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = GenerateDocsRequest(decoded)
+	return nil
+}
+
 // GenerateDocsResponse: Generated documentation output.
 //
 // The content is Markdown.
@@ -17,6 +34,23 @@ type GenerateDocsRequest struct {
 // Clients may render it directly.
 type GenerateDocsResponse struct {
 	Content string `json:"content"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *GenerateDocsResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"content"}, []string{"content"}); err != nil {
+		return err
+	}
+	type alias GenerateDocsResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = GenerateDocsResponse(decoded)
+	return nil
 }
 
 // RequestId: A JSON-RPC request identifier.

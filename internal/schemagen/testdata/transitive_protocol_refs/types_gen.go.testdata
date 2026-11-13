@@ -4,3 +4,20 @@ package acp
 type VisiblePayload struct {
 	Name string `json:"name"`
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *VisiblePayload) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name"}, []string{"name"}); err != nil {
+		return err
+	}
+	type alias VisiblePayload
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*p = VisiblePayload(decoded)
+	return nil
+}

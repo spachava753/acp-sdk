@@ -2,6 +2,7 @@ package rpcgen
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 	"testing"
 
@@ -30,9 +31,7 @@ func TestGeneratePanicsOnSchemaItCannotMap(t *testing.T) {
 func schemaWith(defs ...map[string]*jsonschema.Schema) *jsonschema.Schema {
 	schema := &jsonschema.Schema{Defs: map[string]*jsonschema.Schema{}}
 	for _, def := range defs {
-		for name, s := range def {
-			schema.Defs[name] = s
-		}
+		maps.Copy(schema.Defs, def)
 	}
 	return schema
 }

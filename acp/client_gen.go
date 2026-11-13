@@ -8,7 +8,6 @@ package acp
 
 import (
 	"context"
-	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
@@ -306,64 +305,82 @@ func (c *Client) SessionUnarchive(ctx context.Context, params *UnarchiveSessionR
 }
 
 func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
-	jsonrpc2.Async(ctx)
+	beginHandler(ctx, req)
 	switch req.Method {
 	case MethodAuthStatusUpdate:
+		if req.IsCall() {
+			return nil, methodNotFound(req.Method)
+		}
 		h, ok := handler.(AuthStatusUpdateHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[AuthStatusUpdateNotification](req)
+		params, err := decodeProtocolParams[AuthStatusUpdateNotification](req)
 		if err != nil {
 			return nil, err
 		}
 		return nil, h.AuthStatusUpdate(ctx, params)
 	case MethodElicitationComplete:
+		if req.IsCall() {
+			return nil, methodNotFound(req.Method)
+		}
 		h, ok := handler.(ElicitationCompleteHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[CompleteElicitationNotification](req)
+		params, err := decodeProtocolParams[CompleteElicitationNotification](req)
 		if err != nil {
 			return nil, err
 		}
 		return nil, h.ElicitationComplete(ctx, params)
 	case MethodElicitationCreate:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(ElicitationCreateHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[CreateElicitationRequest](req)
+		params, err := decodeProtocolParams[CreateElicitationRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.ElicitationCreate(ctx, params))
 	case MethodFsReadTextFile:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(FsReadTextFileHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[ReadTextFileRequest](req)
+		params, err := decodeProtocolParams[ReadTextFileRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.FsReadTextFile(ctx, params))
 	case MethodFsWriteTextFile:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(FsWriteTextFileHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[WriteTextFileRequest](req)
+		params, err := decodeProtocolParams[WriteTextFileRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.FsWriteTextFile(ctx, params))
 	case MethodMcpMessage:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(McpMessageHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[MessageMcpRequest](req)
+		params, err := decodeProtocolParams[MessageMcpRequest](req)
 		if err != nil {
 			return nil, err
 		}
@@ -374,7 +391,7 @@ func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request)
 			if !ok {
 				return nil, methodNotFound(req.Method)
 			}
-			params, err := decodeParams[ProxySuccessorRequest](req)
+			params, err := decodeProtocolParams[ProxySuccessorRequest](req)
 			if err != nil {
 				return nil, err
 			}
@@ -384,77 +401,98 @@ func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[ProxySuccessorNotification](req)
+		params, err := decodeProtocolParams[ProxySuccessorNotification](req)
 		if err != nil {
 			return nil, err
 		}
 		return nil, h.ProxySuccessorNotification(ctx, params)
 	case MethodSessionRequestPermission:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(SessionRequestPermissionHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[RequestPermissionRequest](req)
+		params, err := decodeProtocolParams[RequestPermissionRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.SessionRequestPermission(ctx, params))
 	case MethodSessionUpdate:
+		if req.IsCall() {
+			return nil, methodNotFound(req.Method)
+		}
 		h, ok := handler.(SessionUpdateHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[SessionNotification](req)
+		params, err := decodeProtocolParams[SessionNotification](req)
 		if err != nil {
 			return nil, err
 		}
 		return nil, h.SessionUpdate(ctx, params)
 	case MethodTerminalCreate:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(TerminalCreateHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[CreateTerminalRequest](req)
+		params, err := decodeProtocolParams[CreateTerminalRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.TerminalCreate(ctx, params))
 	case MethodTerminalKill:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(TerminalKillHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[KillTerminalRequest](req)
+		params, err := decodeProtocolParams[KillTerminalRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.TerminalKill(ctx, params))
 	case MethodTerminalOutput:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(TerminalOutputHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[TerminalOutputRequest](req)
+		params, err := decodeProtocolParams[TerminalOutputRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.TerminalOutput(ctx, params))
 	case MethodTerminalRelease:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(TerminalReleaseHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[ReleaseTerminalRequest](req)
+		params, err := decodeProtocolParams[ReleaseTerminalRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.TerminalRelease(ctx, params))
 	case MethodTerminalWaitForExit:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(TerminalWaitForExitHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[WaitForTerminalExitRequest](req)
+		params, err := decodeProtocolParams[WaitForTerminalExitRequest](req)
 		if err != nil {
 			return nil, err
 		}

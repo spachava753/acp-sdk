@@ -14,10 +14,21 @@ type CollectionRequest struct {
 	Resources  map[string]ResourceSpec `json:"resources"`
 }
 
-// UnmarshalJSON preserves unstructured numbers as json.Number.
+// UnmarshalJSON implements json.Unmarshaler.
 func (r *CollectionRequest) UnmarshalJSON(data []byte) error {
-	type plain CollectionRequest
-	return unmarshalJSON(data, (*plain)(r))
+	if err := requireJSONProperties(data, []string{"args", "env", "headers", "resources"}, []string{"args", "env", "headers", "resources"}); err != nil {
+		return err
+	}
+	type alias CollectionRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = CollectionRequest(decoded)
+	return nil
 }
 
 // EnvVariable: An environment variable.
@@ -26,8 +37,42 @@ type EnvVariable struct {
 	Value string `json:"value"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (v *EnvVariable) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "value"}, []string{"name", "value"}); err != nil {
+		return err
+	}
+	type alias EnvVariable
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*v = EnvVariable(decoded)
+	return nil
+}
+
 // ResourceSpec: A resource specification.
 type ResourceSpec struct {
 	MimeType string `json:"mimeType,omitempty"`
 	URI      string `json:"uri"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *ResourceSpec) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"uri"}, []string{"mimeType", "uri"}); err != nil {
+		return err
+	}
+	type alias ResourceSpec
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*s = ResourceSpec(decoded)
+	return nil
 }

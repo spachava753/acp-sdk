@@ -2,7 +2,6 @@ package acp
 
 import (
 	"context"
-	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
@@ -17,24 +16,30 @@ func (c *Client) TaskStop(ctx context.Context, params *StopTaskRequest) (*StopTa
 }
 
 func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
-	jsonrpc2.Async(ctx)
+	beginHandler(ctx, req)
 	switch req.Method {
 	case MethodTaskRead:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(TaskReadHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[ReadTaskRequest](req)
+		params, err := decodeProtocolParams[ReadTaskRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.TaskRead(ctx, params))
 	case MethodTaskWrite:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(TaskWriteHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[WriteTaskRequest](req)
+		params, err := decodeProtocolParams[WriteTaskRequest](req)
 		if err != nil {
 			return nil, err
 		}

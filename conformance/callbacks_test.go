@@ -21,6 +21,7 @@ func TestConformanceBidirectionalCallbacksDuringPrompt(t *testing.T) {
 		return agent
 	})
 	defer closeConformanceClient(t, client, done)
+	initializeConformanceClient(t, client)
 
 	res, err := client.SessionPrompt(t.Context(), &acp.PromptRequest{
 		SessionID: acp.SessionId("sess-123"),

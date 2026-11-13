@@ -50,6 +50,68 @@ func (i Items) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
+// UnmarshalJSON decodes the first valid schema alternative.
+func (i *Items) UnmarshalJSON(data []byte) error {
+	type alias Items
+	var decoded alias
+	var raw struct {
+		Mode    json.RawMessage `json:"mode"`
+		Options json.RawMessage `json:"options"`
+		Values  json.RawMessage `json:"values"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var err error
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"mode", "values"}, []string{"mode", "values"}); err != nil {
+			return err
+		}
+		if len(raw.Mode) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.Mode, &value); err != nil {
+				return err
+			}
+			decoded.Mode = func(v string) *string {
+				converted := string(v)
+				return &converted
+			}(value)
+		}
+		if len(raw.Values) > 0 {
+			var value []string
+			if err := unmarshalJSON(raw.Values, &value); err != nil {
+				return err
+			}
+			decoded.Values = value
+		}
+		return nil
+	}()
+	if err == nil {
+		*i = Items(decoded)
+		return nil
+	}
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"options"}, []string{"options"}); err != nil {
+			return err
+		}
+		if len(raw.Options) > 0 {
+			var value []TitledOption
+			if err := unmarshalJSON(raw.Options, &value); err != nil {
+				return err
+			}
+			decoded.Options = value
+		}
+		return nil
+	}()
+	if err == nil {
+		*i = Items(decoded)
+		return nil
+	}
+	return err
+}
+
 // PlainItems: Plain item values.
 type PlainItems struct {
 	Mode   string   `json:"mode"`
@@ -64,6 +126,23 @@ func (i PlainItems) MarshalJSON() ([]byte, error) {
 		a.Values = []string{}
 	}
 	return json.Marshal(a)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (i *PlainItems) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"mode", "values"}, []string{"mode", "values"}); err != nil {
+		return err
+	}
+	type alias PlainItems
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*i = PlainItems(decoded)
+	return nil
 }
 
 // TitledItems: Titled item values.
@@ -81,8 +160,42 @@ func (i TitledItems) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (i *TitledItems) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"options"}, []string{"options"}); err != nil {
+		return err
+	}
+	type alias TitledItems
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*i = TitledItems(decoded)
+	return nil
+}
+
 // TitledOption: Option with a display label.
 type TitledOption struct {
 	Label string `json:"label"`
 	Value string `json:"value"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *TitledOption) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"label", "value"}, []string{"label", "value"}); err != nil {
+		return err
+	}
+	type alias TitledOption
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*o = TitledOption(decoded)
+	return nil
 }

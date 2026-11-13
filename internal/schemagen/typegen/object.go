@@ -5,6 +5,7 @@
 package typegen
 
 import (
+	"slices"
 	"strings"
 	"unicode"
 
@@ -34,9 +35,13 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 	var structFields []jen.Code
 	propertyNames := sortedPropertyNames(schema.Properties)
 	var reserved []string
+	retainExtra := explicitExtraFields(schema)
+	if retainExtra {
+		reserved = append(reserved, "ExtraFields")
+	}
 	for _, jsonName := range propertyNames {
 		if preservesJSONNull(defs, jsonName, schema.Properties[jsonName]) {
-			reserved = []string{"NullFields"}
+			reserved = append(reserved, "NullFields")
 			break
 		}
 	}
@@ -45,10 +50,7 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 		prop := schema.Properties[jsonName]
 		if jsonName == "_meta" {
 			needsMeta = true
-			deserialize := deserializeField{jsonName: jsonName, goName: goNames[jsonName], typeCode: jen.Id("Meta"), typeText: "Meta", preserveNull: preservesJSONNull(defs, jsonName, prop)}
-			if deserialize.preserveNull {
-				deserialize.defaultOnError = schemaBoolExtra(prop, "x-deserialize-default-on-error")
-			}
+			deserialize := deserializeField{jsonName: jsonName, goName: goNames[jsonName], typeCode: jen.Id("Meta"), typeText: "Meta", preserveNull: preservesJSONNull(defs, jsonName, prop), defaultOnError: schemaBoolExtra(prop, "x-deserialize-default-on-error")}
 			f := field{deserializeField: deserialize, tag: jsonTag(jsonName, false, true)}
 			fields = append(fields, f)
 			structFields = append(structFields, jen.Id(f.goName).Add(f.typeCode).Tag(map[string]string{"json": f.tag}))
@@ -65,8 +67,11 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 		structFields = append(structFields, jen.Id(f.goName).Add(f.typeCode).Tag(map[string]string{"json": f.tag}))
 	}
 
-	if len(reserved) > 0 {
+	if slices.Contains(reserved, "NullFields") {
 		structFields = append(structFields, nullFieldsDeclaration())
+	}
+	if retainExtra {
+		structFields = append(structFields, extraFieldsDeclaration())
 	}
 	codes := []jen.Code{commented(name, schema.Description, jen.Type().Id(name).Struct(structFields...)), jen.Line()}
 
@@ -103,8 +108,12 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 		deserializeFields = append(deserializeFields, f.deserializeField)
 	}
 	nullFields := preservedNullFields(deserializeFields)
-	unmarshalMethod, hasUnmarshal := deserializeUnmarshalCode(name, deserializeFields, nil)
-	if len(nullFields) == 0 && ((len(requiredSlices) == 0 && len(requiredArrayUnions) == 0) || hasRequiredMap) {
+	var after []jen.Code
+	if retainExtra {
+		after = captureExtraFieldsCode(schema.Properties, jen.Id("data"))
+	}
+	unmarshalMethod, hasUnmarshal := deserializeUnmarshalCode(name, deserializeFields, propertiesValidationCode(defs, schema.Properties, schema.Required, jen.Id("data")), after)
+	if !retainExtra && len(nullFields) == 0 && ((len(requiredSlices) == 0 && len(requiredArrayUnions) == 0) || hasRequiredMap) {
 		if hasUnmarshal {
 			codes = append(codes, unmarshalMethod)
 		}
@@ -136,7 +145,13 @@ func objectCode(defs map[string]*jsonschema.Schema, name string, schema *jsonsch
 			body = append(body, optionalWireFieldAssignmentCode("a", unionField{deserializeField: f})...)
 		}
 		body = append(body, nullFieldMarshalAssignments("a", nullFields)...)
-		body = append(body, jen.Return(jen.Qual("encoding/json", "Marshal").Call(jen.Id("w"))))
+		if retainExtra {
+			body = append(body, jen.Return(jen.Id("marshalJSONWithExtraFields").Call(jen.Id("w"), jen.Id("a").Dot("ExtraFields"), jsonFieldNames(schema.Properties))))
+		} else {
+			body = append(body, jen.Return(jen.Qual("encoding/json", "Marshal").Call(jen.Id("w"))))
+		}
+	} else if retainExtra {
+		body = append(body, jen.Return(jen.Id("marshalJSONWithExtraFields").Call(jen.Id("a"), jen.Id("a").Dot("ExtraFields"), jsonFieldNames(schema.Properties))))
 	} else {
 		body = append(body, jen.Return(jen.Qual("encoding/json", "Marshal").Call(jen.Id("a"))))
 	}

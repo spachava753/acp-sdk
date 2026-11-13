@@ -19,6 +19,23 @@ func (c SelectConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SelectConfig) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"currentValue", "options"}, []string{"currentValue", "options"}); err != nil {
+		return err
+	}
+	type alias SelectConfig
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*c = SelectConfig(decoded)
+	return nil
+}
+
 type SelectGroup struct {
 	Name    string         `json:"name"`
 	Options []SelectOption `json:"options"`
@@ -34,8 +51,42 @@ func (g SelectGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (g *SelectGroup) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name", "options"}, []string{"name", "options"}); err != nil {
+		return err
+	}
+	type alias SelectGroup
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*g = SelectGroup(decoded)
+	return nil
+}
+
 type SelectOption struct {
 	Value string `json:"value"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *SelectOption) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"value"}, []string{"value"}); err != nil {
+		return err
+	}
+	type alias SelectOption
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*o = SelectOption(decoded)
+	return nil
 }
 
 // SelectOptions: Grouped or ungrouped select options.

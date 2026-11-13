@@ -1,6 +1,9 @@
 package acp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // Encoding: Known encodings.
 type Encoding string
@@ -11,6 +14,23 @@ const (
 	// EncodingUtf16: UTF-16 encoding.
 	EncodingUtf16 Encoding = "utf-16"
 )
+
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *Encoding) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("Encoding must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "utf-8", "utf-16":
+		*v = Encoding(value)
+		return nil
+	}
+	return fmt.Errorf("invalid Encoding value %q", value)
+}
 
 // Payload: Object with tolerant arrays of const enum items.
 type Payload struct {
@@ -34,7 +54,7 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 			decoded.Encodings = []Encoding{}
 			for _, value := range values {
 				var item Encoding
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item {
 					case EncodingUtf8, EncodingUtf16:
 						decoded.Encodings = append(decoded.Encodings, item)

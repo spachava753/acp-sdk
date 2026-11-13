@@ -1,5 +1,7 @@
 package acp
 
+import "fmt"
+
 // CollisionConstEnum: String constants whose values normalize to the same Go suffix.
 type CollisionConstEnum string
 
@@ -12,6 +14,23 @@ const (
 	CollisionConstEnumInProgress3 CollisionConstEnum = "in progress"
 )
 
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *CollisionConstEnum) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("CollisionConstEnum must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "in-progress", "in_progress", "in progress":
+		*v = CollisionConstEnum(value)
+		return nil
+	}
+	return fmt.Errorf("invalid CollisionConstEnum value %q", value)
+}
+
 // CollisionEnum: A string enum whose values normalize to the same Go suffix.
 type CollisionEnum string
 
@@ -20,6 +39,23 @@ const (
 	CollisionEnumInProgress2 CollisionEnum = "in_progress"
 	CollisionEnumInProgress3 CollisionEnum = "in progress"
 )
+
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *CollisionEnum) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("CollisionEnum must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "in-progress", "in_progress", "in progress":
+		*v = CollisionEnum(value)
+		return nil
+	}
+	return fmt.Errorf("invalid CollisionEnum value %q", value)
+}
 
 // OpenStatus: Open string constants whose known values normalize to the same Go suffix.
 type OpenStatus string

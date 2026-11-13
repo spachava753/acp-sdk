@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "ClosedReason": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "end_turn"
+        },
+        {
+          "type": "string",
+          "const": "cancelled"
+        }
+      ]
+    },
+    "ClosedMode": {
+      "type": "string",
+      "enum": [
+        "fast",
+        "slow"
+      ]
+    },
+    "OpenName": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "known"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "Packet": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-deserialize-default-on-null": true
+        }
+      },
+      "required": [
+        "id",
+        "count",
+        "items"
+      ]
+    },
+    "Envelope": {
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true,
+          "x-deserialize-default-on-error": true
+        },
+        "packet": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Packet"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "reason": {
+          "$ref": "#/$defs/ClosedReason",
+          "x-deserialize-default-on-error": true
+        },
+        "mode": {
+          "$ref": "#/$defs/ClosedMode"
+        },
+        "name": {
+          "$ref": "#/$defs/OpenName"
+        }
+      }
+    }
+  }
+}

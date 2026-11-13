@@ -91,3 +91,132 @@ func (t Transport) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(w)
 }
+
+// UnmarshalJSON decodes the selected schema variant.
+func (t *Transport) UnmarshalJSON(data []byte) error {
+	type alias Transport
+	var decoded alias
+	var raw struct {
+		Type    json.RawMessage `json:"type"`
+		Args    json.RawMessage `json:"args"`
+		Command json.RawMessage `json:"command"`
+		Env     json.RawMessage `json:"env"`
+		Headers json.RawMessage `json:"headers"`
+		Name    json.RawMessage `json:"name"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag TransportType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "http":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "name", "headers"}, []string{"headers", "name", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Headers) > 0 {
+				var value []string
+				if err := unmarshalJSON(raw.Headers, &value); err != nil {
+					return err
+				}
+				decoded.Headers = value
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"name", "command", "args", "env"}, []string{"args", "command", "env", "name"}); err != nil {
+					return err
+				}
+				if len(raw.Args) > 0 {
+					var value []string
+					if err := unmarshalJSON(raw.Args, &value); err != nil {
+						return err
+					}
+					decoded.Args = value
+				}
+				if len(raw.Command) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Command, &value); err != nil {
+						return err
+					}
+					decoded.Command = value
+				}
+				if len(raw.Env) > 0 {
+					var value []string
+					if err := unmarshalJSON(raw.Env, &value); err != nil {
+						return err
+					}
+					decoded.Env = value
+				}
+				if len(raw.Name) > 0 {
+					var value string
+					if err := unmarshalJSON(raw.Name, &value); err != nil {
+						return err
+					}
+					decoded.Name = value
+				}
+				return nil
+			}()
+		}
+	default:
+		err = func() error {
+			decoded = alias{}
+			if err := requireJSONProperties(data, []string{"name", "command", "args", "env"}, []string{"args", "command", "env", "name"}); err != nil {
+				return err
+			}
+			if len(raw.Args) > 0 {
+				var value []string
+				if err := unmarshalJSON(raw.Args, &value); err != nil {
+					return err
+				}
+				decoded.Args = value
+			}
+			if len(raw.Command) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Command, &value); err != nil {
+					return err
+				}
+				decoded.Command = value
+			}
+			if len(raw.Env) > 0 {
+				var value []string
+				if err := unmarshalJSON(raw.Env, &value); err != nil {
+					return err
+				}
+				decoded.Env = value
+			}
+			if len(raw.Name) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Name, &value); err != nil {
+					return err
+				}
+				decoded.Name = value
+			}
+			return nil
+		}()
+	}
+	if err != nil {
+		return err
+	}
+	*t = Transport(decoded)
+	return nil
+}

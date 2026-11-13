@@ -1,6 +1,9 @@
 package acp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // FixedStatus: Single status used by a constant-valued variant.
 type FixedStatus string
@@ -9,12 +12,46 @@ const (
 	FixedStatusFixed FixedStatus = "fixed"
 )
 
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *FixedStatus) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("FixedStatus must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "fixed":
+		*v = FixedStatus(value)
+		return nil
+	}
+	return fmt.Errorf("invalid FixedStatus value %q", value)
+}
+
 // PrimaryStatus: Status used by the first update variant.
 type PrimaryStatus string
 
 const (
 	PrimaryStatusRunning PrimaryStatus = "running"
 )
+
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *PrimaryStatus) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("PrimaryStatus must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "running":
+		*v = PrimaryStatus(value)
+		return nil
+	}
+	return fmt.Errorf("invalid PrimaryStatus value %q", value)
+}
 
 // SecondaryStatus: Status used by the second update variant.
 type SecondaryStatus string
@@ -109,58 +146,119 @@ func (u Update) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON decodes the selected schema variant.
 func (u *Update) UnmarshalJSON(data []byte) error {
 	type alias Update
-	decoded := alias{}
-	raw := struct {
+	var decoded alias
+	var raw struct {
+		Kind   json.RawMessage `json:"kind"`
 		Status json.RawMessage `json:"status"`
-		*alias
-	}{alias: &decoded}
+	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
 	}
-	if len(raw.Status) > 0 {
-		switch decoded.Kind {
-		case UpdateTypePrimary:
-			var value PrimaryStatus
-			if err := unmarshalJSON(raw.Status, &value); err == nil {
-				switch string(value) {
-				case "running":
-					decoded.Status = &value
+	var tag UpdateType
+	var tagErr error
+	if len(raw.Kind) > 0 {
+		tagErr = unmarshalJSON(raw.Kind, &tag)
+	}
+	var err error
+	switch tag {
+	case "primary":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind"}, []string{"kind"}); err != nil {
+				return err
+			}
+			if len(raw.Status) > 0 {
+				var value PrimaryStatus
+				if err := unmarshalJSON(raw.Status, &value); err == nil {
+					switch string(value) {
+					case "running":
+						decoded.Status = &value
+					}
 				}
 			}
-		case UpdateTypeSecondary:
-			var value SecondaryStatus
-			if err := unmarshalJSON(raw.Status, &value); err != nil {
+			return nil
+		}()
+	case "secondary":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "status"}, []string{"kind", "status"}); err != nil {
 				return err
 			}
-			decoded.Status = func(v SecondaryStatus) *PrimaryStatus {
-				converted := PrimaryStatus(v)
-				return &converted
-			}(value)
-		case UpdateTypeNullableSecondary:
-			var value *SecondaryStatus
-			if err := unmarshalJSON(raw.Status, &value); err != nil {
-				return err
-			}
-			decoded.Status = func(v *SecondaryStatus) *PrimaryStatus {
-				if v == nil {
-					return nil
+			if len(raw.Status) > 0 {
+				var value SecondaryStatus
+				if err := unmarshalJSON(raw.Status, &value); err != nil {
+					return err
 				}
-				converted := PrimaryStatus(*v)
-				return &converted
-			}(value)
-		case UpdateTypeFixed:
-			var value FixedStatus
-			if err := unmarshalJSON(raw.Status, &value); err != nil {
+				decoded.Status = func(v SecondaryStatus) *PrimaryStatus {
+					converted := PrimaryStatus(v)
+					return &converted
+				}(value)
+			}
+			return nil
+		}()
+	case "nullable_secondary":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "status"}, []string{"kind"}); err != nil {
 				return err
 			}
-			decoded.Status = func(v FixedStatus) *PrimaryStatus {
-				converted := PrimaryStatus(v)
-				return &converted
-			}(value)
-		}
+			if len(raw.Status) > 0 {
+				var value *SecondaryStatus
+				if err := unmarshalJSON(raw.Status, &value); err != nil {
+					return err
+				}
+				decoded.Status = func(v *SecondaryStatus) *PrimaryStatus {
+					if v == nil {
+						return nil
+					}
+					converted := PrimaryStatus(*v)
+					return &converted
+				}(value)
+			}
+			return nil
+		}()
+	case "fixed":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "status"}, []string{"kind", "status"}); err != nil {
+				return err
+			}
+			if len(raw.Status) > 0 {
+				var value FixedStatus
+				if err := unmarshalJSON(raw.Status, &value); err != nil {
+					return err
+				}
+				decoded.Status = func(v FixedStatus) *PrimaryStatus {
+					converted := PrimaryStatus(v)
+					return &converted
+				}(value)
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("Update: unknown kind %q", tag)
+	}
+	if err != nil {
+		return err
 	}
 	*u = Update(decoded)
 	return nil

@@ -5,3 +5,20 @@ type CollidingFields struct {
 	FooBar  string `json:"foo-bar"`
 	FooBar2 int32  `json:"foo_bar,omitempty"`
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (f *CollidingFields) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"foo-bar"}, []string{"foo-bar", "foo_bar"}); err != nil {
+		return err
+	}
+	type alias CollidingFields
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*f = CollidingFields(decoded)
+	return nil
+}

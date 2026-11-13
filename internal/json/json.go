@@ -8,6 +8,7 @@ package json
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 
 	"github.com/segmentio/encoding/json"
@@ -32,5 +33,17 @@ func (d *Decoder) Decode(v any) error {
 }
 
 func Unmarshal(data []byte, v any) error {
-	return NewDecoder(bytes.NewReader(data)).Decode(v)
+	dec := NewDecoder(bytes.NewReader(data))
+	if err := dec.Decode(v); err != nil {
+		return err
+	}
+	// Unlike the streaming Decoder, Unmarshal must consume exactly one value.
+	var extra any
+	if err := dec.Decode(&extra); err != io.EOF {
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("multiple JSON values")
+	}
+	return nil
 }

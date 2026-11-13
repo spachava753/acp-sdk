@@ -198,6 +198,56 @@ Agents call client methods through `AgentConnection`, such as `SessionUpdate`, `
 
 Proxy Chains methods are generated on both sides: a conductor is a client and a proxy is an agent. `Client` sends `ProxyInitialize`, both sides send `ProxySuccessor` and `ProxySuccessorNotification`, and handlers implement the matching `Proxy*Handler` interfaces.
 
+If the agent implements `InitializeHandler`, other requests are rejected until
+an `initialize` or `proxy/initialize` response has been successfully encoded, so
+an agent that also implements `ProxyInitializeHandler` can be started either
+way. A failed or null initialization response does not activate the connection.
+Raw agents without that handler keep their partial-handler behavior.
+
+## Ordering, cancellation, and shutdown
+
+Notification handlers, including `SessionUpdate` and extension notifications,
+run in receive order, one at a time. Normal `SessionPrompt` and `SessionLoad`
+calls wait for the notification callbacks received before their response, on
+both success and error. Later notifications do not extend that completion
+boundary. This is a Go SDK delivery guarantee, not a claim that ACP specifies
+every callback scheduling policy.
+
+Incoming requests start in receive order too: a request does not start until
+the notification callbacks received before it have returned. A permission
+callback therefore sees the tool announcements that preceded it. Request
+handlers then run concurrently, so a long prompt turn does not hold up later
+messages.
+
+A slow notification handler delays the messages behind it, so keep notification
+handlers short. A handler can make nested calls using its supplied context. Such
+calls bypass the completion barrier so they cannot wait on their own handler.
+Responses are never queued, so a notification callback can await the answer to
+its own call. If the peer must first send this side a request, that request
+waits behind the callback; do such work in a goroutine with its own context
+instead.
+
+Canceling a call's context releases its local pending entry. After a successful
+send, the SDK also attempts `$/cancel_request`; peers may ignore this optional
+ACP feature. Incoming request cancellation cancels the matching handler context.
+It is distinct from `SessionCancel`: applications still manage session work,
+resolve pending permission requests with the `cancelled` outcome, and return the
+prompt's `cancelled` stop reason as required by ACP.
+
+`Connect` uses its context for establishment. `RunAgent` uses its context for the
+serving lifetime; cancellation aborts transport I/O and cooperative handlers.
+A clean input EOF may be a half-close, so accepted final replies can still drain.
+`Close` stops new work, cancels pending requests, and drains accepted writes and
+notification handlers. Do not call it synchronously from a handler included in
+that drain. Give potentially blocking calls their own cancellable contexts.
+
+Built-in stream writes can be canceled while queued without disturbing another
+writer. An interrupted partial frame closes the stream rather than letting later
+messages follow a corrupted prefix. Caller-provided streams must support write
+deadlines or a `Close` that unblocks I/O; arbitrary blocking writers cannot be
+interrupted safely. `CommandTransport.TerminateDuration` starts at physical
+transport closure, not while the RPC layer is still draining accepted work.
+
 ## Extensions
 
 Custom ACP methods must start with `_`. Both `Client` and `AgentConnection` can
@@ -274,7 +324,8 @@ an `AgentConnection`.
 
 Register before connecting so handlers are ready when messages arrive. Duplicate
 registrations of the same message kind are rejected; one name may have both a
-request and a notification handler. Handlers may run concurrently and may call
+request and a notification handler. Request handlers may run concurrently;
+notification handlers run one at a time in receive order. Handlers may call
 back to the peer. JSON decoding failures return `-32602` for requests; handlers
 must validate required fields and other application constraints themselves.
 Missing or `null` parameters produce a zero-valued parameter struct. Return a
@@ -346,6 +397,18 @@ update := acp.AgentMessageChunkSessionUpdate(content)
 
 The constructors are discoverable on [pkg.go.dev](https://pkg.go.dev/github.com/spachava753/acp-sdk/acp) alongside the generated type documentation.
 
+Decoded select `CurrentValue` and string-variant config setter `Value` now use
+`SessionConfigValueId`, matching their constructors and selectable option IDs;
+boolean values remain `bool`. Update assertions that previously expected plain
+`string` from these `any` fields.
+
+Generated decoders check required fields and known variant types while retaining
+schema-directed default-on-error, default-on-null, and invalid-item recovery.
+Types whose schemas explicitly retain unknown properties expose `ExtraFields`
+with raw JSON values. This includes opaque MCP errors and custom/future
+elicitation payloads. Known active properties take precedence when encoding;
+these fields are not permission to add arbitrary root fields to other ACP types.
+
 For MCP message responses, use `ResultMessageMcpResponse` or
 `ErrorMessageMcpResponse`. `ResultMessageMcpResponse(nil)` sends a valid JSON
 null result. Decoding prefers the result carrier when both outcomes are present;
@@ -353,10 +416,10 @@ encoding likewise emits only the first present carrier in schema order.
 
 ## Explicit Nulls in Patches
 
-Subagent patches distinguish omitted fields (unchanged) from explicit `null`
-(clear). `SubagentUpdate`, `SessionMessage`, and their `SessionUpdate` variants
-expose `NullFields` to preserve this distinction without changing their typed
-fields:
+Patch types distinguish omitted fields (unchanged) from explicit `null` (clear).
+`SessionInfoUpdate`, `CompactionUpdate`, `SubagentUpdate`, `SessionMessage`, and
+their relevant `SessionUpdate` variants expose `NullFields` to preserve this
+distinction without changing their typed fields:
 
 ```go
 update := acp.SubagentUpdateSessionUpdate("child-session")
@@ -370,8 +433,8 @@ in the selected variant support these markers.
 
 On decoding, `NullFields` records explicit nulls; omitted fields are not listed.
 Use `slices.Contains(update.NullFields, "state")` to recognize a clear operation.
-`McpError.NullFields` similarly preserves explicit `"data":null`; a nil `Data`
-without a null marker omits the key.
+`Error.NullFields` and `McpError.NullFields` similarly preserve explicit
+`"data":null`; a nil `Data` without a null marker omits the key.
 
 ## Transports
 
@@ -384,6 +447,14 @@ without a null marker omits the key.
 | Custom `Transport` | Supply another bidirectional connection implementation. |
 
 The built-in stream transports use newline-delimited JSON-RPC messages, matching the ACP [stdio transport](https://agentclientprotocol.com/protocol/v1/transports). The public [`jsonrpc`](./jsonrpc) package exposes protocol-neutral message encoding helpers for custom transports.
+
+Envelope IDs retain exact signed integers, strings, and explicit null.
+`jsonrpc.MakeID(nil)` means a present null request ID; use a zero `jsonrpc.ID{}`
+for a notification's absent ID. Prefer `int64` or `json.Number` for large IDs
+instead of converting through `float64`. Invalid complete frames are not
+executed as valid prefixes. Malformed response/notification shapes do not receive
+error replies; recoverable request-frame errors receive protocol errors without
+forcing transport shutdown.
 
 ## Packages
 
@@ -406,11 +477,17 @@ Run the race detector:
 go test -race ./...
 ```
 
-Run only the black-box conformance suite:
+Run all conformance packages:
 
 ```sh
-go test ./conformance
+go test ./conformance/...
 ```
+
+They test the SDK against an independent peer, grouped by area: `wire`
+(JSON-RPC framing, IDs, errors and dispatch), `lifecycle` (cancellation,
+shutdown and transports), `session` (session methods, callbacks and ordering)
+and `schema` (typed payloads and routes). They cover SDK behavior choices as
+well as protocol requirements; passing them is not an ACP certification.
 
 To refresh and regenerate the protocol surface:
 

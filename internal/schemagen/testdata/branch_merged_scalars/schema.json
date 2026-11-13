@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "ValueId": {
+      "type": "string"
+    },
+    "Setter": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        {
+          "title": "value_id",
+          "type": "object",
+          "properties": {
+            "value": {
+              "$ref": "#/$defs/ValueId"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      ]
+    },
+    "Option": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "currentValue": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "currentValue"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "select"
+            },
+            "id": {
+              "type": "string"
+            },
+            "currentValue": {
+              "$ref": "#/$defs/ValueId"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "currentValue"
+          ]
+        }
+      ]
+    },
+    "List": {
+      "type": "object",
+      "properties": {
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Option"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        }
+      }
+    }
+  }
+}

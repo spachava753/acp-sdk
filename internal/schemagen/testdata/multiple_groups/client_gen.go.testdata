@@ -2,7 +2,6 @@ package acp
 
 import (
 	"context"
-	"github.com/spachava753/acp-sdk/internal/jsonrpc2"
 	"github.com/spachava753/acp-sdk/jsonrpc"
 )
 
@@ -17,24 +16,30 @@ func (c *Client) BetaStop(ctx context.Context, params *StopBetaRequest) (*StopBe
 }
 
 func handleClientRequest(ctx context.Context, handler any, req *jsonrpc.Request) (any, error) {
-	jsonrpc2.Async(ctx)
+	beginHandler(ctx, req)
 	switch req.Method {
 	case MethodDeltaWrite:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(DeltaWriteHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[WriteDeltaRequest](req)
+		params, err := decodeProtocolParams[WriteDeltaRequest](req)
 		if err != nil {
 			return nil, err
 		}
 		return rpcResult(h.DeltaWrite(ctx, params))
 	case MethodGammaRead:
+		if !req.IsCall() {
+			return nil, nil
+		}
 		h, ok := handler.(GammaReadHandler)
 		if !ok {
 			return nil, methodNotFound(req.Method)
 		}
-		params, err := decodeParams[ReadGammaRequest](req)
+		params, err := decodeProtocolParams[ReadGammaRequest](req)
 		if err != nil {
 			return nil, err
 		}

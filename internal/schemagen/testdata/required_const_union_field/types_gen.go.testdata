@@ -1,8 +1,30 @@
 package acp
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 // LinkWidget: Link widget branch.
 type LinkWidget struct {
 	Url string `json:"url"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (w *LinkWidget) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"url"}, []string{"url"}); err != nil {
+		return err
+	}
+	type alias LinkWidget
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*w = LinkWidget(decoded)
+	return nil
 }
 
 // TextKind: Text widget kind.
@@ -13,16 +35,44 @@ const (
 	TextKindText TextKind = "text"
 )
 
+// UnmarshalJSON rejects values outside the closed schema enum.
+func (v *TextKind) UnmarshalJSON(data []byte) error {
+	var value string
+	if isJSONNull(data) {
+		return fmt.Errorf("TextKind must not be null")
+	}
+	if err := unmarshalJSON(data, &value); err != nil {
+		return err
+	}
+	switch value {
+	case "text":
+		*v = TextKind(value)
+		return nil
+	}
+	return fmt.Errorf("invalid TextKind value %q", value)
+}
+
 // TextWidget: Text widget branch.
 type TextWidget struct {
 	Kind  TextKind `json:"kind"`
 	Label string   `json:"label"`
 }
 
-// UnmarshalJSON preserves unstructured numbers as json.Number.
+// UnmarshalJSON implements json.Unmarshaler.
 func (w *TextWidget) UnmarshalJSON(data []byte) error {
-	type plain TextWidget
-	return unmarshalJSON(data, (*plain)(w))
+	if err := requireJSONProperties(data, []string{"kind", "label"}, []string{"kind", "label"}); err != nil {
+		return err
+	}
+	type alias TextWidget
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*w = TextWidget(decoded)
+	return nil
 }
 
 // Widget: Union with a branch-required const field.
@@ -47,8 +97,67 @@ func NewLinkWidget(url string) Widget {
 	}
 }
 
-// UnmarshalJSON preserves unstructured numbers as json.Number.
+// UnmarshalJSON decodes the first valid schema alternative.
 func (w *Widget) UnmarshalJSON(data []byte) error {
-	type plain Widget
-	return unmarshalJSON(data, (*plain)(w))
+	type alias Widget
+	var decoded alias
+	var raw struct {
+		Kind  json.RawMessage `json:"kind"`
+		Label json.RawMessage `json:"label"`
+		Url   json.RawMessage `json:"url"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var err error
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"kind", "label"}, []string{"kind", "label"}); err != nil {
+			return err
+		}
+		if len(raw.Kind) > 0 {
+			var value TextKind
+			if err := unmarshalJSON(raw.Kind, &value); err != nil {
+				return err
+			}
+			decoded.Kind = value
+		}
+		if len(raw.Label) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.Label, &value); err != nil {
+				return err
+			}
+			decoded.Label = func(v string) *string {
+				converted := string(v)
+				return &converted
+			}(value)
+		}
+		return nil
+	}()
+	if err == nil {
+		*w = Widget(decoded)
+		return nil
+	}
+	err = func() error {
+		decoded = alias{}
+		if err := requireJSONProperties(data, []string{"url"}, []string{"url"}); err != nil {
+			return err
+		}
+		if len(raw.Url) > 0 {
+			var value string
+			if err := unmarshalJSON(raw.Url, &value); err != nil {
+				return err
+			}
+			decoded.Url = func(v string) *string {
+				converted := string(v)
+				return &converted
+			}(value)
+		}
+		return nil
+	}()
+	if err == nil {
+		*w = Widget(decoded)
+		return nil
+	}
+	return err
 }

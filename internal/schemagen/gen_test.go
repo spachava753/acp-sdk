@@ -76,7 +76,7 @@ func TestGenerateDeterministic(t *testing.T) {
 
 	want := generatedFilesByName(t, schemagen.Generate(&schema))
 	typeCheckGenerated(t, want)
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		got := generatedFilesByName(t, schemagen.Generate(&schema))
 		for filename, wantContents := range want {
 			gotContents, ok := got[filename]

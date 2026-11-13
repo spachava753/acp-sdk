@@ -21,6 +21,7 @@ func TestConformanceConcurrentPrompts(t *testing.T) {
 		return agent
 	})
 	defer closeConformanceClient(t, client, done)
+	initializeConformanceClient(t, client)
 
 	const n = 8
 	errs := make(chan error, n)

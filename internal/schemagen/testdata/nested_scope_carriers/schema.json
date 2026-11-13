@@ -1,0 +1,165 @@
+{
+  "$defs": {
+    "RawId": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "integer",
+          "format": "int64"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "SessionScope": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string"
+        },
+        "toolCallId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sessionId"
+      ]
+    },
+    "RequestScope": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "$ref": "#/$defs/RawId"
+        }
+      },
+      "required": [
+        "requestId"
+      ]
+    },
+    "ScopeChoice": {
+      "anyOf": [
+        {
+          "title": "Session",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionScope"
+            }
+          ]
+        },
+        {
+          "title": "Request",
+          "allOf": [
+            {
+              "$ref": "#/$defs/RequestScope"
+            }
+          ]
+        }
+      ]
+    },
+    "MessageBody": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "message"
+      ]
+    },
+    "Body": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "message"
+      ],
+      "anyOf": [
+        {
+          "title": "Session",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionScope"
+            }
+          ]
+        },
+        {
+          "title": "Request",
+          "allOf": [
+            {
+              "$ref": "#/$defs/RequestScope"
+            }
+          ]
+        }
+      ]
+    },
+    "Request": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "known"
+            }
+          },
+          "required": [
+            "mode"
+          ],
+          "allOf": [
+            {
+              "$ref": "#/$defs/MessageBody"
+            },
+            {
+              "$ref": "#/$defs/ScopeChoice"
+            }
+          ]
+        },
+        {
+          "title": "other",
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "mode",
+            "message"
+          ],
+          "allOf": [
+            {
+              "$ref": "#/$defs/ScopeChoice"
+            }
+          ],
+          "unevaluatedProperties": true,
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "const": "known"
+                  }
+                },
+                "required": [
+                  "mode"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

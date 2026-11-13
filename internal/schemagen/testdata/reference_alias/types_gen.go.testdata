@@ -1,0 +1,34 @@
+package acp
+
+// AllOfAlias: Names Base through allOf, so it is the same payload.
+type AllOfAlias = Base
+
+// Base: An object with a required field.
+type Base struct {
+	Name string `json:"name"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (b *Base) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"name"}, []string{"name"}); err != nil {
+		return err
+	}
+	type alias Base
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*b = Base(decoded)
+	return nil
+}
+
+type Label string
+
+// LabelName: Names a string definition and stays a distinct type.
+type LabelName Label
+
+// RefAlias: Names Base directly.
+type RefAlias = Base

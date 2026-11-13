@@ -2,6 +2,7 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -82,6 +83,93 @@ func (u CollisionUnion) MarshalJSON() ([]byte, error) {
 	return json.Marshal(w)
 }
 
+// UnmarshalJSON decodes the selected schema variant.
+func (u *CollisionUnion) UnmarshalJSON(data []byte) error {
+	type alias CollisionUnion
+	var decoded alias
+	var raw struct {
+		Kind  json.RawMessage `json:"kind"`
+		Count json.RawMessage `json:"count"`
+		Ok    json.RawMessage `json:"ok"`
+		Text  json.RawMessage `json:"text"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag CollisionUnionType
+	var tagErr error
+	if len(raw.Kind) > 0 {
+		tagErr = unmarshalJSON(raw.Kind, &tag)
+	}
+	var err error
+	switch tag {
+	case "in-progress":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "text"}, []string{"kind", "text"}); err != nil {
+				return err
+			}
+			if len(raw.Text) > 0 {
+				var value string
+				if err := unmarshalJSON(raw.Text, &value); err != nil {
+					return err
+				}
+				decoded.Text = value
+			}
+			return nil
+		}()
+	case "in_progress":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "count"}, []string{"count", "kind"}); err != nil {
+				return err
+			}
+			if len(raw.Count) > 0 {
+				var value int32
+				if err := unmarshalJSON(raw.Count, &value); err != nil {
+					return err
+				}
+				decoded.Count = value
+			}
+			return nil
+		}()
+	case "in progress":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Kind = tag
+			if err := requireJSONProperties(data, []string{"kind", "ok"}, []string{"kind", "ok"}); err != nil {
+				return err
+			}
+			if len(raw.Ok) > 0 {
+				var value bool
+				if err := unmarshalJSON(raw.Ok, &value); err != nil {
+					return err
+				}
+				decoded.Ok = value
+			}
+			return nil
+		}()
+	default:
+		return fmt.Errorf("CollisionUnion: unknown kind %q", tag)
+	}
+	if err != nil {
+		return err
+	}
+	*u = CollisionUnion(decoded)
+	return nil
+}
+
 // Payload: Object with a tolerant array of colliding union items.
 type Payload struct {
 	Items []CollisionUnion `json:"items,omitempty"`
@@ -89,6 +177,9 @@ type Payload struct {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (p *Payload) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{}, []string{"items"}); err != nil {
+		return err
+	}
 	type alias Payload
 	decoded := alias{}
 	raw := struct {
@@ -106,7 +197,7 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 			decoded.Items = []CollisionUnion{}
 			for _, value := range values {
 				var item CollisionUnion
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Kind {
 					case CollisionUnionTypeInProgress, CollisionUnionTypeInProgress2, CollisionUnionTypeInProgress3:
 						decoded.Items = append(decoded.Items, item)

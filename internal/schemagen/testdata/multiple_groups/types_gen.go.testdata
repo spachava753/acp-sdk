@@ -6,14 +6,65 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (e *Error) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"code", "message"}, []string{"code", "message"}); err != nil {
+		return err
+	}
+	type alias Error
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*e = Error(decoded)
+	return nil
+}
+
 // ReadGammaRequest: Parameters for reading gamma state.
 type ReadGammaRequest struct {
 	GammaID string `json:"gammaId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ReadGammaRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"gammaId"}, []string{"gammaId"}); err != nil {
+		return err
+	}
+	type alias ReadGammaRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = ReadGammaRequest(decoded)
+	return nil
+}
+
 // ReadGammaResponse: Result from reading gamma state.
 type ReadGammaResponse struct {
 	Value string `json:"value"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *ReadGammaResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"value"}, []string{"value"}); err != nil {
+		return err
+	}
+	type alias ReadGammaResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = ReadGammaResponse(decoded)
+	return nil
 }
 
 // RequestId: A JSON-RPC request identifier.
@@ -24,9 +75,43 @@ type StartAlphaRequest struct {
 	AlphaID string `json:"alphaId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *StartAlphaRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"alphaId"}, []string{"alphaId"}); err != nil {
+		return err
+	}
+	type alias StartAlphaRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = StartAlphaRequest(decoded)
+	return nil
+}
+
 // StartAlphaResponse: Result from starting alpha processing.
 type StartAlphaResponse struct {
 	Started bool `json:"started"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *StartAlphaResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"started"}, []string{"started"}); err != nil {
+		return err
+	}
+	type alias StartAlphaResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = StartAlphaResponse(decoded)
+	return nil
 }
 
 // StopBetaRequest: Parameters for stopping beta processing.
@@ -34,9 +119,43 @@ type StopBetaRequest struct {
 	BetaID string `json:"betaId"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *StopBetaRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"betaId"}, []string{"betaId"}); err != nil {
+		return err
+	}
+	type alias StopBetaRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = StopBetaRequest(decoded)
+	return nil
+}
+
 // StopBetaResponse: Result from stopping beta processing.
 type StopBetaResponse struct {
 	Stopped bool `json:"stopped"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *StopBetaResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"stopped"}, []string{"stopped"}); err != nil {
+		return err
+	}
+	type alias StopBetaResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = StopBetaResponse(decoded)
+	return nil
 }
 
 // WriteDeltaRequest: Parameters for writing delta state.
@@ -45,7 +164,41 @@ type WriteDeltaRequest struct {
 	Value   string `json:"value"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *WriteDeltaRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"deltaId", "value"}, []string{"deltaId", "value"}); err != nil {
+		return err
+	}
+	type alias WriteDeltaRequest
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = WriteDeltaRequest(decoded)
+	return nil
+}
+
 // WriteDeltaResponse: Result from writing delta state.
 type WriteDeltaResponse struct {
 	Version int64 `json:"version"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *WriteDeltaResponse) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"version"}, []string{"version"}); err != nil {
+		return err
+	}
+	type alias WriteDeltaResponse
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*r = WriteDeltaResponse(decoded)
+	return nil
 }

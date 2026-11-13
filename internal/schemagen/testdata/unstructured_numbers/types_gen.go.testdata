@@ -21,10 +21,21 @@ type Envelope struct {
 	Values         Values           `json:"values,omitempty"`
 }
 
-// UnmarshalJSON preserves unstructured numbers as json.Number.
+// UnmarshalJSON implements json.Unmarshaler.
 func (e *Envelope) UnmarshalJSON(data []byte) error {
-	type plain Envelope
-	return unmarshalJSON(data, (*plain)(e))
+	if err := requireJSONProperties(data, []string{"payload", "count", "fraction"}, []string{"_meta", "count", "fraction", "map", "nested", "values"}); err != nil {
+		return err
+	}
+	type alias Envelope
+	decoded := alias{}
+	raw := struct {
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	*e = Envelope(decoded)
+	return nil
 }
 
 type JSONValue any
