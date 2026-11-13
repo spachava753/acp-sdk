@@ -326,6 +326,7 @@ func (c *AudioContent) UnmarshalJSON(data []byte) error {
 type AuthAccount struct {
 	Meta         Meta    `json:"_meta,omitzero"`
 	Active       *bool   `json:"active,omitempty"`
+	Description  *string `json:"description,omitempty"`
 	Email        *string `json:"email,omitempty"`
 	Label        string  `json:"label"`
 	Name         *string `json:"name,omitempty"`
@@ -342,6 +343,7 @@ func (a *AuthAccount) UnmarshalJSON(data []byte) error {
 	raw := struct {
 		Meta         json.RawMessage `json:"_meta"`
 		Active       json.RawMessage `json:"active"`
+		Description  json.RawMessage `json:"description"`
 		Email        json.RawMessage `json:"email"`
 		Name         json.RawMessage `json:"name"`
 		Organization json.RawMessage `json:"organization"`
@@ -360,6 +362,12 @@ func (a *AuthAccount) UnmarshalJSON(data []byte) error {
 		var value *bool
 		if err := unmarshalJSON(raw.Active, &value); err == nil {
 			decoded.Active = value
+		}
+	}
+	if len(raw.Description) > 0 {
+		var value *string
+		if err := unmarshalJSON(raw.Description, &value); err == nil {
+			decoded.Description = value
 		}
 	}
 	if len(raw.Email) > 0 {
@@ -5120,6 +5128,170 @@ func (i *Implementation) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// InitialSessionConfigOption: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// An initial value for a config option, sent on session setup requests.
+//
+// Same shape as `session/set_config_option` without `sessionId`. Unlike
+// `session/set_config_option`, an unknown `configId`, a `type` that does not match the
+// option, or a value that is not allowed is ignored instead of rejected.
+//
+// Clients only send `type: "boolean"` entries when they advertise
+// `sessionCapabilities.configOptions.boolean`.
+type InitialSessionConfigOption struct {
+	Type     InitialSessionConfigOptionType `json:"type,omitempty"`
+	Meta     Meta                           `json:"_meta,omitzero"`
+	ConfigID SessionConfigId                `json:"configId"`
+	Value    any                            `json:"value"`
+}
+
+// InitialSessionConfigOptionType is the discriminator for InitialSessionConfigOption variants.
+type InitialSessionConfigOptionType string
+
+const (
+	InitialSessionConfigOptionTypeBoolean InitialSessionConfigOptionType = "boolean"
+)
+
+// BooleanInitialSessionConfigOption creates a boolean value (`type: "boolean"`).
+func BooleanInitialSessionConfigOption(configID SessionConfigId, value bool) InitialSessionConfigOption {
+	return InitialSessionConfigOption{
+		Type:     InitialSessionConfigOptionTypeBoolean,
+		ConfigID: configID,
+		Value:    value,
+	}
+}
+
+// ValueIdInitialSessionConfigOption creates a `SessionConfigValueId` string value.
+//
+// This is the default when `type` is absent on the wire. Unknown `type`
+// values with string payloads also gracefully deserialize into this
+// variant.
+func ValueIdInitialSessionConfigOption(configID SessionConfigId, value SessionConfigValueId) InitialSessionConfigOption {
+	return InitialSessionConfigOption{
+		ConfigID: configID,
+		Value:    value,
+	}
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (o *InitialSessionConfigOption) UnmarshalJSON(data []byte) error {
+	type alias InitialSessionConfigOption
+	var decoded alias
+	var raw struct {
+		Type     json.RawMessage `json:"type"`
+		Meta     json.RawMessage `json:"_meta"`
+		ConfigID json.RawMessage `json:"configId"`
+		Value    json.RawMessage `json:"value"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag InitialSessionConfigOptionType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "boolean":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"configId", "type", "value"}, []string{"configId", "type", "value"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.ConfigID) > 0 {
+				var value SessionConfigId
+				if err := unmarshalJSON(raw.ConfigID, &value); err != nil {
+					return err
+				}
+				decoded.ConfigID = value
+			}
+			if len(raw.Value) > 0 {
+				var value bool
+				if err := unmarshalJSON(raw.Value, &value); err != nil {
+					return err
+				}
+				decoded.Value = value
+			}
+			return nil
+		}()
+		if err != nil {
+			err = func() error {
+				decoded = alias{}
+				if err := requireJSONProperties(data, []string{"configId", "value"}, []string{"configId", "value"}); err != nil {
+					return err
+				}
+				if len(raw.Meta) > 0 {
+					var value Meta
+					if err := unmarshalJSON(raw.Meta, &value); err == nil {
+						decoded.Meta = value
+					}
+				}
+				if len(raw.ConfigID) > 0 {
+					var value SessionConfigId
+					if err := unmarshalJSON(raw.ConfigID, &value); err != nil {
+						return err
+					}
+					decoded.ConfigID = value
+				}
+				if len(raw.Value) > 0 {
+					var value SessionConfigValueId
+					if err := unmarshalJSON(raw.Value, &value); err != nil {
+						return err
+					}
+					decoded.Value = value
+				}
+				return nil
+			}()
+		}
+	default:
+		err = func() error {
+			decoded = alias{}
+			if err := requireJSONProperties(data, []string{"configId", "value"}, []string{"configId", "value"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.ConfigID) > 0 {
+				var value SessionConfigId
+				if err := unmarshalJSON(raw.ConfigID, &value); err != nil {
+					return err
+				}
+				decoded.ConfigID = value
+			}
+			if len(raw.Value) > 0 {
+				var value SessionConfigValueId
+				if err := unmarshalJSON(raw.Value, &value); err != nil {
+					return err
+				}
+				decoded.Value = value
+			}
+			return nil
+		}()
+	}
+	if err != nil {
+		return err
+	}
+	*o = InitialSessionConfigOption(decoded)
+	return nil
+}
+
 // InitializeProxyRequest: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -5514,12 +5686,13 @@ const (
 //
 // See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/v1/draft/session-setup#loading-sessions)
 type LoadSessionRequest struct {
-	Meta                  Meta          `json:"_meta,omitzero"`
-	AdditionalDirectories []string      `json:"additionalDirectories,omitempty"`
-	Cwd                   string        `json:"cwd"`
-	McpServers            []McpServer   `json:"mcpServers"`
-	SessionID             SessionId     `json:"sessionId"`
-	SystemPrompt          *SystemPrompt `json:"systemPrompt,omitempty"`
+	Meta                  Meta                         `json:"_meta,omitzero"`
+	AdditionalDirectories []string                     `json:"additionalDirectories,omitempty"`
+	ConfigOptions         []InitialSessionConfigOption `json:"configOptions,omitempty"`
+	Cwd                   string                       `json:"cwd"`
+	McpServers            []McpServer                  `json:"mcpServers"`
+	SessionID             SessionId                    `json:"sessionId"`
+	SystemPrompt          *SystemPrompt                `json:"systemPrompt,omitempty"`
 }
 
 // LoadSessionResponse: Response from loading an existing session.
@@ -6874,11 +7047,12 @@ func (s *MultiSelectPropertySchema) UnmarshalJSON(data []byte) error {
 //
 // See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/v1/draft/session-setup#creating-a-session)
 type NewSessionRequest struct {
-	Meta                  Meta          `json:"_meta,omitzero"`
-	AdditionalDirectories []string      `json:"additionalDirectories,omitempty"`
-	Cwd                   string        `json:"cwd"`
-	McpServers            []McpServer   `json:"mcpServers"`
-	SystemPrompt          *SystemPrompt `json:"systemPrompt,omitempty"`
+	Meta                  Meta                         `json:"_meta,omitzero"`
+	AdditionalDirectories []string                     `json:"additionalDirectories,omitempty"`
+	ConfigOptions         []InitialSessionConfigOption `json:"configOptions,omitempty"`
+	Cwd                   string                       `json:"cwd"`
+	McpServers            []McpServer                  `json:"mcpServers"`
+	SystemPrompt          *SystemPrompt                `json:"systemPrompt,omitempty"`
 }
 
 // NewSessionResponse: Response from creating a new session.
@@ -8513,12 +8687,13 @@ func (l *ResourceLink) UnmarshalJSON(data []byte) error {
 //
 // Only available if the Agent supports the `sessionCapabilities.resume` capability.
 type ResumeSessionRequest struct {
-	Meta                  Meta          `json:"_meta,omitzero"`
-	AdditionalDirectories []string      `json:"additionalDirectories,omitempty"`
-	Cwd                   string        `json:"cwd"`
-	McpServers            []McpServer   `json:"mcpServers,omitempty"`
-	SessionID             SessionId     `json:"sessionId"`
-	SystemPrompt          *SystemPrompt `json:"systemPrompt,omitempty"`
+	Meta                  Meta                         `json:"_meta,omitzero"`
+	AdditionalDirectories []string                     `json:"additionalDirectories,omitempty"`
+	ConfigOptions         []InitialSessionConfigOption `json:"configOptions,omitempty"`
+	Cwd                   string                       `json:"cwd"`
+	McpServers            []McpServer                  `json:"mcpServers,omitempty"`
+	SessionID             SessionId                    `json:"sessionId"`
+	SystemPrompt          *SystemPrompt                `json:"systemPrompt,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -8812,6 +8987,7 @@ type SessionCapabilities struct {
 	Delete                *SessionDeleteCapabilities                `json:"delete,omitempty"`
 	Fork                  *SessionForkCapabilities                  `json:"fork,omitempty"`
 	List                  *SessionListCapabilities                  `json:"list,omitempty"`
+	Options               *SessionOptionsCapabilities               `json:"options,omitempty"`
 	Resume                *SessionResumeCapabilities                `json:"resume,omitempty"`
 	Status                *SessionStatusCapabilities                `json:"status,omitempty"`
 	SystemPrompt          *SessionSystemPromptCapabilities          `json:"systemPrompt,omitempty"`
@@ -8830,6 +9006,7 @@ func (c *SessionCapabilities) UnmarshalJSON(data []byte) error {
 		Delete                json.RawMessage `json:"delete"`
 		Fork                  json.RawMessage `json:"fork"`
 		List                  json.RawMessage `json:"list"`
+		Options               json.RawMessage `json:"options"`
 		Resume                json.RawMessage `json:"resume"`
 		Status                json.RawMessage `json:"status"`
 		SystemPrompt          json.RawMessage `json:"systemPrompt"`
@@ -8879,6 +9056,12 @@ func (c *SessionCapabilities) UnmarshalJSON(data []byte) error {
 		var value *SessionListCapabilities
 		if err := unmarshalJSON(raw.List, &value); err == nil {
 			decoded.List = value
+		}
+	}
+	if len(raw.Options) > 0 {
+		var value *SessionOptionsCapabilities
+		if err := unmarshalJSON(raw.Options, &value); err == nil {
+			decoded.Options = value
 		}
 	}
 	if len(raw.Resume) > 0 {
@@ -9791,6 +9974,184 @@ func (n *SessionNotification) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// SessionOptionsCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Capabilities for the `session/options` method.
+//
+// Supplying `{}` means the agent supports `session/options` and accepts initial config
+// option values on session setup requests.
+type SessionOptionsCapabilities struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SessionOptionsCapabilities) UnmarshalJSON(data []byte) error {
+	type alias SessionOptionsCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = SessionOptionsCapabilities(decoded)
+	return nil
+}
+
+// SessionOptionsRequest: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Request parameters for `session/options`, which returns the config options a session
+// would start with, without creating or resuming a session.
+//
+// Only available if the Agent supports the `sessionCapabilities.options` capability.
+//
+// `session/options` MUST NOT create or resume a session, send `session/update`
+// notifications, add an entry to `session/list`, or change an existing session. Agents
+// SHOULD NOT connect to MCP servers to answer it.
+type SessionOptionsRequest struct {
+	Meta                  Meta       `json:"_meta,omitzero"`
+	AdditionalDirectories []string   `json:"additionalDirectories,omitempty"`
+	Cwd                   string     `json:"cwd"`
+	SessionID             *SessionId `json:"sessionId,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *SessionOptionsRequest) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"cwd"}, []string{"cwd"}); err != nil {
+		return err
+	}
+	type alias SessionOptionsRequest
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = SessionOptionsRequest(decoded)
+	return nil
+}
+
+// SessionOptionsResponse: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Response from `session/options`.
+//
+// The result is a snapshot. The options a session actually starts with are the ones in
+// the session setup response.
+//
+// Agents only return `type: "boolean"` options when the Client advertises
+// `sessionCapabilities.configOptions.boolean`.
+type SessionOptionsResponse struct {
+	Meta          Meta                   `json:"_meta,omitzero"`
+	ConfigOptions *[]SessionConfigOption `json:"configOptions,omitempty"`
+	Modes         *SessionModeState      `json:"modes,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *SessionOptionsResponse) UnmarshalJSON(data []byte) error {
+	type alias SessionOptionsResponse
+	decoded := alias{}
+	raw := struct {
+		Meta          json.RawMessage `json:"_meta"`
+		ConfigOptions json.RawMessage `json:"configOptions"`
+		Modes         json.RawMessage `json:"modes"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	if len(raw.ConfigOptions) > 0 {
+		var values []json.RawMessage
+		if err := unmarshalJSON(raw.ConfigOptions, &values); err == nil && values != nil {
+			items := []SessionConfigOption{}
+			for _, value := range values {
+				var item SessionConfigOption
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
+					switch item.Type {
+					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
+						items = append(items, item)
+					}
+				}
+			}
+			decoded.ConfigOptions = &items
+		}
+	}
+	if len(raw.Modes) > 0 {
+		var value *SessionModeState
+		if err := unmarshalJSON(raw.Modes, &value); err == nil {
+			decoded.Modes = value
+		}
+	}
+	*r = SessionOptionsResponse(decoded)
+	return nil
+}
+
+// SessionReference: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// A display-only reference to another session that this tool call operates on,
+// such as a subagent it created, delegated to, or is waiting on.
+//
+// The referenced session must already be known to the Client through ordinary
+// session setup or a `subagent_update` announcement. The reference does not
+// establish ownership, grant any Client-initiated controls, or report that the
+// referenced session received or finished any work.
+type SessionReference struct {
+	Meta      Meta      `json:"_meta,omitzero"`
+	SessionID SessionId `json:"sessionId"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (r *SessionReference) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"sessionId"}, []string{"sessionId"}); err != nil {
+		return err
+	}
+	type alias SessionReference
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*r = SessionReference(decoded)
+	return nil
+}
+
 // SessionResumeCapabilities: Capabilities for the `session/resume` method.
 //
 // Supplying `{}` means the agent supports resuming sessions.
@@ -9949,11 +10310,7 @@ func (r *SessionStatusResponse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SessionSystemPromptCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Capabilities for client-provided system prompts.
+// SessionSystemPromptCapabilities: Capabilities for client-provided system prompts.
 //
 // Supplying `{}` means the agent supports `systemPrompt` on session lifecycle
 // requests in `append` mode.
@@ -9990,11 +10347,7 @@ func (c *SessionSystemPromptCapabilities) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SessionSystemPromptModeCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// System prompt delivery modes the agent supports in addition to `append`.
+// SessionSystemPromptModeCapabilities: System prompt delivery modes the agent supports in addition to `append`.
 //
 // `append` has no entry because every agent advertising
 // `sessionCapabilities.systemPrompt` supports it.
@@ -10031,11 +10384,7 @@ func (c *SessionSystemPromptModeCapabilities) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SessionSystemPromptOverrideCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Capabilities for the `override` system prompt mode.
+// SessionSystemPromptOverrideCapabilities: Capabilities for the `override` system prompt mode.
 //
 // Supplying `{}` means the agent supports replacing its built-in default
 // instructions with the client-provided system prompt.
@@ -10824,7 +11173,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 						var item ToolCallContent
 						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							switch item.Type {
-							case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
+							case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal, ToolCallContentTypeSession:
 								items = append(items, item)
 							}
 						}
@@ -10933,7 +11282,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 						var item ToolCallContent
 						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							switch item.Type {
-							case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
+							case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal, ToolCallContentTypeSession:
 								items = append(items, item)
 							}
 						}
@@ -12758,17 +13107,12 @@ type SubagentUpdate struct {
 	NullFields []string `json:"-"`
 }
 
-// SystemPrompt: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Client-provided system-level instructions for a session.
+// SystemPrompt: Client-provided system-level instructions for a session.
 //
 // Clients MUST only send this when the Agent advertises
 // `sessionCapabilities.systemPrompt`. Agents that cannot apply it, for example
 // because of an unadvertised mode or an unsupported content block type, MUST
-// return an error instead of creating, loading, resuming, or forking the
-// session.
+// return an error instead of creating, loading, or resuming the session.
 type SystemPrompt struct {
 	Meta    Meta             `json:"_meta,omitzero"`
 	Content []ContentBlock   `json:"content"`
@@ -12809,11 +13153,7 @@ func (p *SystemPrompt) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SystemPromptMode: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// How the Agent combines a client-provided system prompt with its own instructions.
+// SystemPromptMode: How the Agent combines a client-provided system prompt with its own instructions.
 //
 // Unknown modes are preserved so they can be stored,
 // proxied, or forwarded. An Agent MUST return an error for a mode it does not
@@ -13159,7 +13499,7 @@ func (c *ToolCall) UnmarshalJSON(data []byte) error {
 				var item ToolCallContent
 				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
-					case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
+					case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal, ToolCallContentTypeSession:
 						decoded.Content = append(decoded.Content, item)
 					}
 				}
@@ -13231,6 +13571,7 @@ type ToolCallContent struct {
 	NewText    string              `json:"newText,omitempty"`
 	OldText    *string             `json:"oldText,omitempty"`
 	Path       string              `json:"path,omitempty"`
+	SessionID  SessionId           `json:"sessionId,omitempty"`
 	TerminalID TerminalId          `json:"terminalId,omitempty"`
 }
 
@@ -13241,6 +13582,7 @@ const (
 	ToolCallContentTypeContent  ToolCallContentType = "content"
 	ToolCallContentTypeDiff     ToolCallContentType = "diff"
 	ToolCallContentTypeTerminal ToolCallContentType = "terminal"
+	ToolCallContentTypeSession  ToolCallContentType = "session"
 )
 
 // ContentToolCallContent creates an ToolCallContent variant: Standard content block (text, images, resources).
@@ -13272,6 +13614,18 @@ func TerminalToolCallContent(terminalID TerminalId) ToolCallContent {
 	}
 }
 
+// SessionToolCallContent creates an ToolCallContent variant: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// A display-only reference to another session, such as a subagent.
+func SessionToolCallContent(sessionID SessionId) ToolCallContent {
+	return ToolCallContent{
+		Type:      ToolCallContentTypeSession,
+		SessionID: sessionID,
+	}
+}
+
 // MarshalJSON implements json.Marshaler.
 func (c ToolCallContent) MarshalJSON() ([]byte, error) {
 	type alias ToolCallContent
@@ -13281,6 +13635,7 @@ func (c ToolCallContent) MarshalJSON() ([]byte, error) {
 		NewText    *string       `json:"newText,omitempty"`
 		Path       *string       `json:"path,omitempty"`
 		TerminalID *TerminalId   `json:"terminalId,omitempty"`
+		SessionID  *SessionId    `json:"sessionId,omitempty"`
 	}
 	w := wire{alias: (*alias)(&c)}
 	if !reflect.ValueOf(c.Content).IsZero() {
@@ -13299,6 +13654,10 @@ func (c ToolCallContent) MarshalJSON() ([]byte, error) {
 		TerminalID := c.TerminalID
 		w.TerminalID = &TerminalID
 	}
+	if !reflect.ValueOf(c.SessionID).IsZero() {
+		SessionID := c.SessionID
+		w.SessionID = &SessionID
+	}
 	switch c.Type {
 	case ToolCallContentTypeContent:
 		Content := c.Content
@@ -13311,6 +13670,9 @@ func (c ToolCallContent) MarshalJSON() ([]byte, error) {
 	case ToolCallContentTypeTerminal:
 		TerminalID := c.TerminalID
 		w.TerminalID = &TerminalID
+	case ToolCallContentTypeSession:
+		SessionID := c.SessionID
+		w.SessionID = &SessionID
 	}
 	return json.Marshal(w)
 }
@@ -13326,6 +13688,7 @@ func (c *ToolCallContent) UnmarshalJSON(data []byte) error {
 		NewText    json.RawMessage `json:"newText"`
 		OldText    json.RawMessage `json:"oldText"`
 		Path       json.RawMessage `json:"path"`
+		SessionID  json.RawMessage `json:"sessionId"`
 		TerminalID json.RawMessage `json:"terminalId"`
 	}
 	if err := unmarshalJSON(data, &raw); err != nil {
@@ -13423,6 +13786,31 @@ func (c *ToolCallContent) UnmarshalJSON(data []byte) error {
 					return err
 				}
 				decoded.TerminalID = value
+			}
+			return nil
+		}()
+	case "session":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "sessionId"}, []string{"sessionId", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.SessionID) > 0 {
+				var value SessionId
+				if err := unmarshalJSON(raw.SessionID, &value); err != nil {
+					return err
+				}
+				decoded.SessionID = value
 			}
 			return nil
 		}()
@@ -13573,7 +13961,7 @@ func (u *ToolCallUpdate) UnmarshalJSON(data []byte) error {
 				var item ToolCallContent
 				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
-					case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
+					case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal, ToolCallContentTypeSession:
 						items = append(items, item)
 					}
 				}

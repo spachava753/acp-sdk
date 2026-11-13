@@ -187,6 +187,14 @@ const (
 	//
 	// See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/v1/draft/session-setup)
 	MethodSessionNew = "session/new"
+	// MethodSessionOptions: **UNSTABLE**
+	//
+	// This capability is not part of the spec yet, and may be removed or changed at any point.
+	//
+	// Returns the config options a session would start with, without creating or resuming a session.
+	//
+	// This method is only available if the agent advertises the `sessionCapabilities.options` capability.
+	MethodSessionOptions = "session/options"
 	// MethodSessionPrompt: Processes a user prompt within a session.
 	//
 	// This method handles the whole lifecycle of a prompt:
@@ -613,6 +621,18 @@ type SessionNewHandler interface {
 	//
 	// See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/v1/draft/session-setup)
 	SessionNew(context.Context, *NewSessionRequest) (*NewSessionResponse, error)
+}
+
+// SessionOptionsHandler handles session/options requests.
+type SessionOptionsHandler interface {
+	// SessionOptions: **UNSTABLE**
+	//
+	// This capability is not part of the spec yet, and may be removed or changed at any point.
+	//
+	// Returns the config options a session would start with, without creating or resuming a session.
+	//
+	// This method is only available if the agent advertises the `sessionCapabilities.options` capability.
+	SessionOptions(context.Context, *SessionOptionsRequest) (*SessionOptionsResponse, error)
 }
 
 // SessionPromptHandler handles session/prompt requests.

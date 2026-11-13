@@ -423,6 +423,19 @@ func handleAgentRequest(ctx context.Context, handler any, req *jsonrpc.Request) 
 			return nil, err
 		}
 		return rpcResult(h.SessionNew(ctx, params))
+	case MethodSessionOptions:
+		if !req.IsCall() {
+			return nil, nil
+		}
+		h, ok := handler.(SessionOptionsHandler)
+		if !ok {
+			return nil, methodNotFound(req.Method)
+		}
+		params, err := decodeProtocolParams[SessionOptionsRequest](req)
+		if err != nil {
+			return nil, err
+		}
+		return rpcResult(h.SessionOptions(ctx, params))
 	case MethodSessionPrompt:
 		if !req.IsCall() {
 			return nil, nil
