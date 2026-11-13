@@ -288,7 +288,7 @@ func (l *List) UnmarshalJSON(data []byte) error {
 			decoded.Closed = []ClosedNullTag{}
 			for _, value := range values {
 				var item ClosedNullTag
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.NullFields2 {
 					case ClosedNullTagTypeKnown, ClosedNullTagTypeOther:
 						decoded.Closed = append(decoded.Closed, item)
@@ -303,7 +303,7 @@ func (l *List) UnmarshalJSON(data []byte) error {
 			decoded.Open = []ExtraTag{}
 			for _, value := range values {
 				var item ExtraTag
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Open = append(decoded.Open, item)
 				}
 			}

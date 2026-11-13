@@ -256,7 +256,7 @@ func (u *Update) UnmarshalJSON(data []byte) error {
 					items := []ToolContent{}
 					for _, rawItem := range values {
 						var item ToolContent
-						if err := unmarshalJSON(rawItem, &item); err == nil {
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							switch item.Type {
 							case ToolContentTypeText, ToolContentTypeTerminal:
 								items = append(items, item)

@@ -47,6 +47,25 @@ func TestElicitationResponseBranches(t *testing.T) {
 	})
 }
 
+// TestMultiSelectDecoding checks that a multi-select default drops items that
+// are not strings, including null, which would otherwise decode as "". It also
+// checks that items with an empty type are rejected unless they are valid
+// titled items: the Go value marks titled items with an empty type, so taking
+// them as a custom type would re-encode them as a different variant.
+func TestMultiSelectDecoding(t *testing.T) {
+	newProperty := alloc[acp.ElicitationPropertySchema]
+	newItems := alloc[acp.MultiSelectItems]
+	runDecodeCases(t, []decodeCase{
+		{name: "default_skips_invalid_items", new: newProperty,
+			input: `{"type":"array","items":{"type":"string","enum":["good"]},"default":["good",null,123]}`,
+			want:  `{"type":"array","items":{"type":"string","enum":["good"]},"default":["good"]}`},
+		{name: "custom_type", new: newItems, input: `{"type":"_vendor","enum":["a"]}`},
+		{name: "empty_type", new: newItems, input: `{"type":""}`, reject: true},
+		{name: "empty_type_titled", new: newItems,
+			input: `{"type":"","anyOf":[{"const":"a","title":"A"}]}`, want: `{"anyOf":[{"const":"a","title":"A"}]}`},
+	})
+}
+
 // TestNullableRequestID checks that a request ID may be null, a string or an
 // int64, and that allowing null does not relax the other two.
 func TestNullableRequestID(t *testing.T) {

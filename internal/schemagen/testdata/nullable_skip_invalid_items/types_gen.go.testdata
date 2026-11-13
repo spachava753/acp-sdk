@@ -34,7 +34,7 @@ func (s *AnnotationSet) UnmarshalJSON(data []byte) error {
 			items := []Role{}
 			for _, value := range values {
 				var item Role
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item {
 					case "assistant", "user":
 						items = append(items, item)
@@ -50,7 +50,7 @@ func (s *AnnotationSet) UnmarshalJSON(data []byte) error {
 			items := []string{}
 			for _, value := range values {
 				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					items = append(items, item)
 				}
 			}
@@ -171,7 +171,7 @@ func (a *TaggedAnnotation) UnmarshalJSON(data []byte) error {
 					items := []Role{}
 					for _, rawItem := range values {
 						var item Role
-						if err := unmarshalJSON(rawItem, &item); err == nil {
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							switch item {
 							case "assistant", "user":
 								items = append(items, item)

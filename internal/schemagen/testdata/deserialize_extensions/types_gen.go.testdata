@@ -68,7 +68,7 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 			decoded.Items = []Item{}
 			for _, value := range values {
 				var item Item
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Items = append(decoded.Items, item)
 				}
 			}
@@ -86,7 +86,7 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 			decoded.RequiredItems = []string{}
 			for _, value := range values {
 				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.RequiredItems = append(decoded.RequiredItems, item)
 				}
 			}
@@ -181,7 +181,7 @@ func (t *Tagged) UnmarshalJSON(data []byte) error {
 					items := []string{}
 					for _, rawItem := range values {
 						var item string
-						if err := unmarshalJSON(rawItem, &item); err == nil {
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							items = append(items, item)
 						}
 					}

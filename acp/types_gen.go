@@ -177,7 +177,7 @@ func (a *Annotations) UnmarshalJSON(data []byte) error {
 			items := []Role{}
 			for _, value := range values {
 				var item Role
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item {
 					case RoleAssistant, RoleUser:
 						items = append(items, item)
@@ -830,7 +830,7 @@ func (r *AuthStatusResponse) UnmarshalJSON(data []byte) error {
 			decoded.Accounts = []AuthAccount{}
 			for _, value := range values {
 				var item AuthAccount
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Accounts = append(decoded.Accounts, item)
 				}
 			}
@@ -882,7 +882,7 @@ func (n *AuthStatusUpdateNotification) UnmarshalJSON(data []byte) error {
 			decoded.Accounts = []AuthAccount{}
 			for _, value := range values {
 				var item AuthAccount
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Accounts = append(decoded.Accounts, item)
 				}
 			}
@@ -1084,7 +1084,7 @@ func (u *AvailableCommandsUpdate) UnmarshalJSON(data []byte) error {
 			decoded.AvailableCommands = []AvailableCommand{}
 			for _, value := range values {
 				var item AvailableCommand
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.AvailableCommands = append(decoded.AvailableCommands, item)
 				}
 			}
@@ -1594,7 +1594,7 @@ func (u *ConfigOptionUpdate) UnmarshalJSON(data []byte) error {
 			decoded.ConfigOptions = []SessionConfigOption{}
 			for _, value := range values {
 				var item SessionConfigOption
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
 						decoded.ConfigOptions = append(decoded.ConfigOptions, item)
@@ -3635,7 +3635,7 @@ func (s *ElicitationPropertySchema) UnmarshalJSON(data []byte) error {
 					items := []string{}
 					for _, rawItem := range values {
 						var item string
-						if err := unmarshalJSON(rawItem, &item); err == nil {
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							items = append(items, item)
 						}
 					}
@@ -4516,7 +4516,7 @@ func (r *ForkSessionResponse) UnmarshalJSON(data []byte) error {
 			items := []SessionConfigOption{}
 			for _, value := range values {
 				var item SessionConfigOption
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
 						items = append(items, item)
@@ -5252,7 +5252,7 @@ func (r *InitializeResponse) UnmarshalJSON(data []byte) error {
 			decoded.AuthMethods = []AuthMethod{}
 			for _, value := range values {
 				var item AuthMethod
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.AuthMethods = append(decoded.AuthMethods, item)
 				}
 			}
@@ -5554,7 +5554,7 @@ func (r *LoadSessionResponse) UnmarshalJSON(data []byte) error {
 			items := []SessionConfigOption{}
 			for _, value := range values {
 				var item SessionConfigOption
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
 						items = append(items, item)
@@ -6763,6 +6763,9 @@ func (i *MultiSelectItems) UnmarshalJSON(data []byte) error {
 			if tagErr != nil {
 				return tagErr
 			}
+			if tag == "" {
+				return fmt.Errorf("MultiSelectItems: empty type is not supported")
+			}
 			decoded.Type = tag
 			if err := requireJSONProperties(data, []string{"type"}, []string{"type"}); err != nil {
 				return err
@@ -6844,7 +6847,7 @@ func (s *MultiSelectPropertySchema) UnmarshalJSON(data []byte) error {
 			items := []string{}
 			for _, value := range values {
 				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					items = append(items, item)
 				}
 			}
@@ -6916,7 +6919,7 @@ func (r *NewSessionResponse) UnmarshalJSON(data []byte) error {
 			items := []SessionConfigOption{}
 			for _, value := range values {
 				var item SessionConfigOption
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
 						items = append(items, item)
@@ -7173,7 +7176,7 @@ func (p *Plan) UnmarshalJSON(data []byte) error {
 			decoded.Entries = []PlanEntry{}
 			for _, value := range values {
 				var item PlanEntry
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Entries = append(decoded.Entries, item)
 				}
 			}
@@ -7404,7 +7407,7 @@ func (i *PlanItems) UnmarshalJSON(data []byte) error {
 			decoded.Entries = []PlanEntry{}
 			for _, value := range values {
 				var item PlanEntry
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Entries = append(decoded.Entries, item)
 				}
 			}
@@ -7650,7 +7653,7 @@ func (c *PlanUpdateContent) UnmarshalJSON(data []byte) error {
 					items := []PlanEntry{}
 					for _, rawItem := range values {
 						var item PlanEntry
-						if err := unmarshalJSON(rawItem, &item); err == nil {
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							items = append(items, item)
 						}
 					}
@@ -8574,7 +8577,7 @@ func (r *ResumeSessionResponse) UnmarshalJSON(data []byte) error {
 			items := []SessionConfigOption{}
 			for _, value := range values {
 				var item SessionConfigOption
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
 						items = append(items, item)
@@ -9309,7 +9312,7 @@ func (g *SessionConfigSelectGroup) UnmarshalJSON(data []byte) error {
 			decoded.Options = []SessionConfigSelectOption{}
 			for _, value := range values {
 				var item SessionConfigSelectOption
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Options = append(decoded.Options, item)
 				}
 			}
@@ -9530,7 +9533,7 @@ func (i *SessionInfo) UnmarshalJSON(data []byte) error {
 			decoded.AdditionalDirectories = []string{}
 			for _, value := range values {
 				var item string
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.AdditionalDirectories = append(decoded.AdditionalDirectories, item)
 				}
 			}
@@ -9743,7 +9746,7 @@ func (s *SessionModeState) UnmarshalJSON(data []byte) error {
 			decoded.AvailableModes = []SessionMode{}
 			for _, value := range values {
 				var item SessionMode
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.AvailableModes = append(decoded.AvailableModes, item)
 				}
 			}
@@ -10819,7 +10822,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 					items := []ToolCallContent{}
 					for _, rawItem := range values {
 						var item ToolCallContent
-						if err := unmarshalJSON(rawItem, &item); err == nil {
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							switch item.Type {
 							case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
 								items = append(items, item)
@@ -10847,7 +10850,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 					items := []ToolCallLocation{}
 					for _, rawItem := range values {
 						var item ToolCallLocation
-						if err := unmarshalJSON(rawItem, &item); err == nil {
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							items = append(items, item)
 						}
 					}
@@ -10928,7 +10931,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 					items := []ToolCallContent{}
 					for _, rawItem := range values {
 						var item ToolCallContent
-						if err := unmarshalJSON(rawItem, &item); err == nil {
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							switch item.Type {
 							case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
 								items = append(items, item)
@@ -10953,7 +10956,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 					items := []ToolCallLocation{}
 					for _, rawItem := range values {
 						var item ToolCallLocation
-						if err := unmarshalJSON(rawItem, &item); err == nil {
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							items = append(items, item)
 						}
 					}
@@ -11024,7 +11027,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 					items := []PlanEntry{}
 					for _, rawItem := range values {
 						var item PlanEntry
-						if err := unmarshalJSON(rawItem, &item); err == nil {
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							items = append(items, item)
 						}
 					}
@@ -11105,7 +11108,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 					items := []AvailableCommand{}
 					for _, rawItem := range values {
 						var item AvailableCommand
-						if err := unmarshalJSON(rawItem, &item); err == nil {
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							items = append(items, item)
 						}
 					}
@@ -11161,7 +11164,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 					items := []SessionConfigOption{}
 					for _, rawItem := range values {
 						var item SessionConfigOption
-						if err := unmarshalJSON(rawItem, &item); err == nil {
+						if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 							switch item.Type {
 							case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
 								items = append(items, item)
@@ -11346,7 +11349,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 						items := []ContentBlock{}
 						for _, rawItem := range values {
 							var item ContentBlock
-							if err := unmarshalJSON(rawItem, &item); err == nil {
+							if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 								switch item.Type {
 								case ContentBlockTypeText, ContentBlockTypeImage, ContentBlockTypeAudio, ContentBlockTypeResourceLink, ContentBlockTypeResource:
 									items = append(items, item)
@@ -11511,7 +11514,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 						items := []ContentBlock{}
 						for _, rawItem := range values {
 							var item ContentBlock
-							if err := unmarshalJSON(rawItem, &item); err == nil {
+							if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 								switch item.Type {
 								case ContentBlockTypeText, ContentBlockTypeImage, ContentBlockTypeAudio, ContentBlockTypeResourceLink, ContentBlockTypeResource:
 									items = append(items, item)
@@ -11909,7 +11912,7 @@ func (r *SetSessionConfigOptionResponse) UnmarshalJSON(data []byte) error {
 			decoded.ConfigOptions = []SessionConfigOption{}
 			for _, value := range values {
 				var item SessionConfigOption
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case SessionConfigOptionTypeSelect, SessionConfigOptionTypeBoolean:
 						decoded.ConfigOptions = append(decoded.ConfigOptions, item)
@@ -13154,7 +13157,7 @@ func (c *ToolCall) UnmarshalJSON(data []byte) error {
 			decoded.Content = []ToolCallContent{}
 			for _, value := range values {
 				var item ToolCallContent
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
 						decoded.Content = append(decoded.Content, item)
@@ -13178,7 +13181,7 @@ func (c *ToolCall) UnmarshalJSON(data []byte) error {
 			decoded.Locations = []ToolCallLocation{}
 			for _, value := range values {
 				var item ToolCallLocation
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Locations = append(decoded.Locations, item)
 				}
 			}
@@ -13568,7 +13571,7 @@ func (u *ToolCallUpdate) UnmarshalJSON(data []byte) error {
 			items := []ToolCallContent{}
 			for _, value := range values {
 				var item ToolCallContent
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case ToolCallContentTypeContent, ToolCallContentTypeDiff, ToolCallContentTypeTerminal:
 						items = append(items, item)
@@ -13593,7 +13596,7 @@ func (u *ToolCallUpdate) UnmarshalJSON(data []byte) error {
 			items := []ToolCallLocation{}
 			for _, value := range values {
 				var item ToolCallLocation
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					items = append(items, item)
 				}
 			}
@@ -14137,7 +14140,7 @@ func (u *CompactionUpdate) UnmarshalJSON(data []byte) error {
 				items := []ContentBlock{}
 				for _, rawItem := range values {
 					var item ContentBlock
-					if err := unmarshalJSON(rawItem, &item); err == nil {
+					if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 						switch item.Type {
 						case ContentBlockTypeText, ContentBlockTypeImage, ContentBlockTypeAudio, ContentBlockTypeResourceLink, ContentBlockTypeResource:
 							items = append(items, item)
@@ -14196,7 +14199,7 @@ func (r *ListSessionsResponse) UnmarshalJSON(data []byte) error {
 			decoded.Sessions = []SessionInfo{}
 			for _, value := range values {
 				var item SessionInfo
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Sessions = append(decoded.Sessions, item)
 				}
 			}
@@ -14311,7 +14314,7 @@ func (i *ProviderInfo) UnmarshalJSON(data []byte) error {
 			decoded.Supported = []LlmProtocol{}
 			for _, value := range values {
 				var item LlmProtocol
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.Supported = append(decoded.Supported, item)
 				}
 			}
@@ -14488,7 +14491,7 @@ func (m *SessionMessage) UnmarshalJSON(data []byte) error {
 				items := []ContentBlock{}
 				for _, rawItem := range values {
 					var item ContentBlock
-					if err := unmarshalJSON(rawItem, &item); err == nil {
+					if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
 						switch item.Type {
 						case ContentBlockTypeText, ContentBlockTypeImage, ContentBlockTypeAudio, ContentBlockTypeResourceLink, ContentBlockTypeResource:
 							items = append(items, item)

@@ -54,7 +54,7 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 			decoded.Encodings = []Encoding{}
 			for _, value := range values {
 				var item Encoding
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item {
 					case EncodingUtf8, EncodingUtf16:
 						decoded.Encodings = append(decoded.Encodings, item)

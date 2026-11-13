@@ -122,6 +122,44 @@ func TestFinalReplyAfterInputEOF(t *testing.T) {
 	}
 }
 
+// A notification handler still running at input EOF can also finish its
+// output: half-close admits notifications from any accepted handler, not only
+// from request handlers awaiting their reply.
+func TestNotificationHandlerNotifiesAfterInputEOF(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		var conn *acp.AgentConnection
+		release := make(chan struct{})
+		sent := make(chan error, 1)
+		mux := acp.NewExtensionMux()
+		if err := acp.AddExtensionNotification(mux, "_test/finish", func(ctx context.Context, _ *struct{}) error {
+			<-release
+			sent <- conn.NotifyExtension(ctx, "_test/done", struct{}{})
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		agent, peer := acptest.StartAgentFunc(t, func(c *acp.AgentConnection) any {
+			conn = c
+			return mux
+		})
+		peer.Notify("_test/finish", struct{}{})
+		peer.CloseInput()
+		// The handler is now blocked and the agent has read input EOF.
+		synctest.Wait()
+		close(release)
+		if err := <-sent; err != nil {
+			t.Errorf("notification after input EOF = %v, want nil", err)
+		}
+		if err := agent.Wait(t); err != nil {
+			t.Errorf("RunAgent = %v, want nil after input EOF", err)
+		}
+		frames := peer.Drain()
+		if len(frames) != 1 || frames[0].Method != "_test/done" {
+			t.Errorf("frames = %v, want only the _test/done notification", frames)
+		}
+	})
+}
+
 // readByteByByte reads r one byte at a time until it fails, returning what it
 // read and the error.
 func readByteByByte(r io.Reader) ([]byte, error) {

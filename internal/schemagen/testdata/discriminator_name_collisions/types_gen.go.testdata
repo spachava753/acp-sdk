@@ -197,7 +197,7 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 			decoded.Items = []CollisionUnion{}
 			for _, value := range values {
 				var item CollisionUnion
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Kind {
 					case CollisionUnionTypeInProgress, CollisionUnionTypeInProgress2, CollisionUnionTypeInProgress3:
 						decoded.Items = append(decoded.Items, item)

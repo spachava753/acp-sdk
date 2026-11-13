@@ -26,7 +26,7 @@ func (l *List) UnmarshalJSON(data []byte) error {
 			decoded.Options = []Option{}
 			for _, value := range values {
 				var item Option
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Type {
 					case OptionTypeBoolean, OptionTypeSelect:
 						decoded.Options = append(decoded.Options, item)

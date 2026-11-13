@@ -93,13 +93,22 @@ func taggedUnionUnmarshalCode(defs map[string]*jsonschema.Schema, name string, s
 			jen.Id("tagErr").Op("=").Id("unmarshalJSON").Call(jen.Id("raw").Dot(discriminatorGoName), jen.Op("&").Id("tag")),
 		),
 	)
+	// The Go value marks an untagged variant with an empty discriminator, so an
+	// open variant cannot also hold one: it would re-encode as the untagged
+	// variant. Such input must match another variant instead.
+	untagged := slices.ContainsFunc(branches, func(branch *jsonschema.Schema) bool {
+		return unionBranchProperties(defs, schema, branch)[discriminator] == nil
+	})
 	candidate := func(branch *jsonschema.Schema) jen.Code {
 		prefix := []jen.Code{jen.Id("decoded").Op("=").Id("alias").Values()}
-		if unionBranchProperties(defs, schema, branch)[discriminator] != nil {
-			prefix = append(prefix,
-				jen.If(jen.Id("tagErr").Op("!=").Nil()).Block(jen.Return(jen.Id("tagErr"))),
-				jen.Id("decoded").Dot(discriminatorGoName).Op("=").Id("tag"),
-			)
+		if property := unionBranchProperties(defs, schema, branch)[discriminator]; property != nil {
+			prefix = append(prefix, jen.If(jen.Id("tagErr").Op("!=").Nil()).Block(jen.Return(jen.Id("tagErr"))))
+			if _, constant := constString(property); untagged && !constant {
+				prefix = append(prefix, jen.If(jen.Id("tag").Op("==").Lit("")).Block(
+					jen.Return(jen.Qual("fmt", "Errorf").Call(jen.Lit(name+": empty "+discriminator+" is not supported"))),
+				))
+			}
+			prefix = append(prefix, jen.Id("decoded").Dot(discriminatorGoName).Op("=").Id("tag"))
 		}
 		prefix = append(prefix, taggedBranchDecodeCode(defs, schema, branch, fields, discriminator, retainExtra, recordRequired)...)
 		return jen.Func().Params().Error().Block(prefix...).Call()

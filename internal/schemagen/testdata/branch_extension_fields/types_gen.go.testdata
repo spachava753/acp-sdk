@@ -2,6 +2,7 @@ package acp
 
 import (
 	"encoding/json"
+	"fmt"
 	"slices"
 )
 
@@ -343,6 +344,9 @@ func (i *Items) UnmarshalJSON(data []byte) error {
 			decoded = alias{}
 			if tagErr != nil {
 				return tagErr
+			}
+			if tag == "" {
+				return fmt.Errorf("Items: empty kind is not supported")
 			}
 			decoded.Kind = tag
 			if err := requireJSONProperties(data, []string{"kind"}, []string{"kind"}); err != nil {

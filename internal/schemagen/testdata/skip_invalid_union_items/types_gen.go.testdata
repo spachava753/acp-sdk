@@ -164,7 +164,7 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 			decoded.FallbackItems = []FallbackItem{}
 			for _, value := range values {
 				var item FallbackItem
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					decoded.FallbackItems = append(decoded.FallbackItems, item)
 				}
 			}
@@ -176,7 +176,7 @@ func (p *Payload) UnmarshalJSON(data []byte) error {
 			decoded.Items = []TaggedItem{}
 			for _, value := range values {
 				var item TaggedItem
-				if err := unmarshalJSON(value, &item); err == nil {
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
 					switch item.Kind {
 					case TaggedItemTypeText, TaggedItemTypeImage:
 						decoded.Items = append(decoded.Items, item)
