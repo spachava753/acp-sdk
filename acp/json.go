@@ -78,6 +78,8 @@ func validateJSONType[T any](data []byte) error {
 
 // validateJSONNumber checks the JSON token kind without imposing a float64
 // range on opaque values. Numeric strings are strings, not numbers.
+//
+//lint:ignore U1000 Generated decoders call it for raw unions with an unformatted number branch; the current schema has none.
 func validateJSONNumber(data []byte) error {
 	var value any
 	if err := unmarshalJSON(data, &value); err != nil {
