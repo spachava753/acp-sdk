@@ -221,6 +221,17 @@ func (c *Client) SessionNew(ctx context.Context, params *NewSessionRequest) (*Ne
 	return call[NewSessionResponse](ctx, c.rpc.conn, MethodSessionNew, params)
 }
 
+// SessionOptions: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Returns the config options a session would start with, without creating or resuming a session.
+//
+// This method is only available if the agent advertises the `sessionCapabilities.options` capability.
+func (c *Client) SessionOptions(ctx context.Context, params *SessionOptionsRequest) (*SessionOptionsResponse, error) {
+	return call[SessionOptionsResponse](ctx, c.rpc.conn, MethodSessionOptions, params)
+}
+
 // SessionPrompt: Processes a user prompt within a session.
 //
 // This method handles the whole lifecycle of a prompt:

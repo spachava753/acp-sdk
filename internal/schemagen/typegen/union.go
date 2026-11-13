@@ -735,8 +735,7 @@ func arrayUnionConstructorPrelude(defs map[string]*jsonschema.Schema, typeName, 
 
 func discriminatorTypeName(defs map[string]*jsonschema.Schema, unionName string) string {
 	used := map[string]bool{}
-	for name := range defs {
-		goName := goDefinitionName(defs, name)
+	for _, goName := range DefinitionNames(defs) {
 		if goName != unionName {
 			used[goName] = true
 		}
@@ -1143,8 +1142,8 @@ func arrayUnionVariants(defs map[string]*jsonschema.Schema, name string, branche
 	variants := make([]arrayUnionVariant, 0, len(branches))
 	usedFields := map[string]bool{}
 	usedTypes := map[string]bool{}
-	for defName := range defs {
-		usedTypes[goDefinitionName(defs, defName)] = true
+	for _, goName := range DefinitionNames(defs) {
+		usedTypes[goName] = true
 	}
 	for _, branch := range branches {
 		fieldName := arrayUnionBaseFieldName(branch.Title)
