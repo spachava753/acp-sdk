@@ -1340,10 +1340,12 @@ func (c *ClientCapabilities) UnmarshalJSON(data []byte) error {
 
 // ClientSessionCapabilities: Session-related capabilities supported by the client.
 type ClientSessionCapabilities struct {
-	Meta          Meta                              `json:"_meta,omitzero"`
-	Compaction    *CompactionCapabilities           `json:"compaction,omitempty"`
-	ConfigOptions *SessionConfigOptionsCapabilities `json:"configOptions,omitempty"`
-	Notices       *NoticeCapabilities               `json:"notices,omitempty"`
+	Meta              Meta                              `json:"_meta,omitzero"`
+	Compaction        *CompactionCapabilities           `json:"compaction,omitempty"`
+	ConfigOptions     *SessionConfigOptionsCapabilities `json:"configOptions,omitempty"`
+	Cursors           *SessionCursorsCapabilities       `json:"cursors,omitempty"`
+	Notices           *NoticeCapabilities               `json:"notices,omitempty"`
+	PromptSuggestions *PromptSuggestionsCapabilities    `json:"promptSuggestions,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -1351,10 +1353,12 @@ func (c *ClientSessionCapabilities) UnmarshalJSON(data []byte) error {
 	type alias ClientSessionCapabilities
 	decoded := alias{}
 	raw := struct {
-		Meta          json.RawMessage `json:"_meta"`
-		Compaction    json.RawMessage `json:"compaction"`
-		ConfigOptions json.RawMessage `json:"configOptions"`
-		Notices       json.RawMessage `json:"notices"`
+		Meta              json.RawMessage `json:"_meta"`
+		Compaction        json.RawMessage `json:"compaction"`
+		ConfigOptions     json.RawMessage `json:"configOptions"`
+		Cursors           json.RawMessage `json:"cursors"`
+		Notices           json.RawMessage `json:"notices"`
+		PromptSuggestions json.RawMessage `json:"promptSuggestions"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
@@ -1378,10 +1382,22 @@ func (c *ClientSessionCapabilities) UnmarshalJSON(data []byte) error {
 			decoded.ConfigOptions = value
 		}
 	}
+	if len(raw.Cursors) > 0 {
+		var value *SessionCursorsCapabilities
+		if err := unmarshalJSON(raw.Cursors, &value); err == nil {
+			decoded.Cursors = value
+		}
+	}
 	if len(raw.Notices) > 0 {
 		var value *NoticeCapabilities
 		if err := unmarshalJSON(raw.Notices, &value); err == nil {
 			decoded.Notices = value
+		}
+	}
+	if len(raw.PromptSuggestions) > 0 {
+		var value *PromptSuggestionsCapabilities
+		if err := unmarshalJSON(raw.PromptSuggestions, &value); err == nil {
+			decoded.PromptSuggestions = value
 		}
 	}
 	*c = ClientSessionCapabilities(decoded)
@@ -2178,7 +2194,7 @@ func UrlCreateElicitationRequest(message string, elicitationID ElicitationId, ur
 // extensions. Unknown values that do not begin with `_` are reserved for
 // future ACP variants.
 //
-// Clients that do not understand this mode should preserve the raw payload
+// Clients that do not understand this mode SHOULD preserve the raw payload
 // when storing, replaying, proxying, or forwarding elicitation requests.
 // They MUST NOT render it as a known elicitation mode.
 func OtherCreateElicitationRequest(message string, mode string) CreateElicitationRequest {
@@ -2610,7 +2626,7 @@ func CancelCreateElicitationResponse() CreateElicitationResponse {
 // extensions. Unknown values that do not begin with `_` are reserved for
 // future ACP variants.
 //
-// Agents that do not understand this action should preserve the raw
+// Agents that do not understand this action SHOULD preserve the raw
 // payload when storing, replaying, proxying, or forwarding elicitation
 // responses. They MUST NOT treat it as a known elicitation action.
 func OtherCreateElicitationResponse(action string) CreateElicitationResponse {
@@ -2855,6 +2871,684 @@ func (u *CurrentModeUpdate) UnmarshalJSON(data []byte) error {
 		}
 	}
 	*u = CurrentModeUpdate(decoded)
+	return nil
+}
+
+// CursorAnchor: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Where a session cursor is, relative to an entity the Client holds.
+//
+// The anchor names the entity by its type and ID, and `position` says on which
+// side of that entity the cursor is. A known `type` with a malformed payload is
+// an error. It does not fall back to the unknown-type variant.
+//
+// See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
+type CursorAnchor struct {
+	Type         CursorAnchorType     `json:"type"`
+	Meta         Meta                 `json:"_meta,omitzero"`
+	CompactionID CompactionId         `json:"compactionId,omitempty"`
+	MessageID    MessageId            `json:"messageId,omitempty"`
+	Position     CursorAnchorPosition `json:"position,omitempty"`
+	ToolCallID   ToolCallId           `json:"toolCallId,omitempty"`
+	// ExtraFields retains extension properties explicitly permitted by the schema.
+	// Known properties take precedence when encoding.
+	ExtraFields map[string]json.RawMessage `json:"-"`
+}
+
+// CursorAnchorType is the discriminator for CursorAnchor variants.
+type CursorAnchorType string
+
+const (
+	CursorAnchorTypeUserMessage    CursorAnchorType = "user_message"
+	CursorAnchorTypeAgentMessage   CursorAnchorType = "agent_message"
+	CursorAnchorTypeAgentThought   CursorAnchorType = "agent_thought"
+	CursorAnchorTypeSessionMessage CursorAnchorType = "session_message"
+	CursorAnchorTypeToolCall       CursorAnchorType = "tool_call"
+	CursorAnchorTypeCompaction     CursorAnchorType = "compaction"
+)
+
+// UserMessageCursorAnchor creates an CursorAnchor variant: The cursor is next to a user message.
+func UserMessageCursorAnchor(messageID MessageId, position CursorAnchorPosition) CursorAnchor {
+	return CursorAnchor{
+		Type:      CursorAnchorTypeUserMessage,
+		MessageID: messageID,
+		Position:  position,
+	}
+}
+
+// AgentMessageCursorAnchor creates an CursorAnchor variant: The cursor is next to an agent message.
+func AgentMessageCursorAnchor(messageID MessageId, position CursorAnchorPosition) CursorAnchor {
+	return CursorAnchor{
+		Type:      CursorAnchorTypeAgentMessage,
+		MessageID: messageID,
+		Position:  position,
+	}
+}
+
+// AgentThoughtCursorAnchor creates an CursorAnchor variant: The cursor is next to an agent thought.
+func AgentThoughtCursorAnchor(messageID MessageId, position CursorAnchorPosition) CursorAnchor {
+	return CursorAnchor{
+		Type:      CursorAnchorTypeAgentThought,
+		MessageID: messageID,
+		Position:  position,
+	}
+}
+
+// SessionMessageCursorAnchor creates an CursorAnchor variant: The cursor is next to a session-directed message.
+func SessionMessageCursorAnchor(messageID MessageId, position CursorAnchorPosition) CursorAnchor {
+	return CursorAnchor{
+		Type:      CursorAnchorTypeSessionMessage,
+		MessageID: messageID,
+		Position:  position,
+	}
+}
+
+// ToolCallCursorAnchor creates an CursorAnchor variant: The cursor is next to a tool call.
+func ToolCallCursorAnchor(toolCallID ToolCallId, position CursorAnchorPosition) CursorAnchor {
+	return CursorAnchor{
+		Type:       CursorAnchorTypeToolCall,
+		Position:   position,
+		ToolCallID: toolCallID,
+	}
+}
+
+// CompactionCursorAnchor creates an CursorAnchor variant: The cursor is next to a compaction.
+func CompactionCursorAnchor(compactionID CompactionId, position CursorAnchorPosition) CursorAnchor {
+	return CursorAnchor{
+		Type:         CursorAnchorTypeCompaction,
+		CompactionID: compactionID,
+		Position:     position,
+	}
+}
+
+// OtherCursorAnchor creates an CursorAnchor variant: Custom or future anchor type.
+//
+// Values beginning with `_` are reserved for implementation-specific
+// extensions. Unknown values that do not begin with `_` are reserved for
+// future ACP variants.
+//
+// A Client that does not recognize the type cannot place the cursor and
+// MUST NOT guess a place for it.
+func OtherCursorAnchor(type_ string) CursorAnchor {
+	return CursorAnchor{
+		Type: CursorAnchorType(type_),
+	}
+}
+
+// MarshalJSON implements json.Marshaler.
+func (a CursorAnchor) MarshalJSON() ([]byte, error) {
+	type alias CursorAnchor
+	type wire struct {
+		*alias
+		MessageID    *MessageId            `json:"messageId,omitempty"`
+		Position     *CursorAnchorPosition `json:"position,omitempty"`
+		ToolCallID   *ToolCallId           `json:"toolCallId,omitempty"`
+		CompactionID *CompactionId         `json:"compactionId,omitempty"`
+	}
+	w := wire{alias: (*alias)(&a)}
+	if !reflect.ValueOf(a.MessageID).IsZero() {
+		MessageID := a.MessageID
+		w.MessageID = &MessageID
+	}
+	if !reflect.ValueOf(a.Position).IsZero() {
+		Position := a.Position
+		w.Position = &Position
+	}
+	if !reflect.ValueOf(a.ToolCallID).IsZero() {
+		ToolCallID := a.ToolCallID
+		w.ToolCallID = &ToolCallID
+	}
+	if !reflect.ValueOf(a.CompactionID).IsZero() {
+		CompactionID := a.CompactionID
+		w.CompactionID = &CompactionID
+	}
+	switch a.Type {
+	case CursorAnchorTypeUserMessage:
+		MessageID := a.MessageID
+		w.MessageID = &MessageID
+		Position := a.Position
+		w.Position = &Position
+	case CursorAnchorTypeAgentMessage:
+		MessageID := a.MessageID
+		w.MessageID = &MessageID
+		Position := a.Position
+		w.Position = &Position
+	case CursorAnchorTypeAgentThought:
+		MessageID := a.MessageID
+		w.MessageID = &MessageID
+		Position := a.Position
+		w.Position = &Position
+	case CursorAnchorTypeSessionMessage:
+		MessageID := a.MessageID
+		w.MessageID = &MessageID
+		Position := a.Position
+		w.Position = &Position
+	case CursorAnchorTypeToolCall:
+		Position := a.Position
+		w.Position = &Position
+		ToolCallID := a.ToolCallID
+		w.ToolCallID = &ToolCallID
+	case CursorAnchorTypeCompaction:
+		CompactionID := a.CompactionID
+		w.CompactionID = &CompactionID
+		Position := a.Position
+		w.Position = &Position
+	}
+	switch a.Type {
+	case "user_message":
+		return json.Marshal(w)
+	case "agent_message":
+		return json.Marshal(w)
+	case "agent_thought":
+		return json.Marshal(w)
+	case "session_message":
+		return json.Marshal(w)
+	case "tool_call":
+		return json.Marshal(w)
+	case "compaction":
+		return json.Marshal(w)
+	default:
+		return marshalJSONWithExtraFields(w, a.ExtraFields, []string{"type"})
+	}
+}
+
+// UnmarshalJSON decodes the selected schema variant.
+func (a *CursorAnchor) UnmarshalJSON(data []byte) error {
+	type alias CursorAnchor
+	var decoded alias
+	var raw struct {
+		Type         json.RawMessage `json:"type"`
+		Meta         json.RawMessage `json:"_meta"`
+		CompactionID json.RawMessage `json:"compactionId"`
+		MessageID    json.RawMessage `json:"messageId"`
+		Position     json.RawMessage `json:"position"`
+		ToolCallID   json.RawMessage `json:"toolCallId"`
+	}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	var tag CursorAnchorType
+	var tagErr error
+	if len(raw.Type) > 0 {
+		tagErr = unmarshalJSON(raw.Type, &tag)
+	}
+	var err error
+	switch tag {
+	case "user_message":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "messageId", "position"}, []string{"messageId", "position", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.MessageID) > 0 {
+				var value MessageId
+				if err := unmarshalJSON(raw.MessageID, &value); err != nil {
+					return err
+				}
+				decoded.MessageID = value
+			}
+			if len(raw.Position) > 0 {
+				var value CursorAnchorPosition
+				if err := unmarshalJSON(raw.Position, &value); err != nil {
+					return err
+				}
+				decoded.Position = value
+			}
+			return nil
+		}()
+	case "agent_message":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "messageId", "position"}, []string{"messageId", "position", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.MessageID) > 0 {
+				var value MessageId
+				if err := unmarshalJSON(raw.MessageID, &value); err != nil {
+					return err
+				}
+				decoded.MessageID = value
+			}
+			if len(raw.Position) > 0 {
+				var value CursorAnchorPosition
+				if err := unmarshalJSON(raw.Position, &value); err != nil {
+					return err
+				}
+				decoded.Position = value
+			}
+			return nil
+		}()
+	case "agent_thought":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "messageId", "position"}, []string{"messageId", "position", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.MessageID) > 0 {
+				var value MessageId
+				if err := unmarshalJSON(raw.MessageID, &value); err != nil {
+					return err
+				}
+				decoded.MessageID = value
+			}
+			if len(raw.Position) > 0 {
+				var value CursorAnchorPosition
+				if err := unmarshalJSON(raw.Position, &value); err != nil {
+					return err
+				}
+				decoded.Position = value
+			}
+			return nil
+		}()
+	case "session_message":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "messageId", "position"}, []string{"messageId", "position", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.MessageID) > 0 {
+				var value MessageId
+				if err := unmarshalJSON(raw.MessageID, &value); err != nil {
+					return err
+				}
+				decoded.MessageID = value
+			}
+			if len(raw.Position) > 0 {
+				var value CursorAnchorPosition
+				if err := unmarshalJSON(raw.Position, &value); err != nil {
+					return err
+				}
+				decoded.Position = value
+			}
+			return nil
+		}()
+	case "tool_call":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "toolCallId", "position"}, []string{"position", "toolCallId", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Position) > 0 {
+				var value CursorAnchorPosition
+				if err := unmarshalJSON(raw.Position, &value); err != nil {
+					return err
+				}
+				decoded.Position = value
+			}
+			if len(raw.ToolCallID) > 0 {
+				var value ToolCallId
+				if err := unmarshalJSON(raw.ToolCallID, &value); err != nil {
+					return err
+				}
+				decoded.ToolCallID = value
+			}
+			return nil
+		}()
+	case "compaction":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type", "compactionId", "position"}, []string{"compactionId", "position", "type"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.CompactionID) > 0 {
+				var value CompactionId
+				if err := unmarshalJSON(raw.CompactionID, &value); err != nil {
+					return err
+				}
+				decoded.CompactionID = value
+			}
+			if len(raw.Position) > 0 {
+				var value CursorAnchorPosition
+				if err := unmarshalJSON(raw.Position, &value); err != nil {
+					return err
+				}
+				decoded.Position = value
+			}
+			return nil
+		}()
+	default:
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.Type = tag
+			if err := requireJSONProperties(data, []string{"type"}, []string{"type"}); err != nil {
+				return err
+			}
+			extra, err := captureJSONExtraFields(data, []string{"type"})
+			if err != nil {
+				return err
+			}
+			decoded.ExtraFields = extra
+			return nil
+		}()
+	}
+	if err != nil {
+		return err
+	}
+	*a = CursorAnchor(decoded)
+	return nil
+}
+
+// CursorAnchorPosition: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// On which side of the anchored entity a session cursor is.
+type CursorAnchorPosition string
+
+const (
+	// CursorAnchorPositionBefore: The cursor is immediately before the entity. The history before the
+	// cursor does not include the entity.
+	CursorAnchorPositionBefore CursorAnchorPosition = "before"
+	// CursorAnchorPositionAfter: The cursor is immediately after the entity. The history before the
+	// cursor includes the entity and nothing that follows it in the timeline.
+	CursorAnchorPositionAfter CursorAnchorPosition = "after"
+)
+
+// CursorCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// The methods that currently accept a session cursor.
+//
+// See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
+type CursorCapabilities struct {
+	Meta Meta                    `json:"_meta,omitzero"`
+	Fork *CursorForkCapabilities `json:"fork,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *CursorCapabilities) UnmarshalJSON(data []byte) error {
+	type alias CursorCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		Fork json.RawMessage `json:"fork"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	if len(raw.Fork) > 0 {
+		var value *CursorForkCapabilities
+		if err := unmarshalJSON(raw.Fork, &value); err == nil {
+			decoded.Fork = value
+		}
+	}
+	*c = CursorCapabilities(decoded)
+	return nil
+}
+
+// CursorCompactionAnchor: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// A session cursor anchor to a compaction.
+type CursorCompactionAnchor struct {
+	Meta         Meta                 `json:"_meta,omitzero"`
+	CompactionID CompactionId         `json:"compactionId"`
+	Position     CursorAnchorPosition `json:"position"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (a *CursorCompactionAnchor) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"compactionId", "position"}, []string{"compactionId", "position"}); err != nil {
+		return err
+	}
+	type alias CursorCompactionAnchor
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*a = CursorCompactionAnchor(decoded)
+	return nil
+}
+
+// CursorForkCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Capability to fork the session at a cursor with `session/fork`.
+//
+// Supplying `{}` advertises support. An omitted or `null` `fork` does not.
+type CursorForkCapabilities struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *CursorForkCapabilities) UnmarshalJSON(data []byte) error {
+	type alias CursorForkCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = CursorForkCapabilities(decoded)
+	return nil
+}
+
+// CursorId: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Unique identifier for a session cursor within a session.
+//
+// The Agent generates it, and it is never reused for another position in the
+// session. Clients MUST NOT parse, change, or construct it.
+//
+// See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
+type CursorId string
+
+// CursorMessageAnchor: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// A session cursor anchor to a message. The anchor's `type` names the kind of message.
+type CursorMessageAnchor struct {
+	Meta      Meta                 `json:"_meta,omitzero"`
+	MessageID MessageId            `json:"messageId"`
+	Position  CursorAnchorPosition `json:"position"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (a *CursorMessageAnchor) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"messageId", "position"}, []string{"messageId", "position"}); err != nil {
+		return err
+	}
+	type alias CursorMessageAnchor
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*a = CursorMessageAnchor(decoded)
+	return nil
+}
+
+// CursorToolCallAnchor: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// A session cursor anchor to a tool call.
+type CursorToolCallAnchor struct {
+	Meta       Meta                 `json:"_meta,omitzero"`
+	Position   CursorAnchorPosition `json:"position"`
+	ToolCallID ToolCallId           `json:"toolCallId"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (a *CursorToolCallAnchor) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"toolCallId", "position"}, []string{"position", "toolCallId"}); err != nil {
+		return err
+	}
+	type alias CursorToolCallAnchor
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*a = CursorToolCallAnchor(decoded)
+	return nil
+}
+
+// CursorUpdate: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// A session cursor upsert. A cursor names one position in the session's timeline.
+//
+// The first update for a `cursorId` MUST include `anchor`. The anchor is fixed
+// after that, and later updates change only `capabilities`.
+//
+// Agents MUST only send this update when the Client advertised
+// the `session.cursors` Client capability.
+//
+// `capabilities` and `_meta` have patch semantics: omission leaves the stored
+// value unchanged, `null` clears it, and a concrete value replaces it.
+//
+// See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
+type CursorUpdate struct {
+	Meta         Meta                `json:"_meta,omitzero"`
+	Anchor       *CursorAnchor       `json:"anchor,omitempty"`
+	Capabilities *CursorCapabilities `json:"capabilities,omitempty"`
+	CursorID     CursorId            `json:"cursorId"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *CursorUpdate) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"cursorId"}, []string{"cursorId"}); err != nil {
+		return err
+	}
+	type alias CursorUpdate
+	decoded := alias{}
+	raw := struct {
+		Meta         json.RawMessage `json:"_meta"`
+		Capabilities json.RawMessage `json:"capabilities"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	if len(raw.Capabilities) > 0 {
+		var value *CursorCapabilities
+		if err := unmarshalJSON(raw.Capabilities, &value); err == nil {
+			decoded.Capabilities = value
+		}
+	}
+	*u = CursorUpdate(decoded)
 	return nil
 }
 
@@ -3333,7 +4027,7 @@ func ArrayElicitationPropertySchema(items MultiSelectItems) ElicitationPropertyS
 // extensions. Unknown values that do not begin with `_` are reserved for
 // future ACP variants.
 //
-// Clients that do not understand this property schema type should preserve
+// Clients that do not understand this property schema type SHOULD preserve
 // the raw schema when storing, replaying, proxying, or forwarding
 // elicitation requests. They MUST NOT render it as a known input control.
 func OtherElicitationPropertySchema(type_ string) ElicitationPropertySchema {
@@ -4346,11 +5040,7 @@ const (
 	ErrorCodeResourceNotFound ErrorCode = -32002
 )
 
-// ErrorStopReason: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Details of a failure that ended a child's foreground work.
+// ErrorStopReason: Details of a failure that ended a child's foreground work.
 type ErrorStopReason struct {
 	Error *Error `json:"error,omitempty"`
 }
@@ -4452,12 +5142,14 @@ func (c *FileSystemCapabilities) UnmarshalJSON(data []byte) error {
 //
 // Only available if the Agent supports the `session.fork` capability.
 type ForkSessionRequest struct {
-	Meta                  Meta          `json:"_meta,omitzero"`
-	AdditionalDirectories []string      `json:"additionalDirectories,omitempty"`
-	Cwd                   string        `json:"cwd"`
-	McpServers            []McpServer   `json:"mcpServers,omitempty"`
-	SessionID             SessionId     `json:"sessionId"`
-	SystemPrompt          *SystemPrompt `json:"systemPrompt,omitempty"`
+	Meta                  Meta                         `json:"_meta,omitzero"`
+	AdditionalDirectories []string                     `json:"additionalDirectories,omitempty"`
+	ConfigOptions         []InitialSessionConfigOption `json:"configOptions,omitempty"`
+	CursorID              *CursorId                    `json:"cursorId,omitempty"`
+	Cwd                   string                       `json:"cwd"`
+	McpServers            []McpServer                  `json:"mcpServers,omitempty"`
+	SessionID             SessionId                    `json:"sessionId"`
+	SystemPrompt          *SystemPrompt                `json:"systemPrompt,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -4575,9 +5267,9 @@ func (h *HttpHeader) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// IdleStateUpdate: The child is ready to process another prompt.
+// IdleStateUpdate: Foreground work is not in progress. The parent can give the child more work.
 //
-// An omitted, `null`, or malformed `stopReason` means not reported.
+// An omitted or `null` `stopReason` means not reported.
 type IdleStateUpdate struct {
 	StopReason IdleStateUpdateType `json:"stopReason,omitempty"`
 	Meta       Meta                `json:"_meta,omitzero"`
@@ -6691,10 +7383,10 @@ func (r *MessageMcpRequest) UnmarshalJSON(data []byte) error {
 // inner MCP outcome: an opaque result (including JSON null), or an MCP error.
 // Outer ACP errors are reserved for binding and runtime failures.
 //
-// Both branches require their carrier key. An error must be a non-null object.
+// Both branches require their carrier key. An error MUST be a non-null object.
 // Unknown outer fields are ignored. Inner result and error fields are preserved.
-// Carrier `_meta` is optional. Null or invalid values are treated as absent.
-// Senders must include exactly one outcome. Receivers prefer `result` if both are present.
+// Carrier `_meta` is optional. Omitted and `null` are equivalent.
+// Senders MUST include exactly one outcome.
 type MessageMcpResponse struct {
 	Meta   Meta      `json:"_meta,omitzero"`
 	Error  *McpError `json:"error,omitempty,omitzero"`
@@ -7301,11 +7993,7 @@ func (v *PermissionOptionKind) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("invalid PermissionOptionKind value %q", value)
 }
 
-// Plan: An execution plan for accomplishing complex tasks.
-//
-// Plans consist of multiple entries representing individual tasks or goals.
-// Agents report plans to clients to provide visibility into their execution strategy.
-// Plans can evolve during execution as the agent discovers new requirements or completes tasks.
+// Plan: A checklist sent with the `plan` session update.
 //
 // See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/v1/draft/agent-plan)
 type Plan struct {
@@ -7360,11 +8048,7 @@ func (p *Plan) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// PlanCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Capabilities for receiving `plan_update` and `plan_removed` session updates.
+// PlanCapabilities: Capabilities for receiving `plan_update` and `plan_removed` session updates.
 type PlanCapabilities struct {
 	Meta Meta `json:"_meta,omitzero"`
 }
@@ -7491,53 +8175,10 @@ func (v *PlanEntryStatus) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("invalid PlanEntryStatus value %q", value)
 }
 
-// PlanFile: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A plan represented by a file URI.
-type PlanFile struct {
-	Meta   Meta   `json:"_meta,omitzero"`
-	PlanID PlanId `json:"planId"`
-	URI    string `json:"uri"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (f *PlanFile) UnmarshalJSON(data []byte) error {
-	if err := requireJSONProperties(data, []string{"planId", "uri"}, []string{"planId", "uri"}); err != nil {
-		return err
-	}
-	type alias PlanFile
-	decoded := alias{}
-	raw := struct {
-		Meta json.RawMessage `json:"_meta"`
-		*alias
-	}{alias: &decoded}
-	if err := unmarshalJSON(data, &raw); err != nil {
-		return err
-	}
-	if len(raw.Meta) > 0 {
-		var value Meta
-		if err := unmarshalJSON(raw.Meta, &value); err == nil {
-			decoded.Meta = value
-		}
-	}
-	*f = PlanFile(decoded)
-	return nil
-}
-
-// PlanId: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Unique identifier for a plan within a session.
+// PlanId: Unique identifier for a plan within a session.
 type PlanId string
 
-// PlanItems: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A plan represented as structured entries.
+// PlanItems: A plan represented as structured entries.
 type PlanItems struct {
 	Meta    Meta        `json:"_meta,omitzero"`
 	Entries []PlanEntry `json:"entries"`
@@ -7591,15 +8232,12 @@ func (i *PlanItems) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// PlanMarkdown: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A plan represented as raw markdown content.
+// PlanMarkdown: A plan represented as Markdown.
 type PlanMarkdown struct {
-	Meta    Meta   `json:"_meta,omitzero"`
-	Content string `json:"content"`
-	PlanID  PlanId `json:"planId"`
+	Meta    Meta    `json:"_meta,omitzero"`
+	Content string  `json:"content"`
+	Path    *string `json:"path,omitempty"`
+	PlanID  PlanId  `json:"planId"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -7611,6 +8249,7 @@ func (m *PlanMarkdown) UnmarshalJSON(data []byte) error {
 	decoded := alias{}
 	raw := struct {
 		Meta json.RawMessage `json:"_meta"`
+		Path json.RawMessage `json:"path"`
 		*alias
 	}{alias: &decoded}
 	if err := unmarshalJSON(data, &raw); err != nil {
@@ -7622,15 +8261,17 @@ func (m *PlanMarkdown) UnmarshalJSON(data []byte) error {
 			decoded.Meta = value
 		}
 	}
+	if len(raw.Path) > 0 {
+		var value *string
+		if err := unmarshalJSON(raw.Path, &value); err == nil {
+			decoded.Path = value
+		}
+	}
 	*m = PlanMarkdown(decoded)
 	return nil
 }
 
-// PlanRemoved: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Removal notice for a plan identified by ID.
+// PlanRemoved: Removal notice for a plan identified by ID.
 type PlanRemoved struct {
 	Meta   Meta   `json:"_meta,omitzero"`
 	PlanID PlanId `json:"planId"`
@@ -7660,11 +8301,7 @@ func (r *PlanRemoved) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// PlanUpdate: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A content update for a plan identified by ID.
+// PlanUpdate: A content update for a plan identified by ID.
 type PlanUpdate struct {
 	Meta Meta              `json:"_meta,omitzero"`
 	Plan PlanUpdateContent `json:"plan"`
@@ -7694,18 +8331,14 @@ func (u *PlanUpdate) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// PlanUpdateContent: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Updated content for a plan.
+// PlanUpdateContent: Updated content for a plan.
 type PlanUpdateContent struct {
 	Type    PlanUpdateContentType `json:"type"`
 	Meta    Meta                  `json:"_meta,omitzero"`
 	Content string                `json:"content,omitempty"`
 	Entries []PlanEntry           `json:"entries,omitempty"`
+	Path    *string               `json:"path,omitempty"`
 	PlanID  PlanId                `json:"planId"`
-	URI     string                `json:"uri,omitempty"`
 }
 
 // PlanUpdateContentType is the discriminator for PlanUpdateContent variants.
@@ -7713,7 +8346,6 @@ type PlanUpdateContentType string
 
 const (
 	PlanUpdateContentTypeItems    PlanUpdateContentType = "items"
-	PlanUpdateContentTypeFile     PlanUpdateContentType = "file"
 	PlanUpdateContentTypeMarkdown PlanUpdateContentType = "markdown"
 )
 
@@ -7726,16 +8358,7 @@ func ItemsPlanUpdateContent(planID PlanId, entries []PlanEntry) PlanUpdateConten
 	}
 }
 
-// FilePlanUpdateContent creates an PlanUpdateContent variant: A URI pointing to a file containing the plan.
-func FilePlanUpdateContent(planID PlanId, uri string) PlanUpdateContent {
-	return PlanUpdateContent{
-		Type:   PlanUpdateContentTypeFile,
-		PlanID: planID,
-		URI:    uri,
-	}
-}
-
-// MarkdownPlanUpdateContent creates an PlanUpdateContent variant: Raw markdown content for the plan.
+// MarkdownPlanUpdateContent creates an PlanUpdateContent variant: The complete plan as Markdown.
 func MarkdownPlanUpdateContent(planID PlanId, content string) PlanUpdateContent {
 	return PlanUpdateContent{
 		Type:    PlanUpdateContentTypeMarkdown,
@@ -7750,17 +8373,12 @@ func (c PlanUpdateContent) MarshalJSON() ([]byte, error) {
 	type wire struct {
 		*alias
 		Entries *[]PlanEntry `json:"entries,omitempty"`
-		URI     *string      `json:"uri,omitempty"`
 		Content *string      `json:"content,omitempty"`
 	}
 	w := wire{alias: (*alias)(&c)}
 	if len(c.Entries) > 0 {
 		Entries := c.Entries
 		w.Entries = &Entries
-	}
-	if !reflect.ValueOf(c.URI).IsZero() {
-		URI := c.URI
-		w.URI = &URI
 	}
 	if !reflect.ValueOf(c.Content).IsZero() {
 		Content := c.Content
@@ -7773,9 +8391,6 @@ func (c PlanUpdateContent) MarshalJSON() ([]byte, error) {
 			Entries = []PlanEntry{}
 		}
 		w.Entries = &Entries
-	case PlanUpdateContentTypeFile:
-		URI := c.URI
-		w.URI = &URI
 	case PlanUpdateContentTypeMarkdown:
 		Content := c.Content
 		w.Content = &Content
@@ -7792,8 +8407,8 @@ func (c *PlanUpdateContent) UnmarshalJSON(data []byte) error {
 		Meta    json.RawMessage `json:"_meta"`
 		Content json.RawMessage `json:"content"`
 		Entries json.RawMessage `json:"entries"`
+		Path    json.RawMessage `json:"path"`
 		PlanID  json.RawMessage `json:"planId"`
-		URI     json.RawMessage `json:"uri"`
 	}
 	if err := unmarshalJSON(data, &raw); err != nil {
 		return err
@@ -7843,38 +8458,6 @@ func (c *PlanUpdateContent) UnmarshalJSON(data []byte) error {
 			}
 			return nil
 		}()
-	case "file":
-		err = func() error {
-			decoded = alias{}
-			if tagErr != nil {
-				return tagErr
-			}
-			decoded.Type = tag
-			if err := requireJSONProperties(data, []string{"type", "planId", "uri"}, []string{"planId", "type", "uri"}); err != nil {
-				return err
-			}
-			if len(raw.Meta) > 0 {
-				var value Meta
-				if err := unmarshalJSON(raw.Meta, &value); err == nil {
-					decoded.Meta = value
-				}
-			}
-			if len(raw.PlanID) > 0 {
-				var value PlanId
-				if err := unmarshalJSON(raw.PlanID, &value); err != nil {
-					return err
-				}
-				decoded.PlanID = value
-			}
-			if len(raw.URI) > 0 {
-				var value string
-				if err := unmarshalJSON(raw.URI, &value); err != nil {
-					return err
-				}
-				decoded.URI = value
-			}
-			return nil
-		}()
 	case "markdown":
 		err = func() error {
 			decoded = alias{}
@@ -7897,6 +8480,12 @@ func (c *PlanUpdateContent) UnmarshalJSON(data []byte) error {
 					return err
 				}
 				decoded.Content = value
+			}
+			if len(raw.Path) > 0 {
+				var value *string
+				if err := unmarshalJSON(raw.Path, &value); err == nil {
+					decoded.Path = value
+				}
 			}
 			if len(raw.PlanID) > 0 {
 				var value PlanId
@@ -8060,6 +8649,276 @@ func (r *PromptResponse) UnmarshalJSON(data []byte) error {
 		}
 	}
 	*r = PromptResponse(decoded)
+	return nil
+}
+
+// PromptSuggestion: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// A prompt the Agent predicts the user will send next.
+type PromptSuggestion struct {
+	Meta   Meta           `json:"_meta,omitzero"`
+	Prompt []ContentBlock `json:"prompt"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (s PromptSuggestion) MarshalJSON() ([]byte, error) {
+	type alias PromptSuggestion
+	a := alias(s)
+	if a.Prompt == nil {
+		a.Prompt = []ContentBlock{}
+	}
+	return json.Marshal(a)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *PromptSuggestion) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"prompt"}, []string{"prompt"}); err != nil {
+		return err
+	}
+	type alias PromptSuggestion
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*s = PromptSuggestion(decoded)
+	return nil
+}
+
+// PromptSuggestionsAudioCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Capabilities for audio content in prompt suggestions.
+//
+// Supplying `{}` means the client can offer suggestions that include audio.
+type PromptSuggestionsAudioCapabilities struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *PromptSuggestionsAudioCapabilities) UnmarshalJSON(data []byte) error {
+	type alias PromptSuggestionsAudioCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = PromptSuggestionsAudioCapabilities(decoded)
+	return nil
+}
+
+// PromptSuggestionsCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Client support for `prompt_suggestions_update` session updates.
+//
+// Supplying `{}` means the client can offer prompt suggestions made of `text`
+// and `resource_link` content blocks. The client opts in to other content
+// block types with the fields below. They have the same names as the agent's
+// prompt capabilities.
+type PromptSuggestionsCapabilities struct {
+	Meta            Meta                                          `json:"_meta,omitzero"`
+	Audio           *PromptSuggestionsAudioCapabilities           `json:"audio,omitempty"`
+	EmbeddedContext *PromptSuggestionsEmbeddedContextCapabilities `json:"embeddedContext,omitempty"`
+	Image           *PromptSuggestionsImageCapabilities           `json:"image,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *PromptSuggestionsCapabilities) UnmarshalJSON(data []byte) error {
+	type alias PromptSuggestionsCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta            json.RawMessage `json:"_meta"`
+		Audio           json.RawMessage `json:"audio"`
+		EmbeddedContext json.RawMessage `json:"embeddedContext"`
+		Image           json.RawMessage `json:"image"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	if len(raw.Audio) > 0 {
+		var value *PromptSuggestionsAudioCapabilities
+		if err := unmarshalJSON(raw.Audio, &value); err == nil {
+			decoded.Audio = value
+		}
+	}
+	if len(raw.EmbeddedContext) > 0 {
+		var value *PromptSuggestionsEmbeddedContextCapabilities
+		if err := unmarshalJSON(raw.EmbeddedContext, &value); err == nil {
+			decoded.EmbeddedContext = value
+		}
+	}
+	if len(raw.Image) > 0 {
+		var value *PromptSuggestionsImageCapabilities
+		if err := unmarshalJSON(raw.Image, &value); err == nil {
+			decoded.Image = value
+		}
+	}
+	*c = PromptSuggestionsCapabilities(decoded)
+	return nil
+}
+
+// PromptSuggestionsEmbeddedContextCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Capabilities for embedded resources in prompt suggestions.
+//
+// Supplying `{}` means the client can offer suggestions that include
+// `resource` content blocks.
+type PromptSuggestionsEmbeddedContextCapabilities struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *PromptSuggestionsEmbeddedContextCapabilities) UnmarshalJSON(data []byte) error {
+	type alias PromptSuggestionsEmbeddedContextCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = PromptSuggestionsEmbeddedContextCapabilities(decoded)
+	return nil
+}
+
+// PromptSuggestionsImageCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Capabilities for image content in prompt suggestions.
+//
+// Supplying `{}` means the client can offer suggestions that include images.
+type PromptSuggestionsImageCapabilities struct {
+	Meta Meta `json:"_meta,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *PromptSuggestionsImageCapabilities) UnmarshalJSON(data []byte) error {
+	type alias PromptSuggestionsImageCapabilities
+	decoded := alias{}
+	raw := struct {
+		Meta json.RawMessage `json:"_meta"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	*c = PromptSuggestionsImageCapabilities(decoded)
+	return nil
+}
+
+// PromptSuggestionsUpdate: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Replaces the session's current list of prompt suggestions.
+//
+// A prompt suggestion is a prompt the Agent predicts the user will send next.
+// The Client offers suggestions where the user writes the next prompt. The
+// list in the most recent update is the current list until the Agent sends
+// another update. A session starts with an empty list.
+//
+// Suggestions are not part of session history. Agents SHOULD NOT include
+// this update when they replay a session.
+//
+// Agents MUST only send this update when the Client advertised
+// the `session.promptSuggestions` Client capability.
+type PromptSuggestionsUpdate struct {
+	Meta        Meta               `json:"_meta,omitzero"`
+	Suggestions []PromptSuggestion `json:"suggestions"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (u PromptSuggestionsUpdate) MarshalJSON() ([]byte, error) {
+	type alias PromptSuggestionsUpdate
+	a := alias(u)
+	if a.Suggestions == nil {
+		a.Suggestions = []PromptSuggestion{}
+	}
+	return json.Marshal(a)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *PromptSuggestionsUpdate) UnmarshalJSON(data []byte) error {
+	if err := requireJSONProperties(data, []string{"suggestions"}, []string{"suggestions"}); err != nil {
+		return err
+	}
+	type alias PromptSuggestionsUpdate
+	decoded := alias{}
+	raw := struct {
+		Meta        json.RawMessage `json:"_meta"`
+		Suggestions json.RawMessage `json:"suggestions"`
+		*alias
+	}{alias: &decoded}
+	if err := unmarshalJSON(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Meta) > 0 {
+		var value Meta
+		if err := unmarshalJSON(raw.Meta, &value); err == nil {
+			decoded.Meta = value
+		}
+	}
+	if len(raw.Suggestions) > 0 {
+		var values []json.RawMessage
+		if err := unmarshalJSON(raw.Suggestions, &values); err != nil {
+			return err
+		} else {
+			decoded.Suggestions = []PromptSuggestion{}
+			for _, value := range values {
+				var item PromptSuggestion
+				if err := unmarshalJSON(value, &item); err == nil && !isJSONNull(value) {
+					decoded.Suggestions = append(decoded.Suggestions, item)
+				}
+			}
+		}
+	}
+	*u = PromptSuggestionsUpdate(decoded)
 	return nil
 }
 
@@ -8938,11 +9797,7 @@ const (
 	SessionArchiveFilterOnly SessionArchiveFilter = "only"
 )
 
-// SessionCancelCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Capability to cancel work in a subagent session without ending that session.
+// SessionCancelCapabilities: Capability to cancel work in a subagent session without ending that session.
 //
 // Supplying `{}` advertises support. An omitted or `null` `cancel` does not.
 type SessionCancelCapabilities struct {
@@ -9378,6 +10233,12 @@ const (
 	SessionConfigOptionCategoryModel SessionConfigOptionCategory = "model"
 	// SessionConfigOptionCategoryModelConfig: Model-related configuration parameter.
 	SessionConfigOptionCategoryModelConfig SessionConfigOptionCategory = "model_config"
+	// SessionConfigOptionCategorySpeed: **UNSTABLE**
+	//
+	// This capability is not part of the spec yet, and may be removed or changed at any point.
+	//
+	// Response speed selector, such as a fast mode toggle.
+	SessionConfigOptionCategorySpeed SessionConfigOptionCategory = "speed"
 	// SessionConfigOptionCategoryThoughtLevel: Thought/reasoning level selector.
 	SessionConfigOptionCategoryThoughtLevel SessionConfigOptionCategory = "thought_level"
 )
@@ -9607,6 +10468,21 @@ func (o *SessionConfigSelectOptions) UnmarshalJSON(data []byte) error {
 // SessionConfigValueId: Unique identifier for a session configuration option value.
 type SessionConfigValueId string
 
+// SessionCursorsCapabilities: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// Client support for `cursor_update` session updates.
+//
+// See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
+type SessionCursorsCapabilities map[string]any
+
+// UnmarshalJSON preserves unstructured numbers as json.Number.
+func (c *SessionCursorsCapabilities) UnmarshalJSON(data []byte) error {
+	type plain SessionCursorsCapabilities
+	return unmarshalJSON(data, (*plain)(c))
+}
+
 // SessionDeleteCapabilities: Capabilities for the `session/delete` method.
 //
 // Supplying `{}` means the agent supports deleting sessions from `session/list`.
@@ -9785,11 +10661,7 @@ func (c *SessionListCapabilities) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SessionMessage: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// An upsert for an inter-session message.
+// SessionMessage: An upsert for an inter-session message.
 type SessionMessage struct {
 	Meta               Meta            `json:"_meta,omitzero"`
 	Content            *[]ContentBlock `json:"content,omitempty"`
@@ -9803,11 +10675,7 @@ type SessionMessage struct {
 	NullFields []string `json:"-"`
 }
 
-// SessionMessageChunk: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A streamed content block of an inter-session message.
+// SessionMessageChunk: A streamed content block of an inter-session message.
 //
 // A chunk carries only content. The message's participants and references come from
 // `session_message` upserts, which can arrive before, between, or after its chunks.
@@ -10018,7 +10886,8 @@ func (c *SessionOptionsCapabilities) UnmarshalJSON(data []byte) error {
 //
 // `session/options` MUST NOT create or resume a session, send `session/update`
 // notifications, add an entry to `session/list`, or change an existing session. Agents
-// SHOULD NOT connect to MCP servers to answer it.
+// SHOULD NOT connect to MCP servers to answer it. Agents MAY start their runtime to resolve
+// the options. The rules above still hold for it.
 type SessionOptionsRequest struct {
 	Meta                  Meta       `json:"_meta,omitzero"`
 	AdditionalDirectories []string   `json:"additionalDirectories,omitempty"`
@@ -10112,11 +10981,7 @@ func (r *SessionOptionsResponse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SessionReference: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A display-only reference to another session that this tool call operates on,
+// SessionReference: A display-only reference to another session that this tool call operates on,
 // such as a subagent it created, delegated to, or is waiting on.
 //
 // The referenced session must already be known to the Client through ordinary
@@ -10452,42 +11317,45 @@ func (c *SessionTitleCapabilities) UnmarshalJSON(data []byte) error {
 //
 // See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v1/draft/prompt-turn#3-agent-reports-output)
 type SessionUpdate struct {
-	SessionUpdate         SessionUpdateType            `json:"sessionUpdate"`
-	Meta                  Meta                         `json:"_meta,omitzero"`
-	AdditionalDirectories *[]string                    `json:"additionalDirectories,omitempty"`
-	AvailableCommands     []AvailableCommand           `json:"availableCommands,omitempty"`
-	Capabilities          *SubagentSessionCapabilities `json:"capabilities,omitempty"`
-	CompactionID          CompactionId                 `json:"compactionId,omitempty"`
-	ConfigOptions         []SessionConfigOption        `json:"configOptions,omitempty"`
-	Content               any                          `json:"content,omitempty,omitzero"`
-	Cost                  *Cost                        `json:"cost,omitempty"`
-	CurrentModeID         SessionModeId                `json:"currentModeId,omitempty"`
-	Cwd                   *string                      `json:"cwd,omitempty"`
-	Description           *string                      `json:"description,omitempty"`
-	Entries               []PlanEntry                  `json:"entries,omitempty"`
-	Error                 *string                      `json:"error,omitempty"`
-	Kind                  *ToolKind                    `json:"kind,omitempty"`
-	Locations             *[]ToolCallLocation          `json:"locations,omitempty"`
-	MessageID             *MessageId                   `json:"messageId,omitempty"`
-	Name                  *string                      `json:"name,omitempty"`
-	Plan                  PlanUpdateContent            `json:"plan,omitzero"`
-	PlanID                PlanId                       `json:"planId,omitempty"`
-	RawInput              any                          `json:"rawInput,omitempty"`
-	RawOutput             any                          `json:"rawOutput,omitempty"`
-	RecipientMessageID    *MessageId                   `json:"recipientMessageId,omitempty"`
-	RecipientSessionID    *SessionId                   `json:"recipientSessionId,omitempty"`
-	SenderMessageID       *MessageId                   `json:"senderMessageId,omitempty"`
-	SenderSessionID       *SessionId                   `json:"senderSessionId,omitempty"`
-	SessionID             SessionId                    `json:"sessionId,omitempty"`
-	Severity              NoticeSeverity               `json:"severity,omitempty"`
-	Size                  uint64                       `json:"size,omitempty"`
-	State                 *StateUpdate                 `json:"state,omitempty"`
-	Status                *ToolCallStatus              `json:"status,omitempty"`
-	Summary               *[]ContentBlock              `json:"summary,omitempty"`
-	Title                 *string                      `json:"title,omitempty"`
-	ToolCallID            ToolCallId                   `json:"toolCallId,omitempty"`
-	UpdatedAt             *string                      `json:"updatedAt,omitempty"`
-	Used                  uint64                       `json:"used,omitempty"`
+	SessionUpdate         SessionUpdateType     `json:"sessionUpdate"`
+	Meta                  Meta                  `json:"_meta,omitzero"`
+	AdditionalDirectories *[]string             `json:"additionalDirectories,omitempty"`
+	Anchor                *CursorAnchor         `json:"anchor,omitempty"`
+	AvailableCommands     []AvailableCommand    `json:"availableCommands,omitempty"`
+	Capabilities          any                   `json:"capabilities,omitempty"`
+	CompactionID          CompactionId          `json:"compactionId,omitempty"`
+	ConfigOptions         []SessionConfigOption `json:"configOptions,omitempty"`
+	Content               any                   `json:"content,omitempty,omitzero"`
+	Cost                  *Cost                 `json:"cost,omitempty"`
+	CurrentModeID         SessionModeId         `json:"currentModeId,omitempty"`
+	CursorID              CursorId              `json:"cursorId,omitempty"`
+	Cwd                   *string               `json:"cwd,omitempty"`
+	Description           *string               `json:"description,omitempty"`
+	Entries               []PlanEntry           `json:"entries,omitempty"`
+	Error                 *string               `json:"error,omitempty"`
+	Kind                  *ToolKind             `json:"kind,omitempty"`
+	Locations             *[]ToolCallLocation   `json:"locations,omitempty"`
+	MessageID             *MessageId            `json:"messageId,omitempty"`
+	Name                  *string               `json:"name,omitempty"`
+	Plan                  PlanUpdateContent     `json:"plan,omitzero"`
+	PlanID                PlanId                `json:"planId,omitempty"`
+	RawInput              any                   `json:"rawInput,omitempty"`
+	RawOutput             any                   `json:"rawOutput,omitempty"`
+	RecipientMessageID    *MessageId            `json:"recipientMessageId,omitempty"`
+	RecipientSessionID    *SessionId            `json:"recipientSessionId,omitempty"`
+	SenderMessageID       *MessageId            `json:"senderMessageId,omitempty"`
+	SenderSessionID       *SessionId            `json:"senderSessionId,omitempty"`
+	SessionID             SessionId             `json:"sessionId,omitempty"`
+	Severity              NoticeSeverity        `json:"severity,omitempty"`
+	Size                  uint64                `json:"size,omitempty"`
+	State                 *StateUpdate          `json:"state,omitempty"`
+	Status                *ToolCallStatus       `json:"status,omitempty"`
+	Suggestions           []PromptSuggestion    `json:"suggestions,omitempty"`
+	Summary               *[]ContentBlock       `json:"summary,omitempty"`
+	Title                 *string               `json:"title,omitempty"`
+	ToolCallID            ToolCallId            `json:"toolCallId,omitempty"`
+	UpdatedAt             *string               `json:"updatedAt,omitempty"`
+	Used                  uint64                `json:"used,omitempty"`
 	// NullFields lists JSON field names to send as explicit null, regardless of their values.
 	// Decoding records explicit nulls here, separately from omitted fields.
 	NullFields []string `json:"-"`
@@ -10513,6 +11381,8 @@ const (
 	SessionUpdateTypeNotice                  SessionUpdateType = "notice"
 	SessionUpdateTypeCompactionUpdate        SessionUpdateType = "compaction_update"
 	SessionUpdateTypeCompactionSummaryChunk  SessionUpdateType = "compaction_summary_chunk"
+	SessionUpdateTypePromptSuggestionsUpdate SessionUpdateType = "prompt_suggestions_update"
+	SessionUpdateTypeCursorUpdate            SessionUpdateType = "cursor_update"
 	SessionUpdateTypeSubagentUpdate          SessionUpdateType = "subagent_update"
 	SessionUpdateTypeSessionMessage          SessionUpdateType = "session_message"
 	SessionUpdateTypeSessionMessageChunk     SessionUpdateType = "session_message_chunk"
@@ -10568,11 +11438,8 @@ func PlanSessionUpdate(entries []PlanEntry) SessionUpdate {
 	}
 }
 
-// PlanUpdateSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A content update for a plan identified by ID.
+// PlanUpdateSessionUpdate creates an SessionUpdate variant: Replaces the plan with this ID. Agents MUST NOT send this update unless
+// the Client advertised `plan`.
 func PlanUpdateSessionUpdate(plan PlanUpdateContent) SessionUpdate {
 	return SessionUpdate{
 		SessionUpdate: SessionUpdateTypePlanUpdate,
@@ -10580,11 +11447,8 @@ func PlanUpdateSessionUpdate(plan PlanUpdateContent) SessionUpdate {
 	}
 }
 
-// PlanRemovedSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Removal notice for a plan identified by ID.
+// PlanRemovedSessionUpdate creates an SessionUpdate variant: Removes the plan with this ID. Agents MUST NOT send this update unless
+// the Client advertised `plan`.
 func PlanRemovedSessionUpdate(planID PlanId) SessionUpdate {
 	return SessionUpdate{
 		SessionUpdate: SessionUpdateTypePlanRemoved,
@@ -10673,12 +11537,43 @@ func CompactionSummaryChunkSessionUpdate(compactionID CompactionId, content Cont
 	}
 }
 
-// SubagentUpdateSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
+// PromptSuggestionsUpdateSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
 //
 // This capability is not part of the spec yet, and may be removed or changed at any point.
 //
-// Announces a child session created and owned by this session, or updates
+// Replaces the session's current list of prompt suggestions.
+//
+// Agents MUST only send this update when the Client advertised
+// the `session.promptSuggestions` Client capability.
+func PromptSuggestionsUpdateSessionUpdate(suggestions []PromptSuggestion) SessionUpdate {
+	return SessionUpdate{
+		SessionUpdate: SessionUpdateTypePromptSuggestionsUpdate,
+		Suggestions:   suggestions,
+	}
+}
+
+// CursorUpdateSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
+//
+// This capability is not part of the spec yet, and may be removed or changed at any point.
+//
+// A session cursor has been announced or its capabilities have changed.
+//
+// Agents MUST only send this update when the Client advertised
+// the `session.cursors` Client capability.
+func CursorUpdateSessionUpdate(cursorID CursorId) SessionUpdate {
+	return SessionUpdate{
+		SessionUpdate: SessionUpdateTypeCursorUpdate,
+		CursorID:      cursorID,
+	}
+}
+
+// SubagentUpdateSessionUpdate creates an SessionUpdate variant: Announces a child session created and owned by this session, or updates
 // that ownership association's metadata.
+//
+// Agents MUST only send this update when the Client advertised
+// the `subagents` Client capability.
+//
+// See protocol docs: [Subagents](https://agentclientprotocol.com/protocol/v1/draft/subagents)
 func SubagentUpdateSessionUpdate(sessionID SessionId) SessionUpdate {
 	return SessionUpdate{
 		SessionUpdate: SessionUpdateTypeSubagentUpdate,
@@ -10686,12 +11581,13 @@ func SubagentUpdateSessionUpdate(sessionID SessionId) SessionUpdate {
 	}
 }
 
-// SessionMessageSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// A message upsert observed in this session's transcript, sent to or
+// SessionMessageSessionUpdate creates an SessionUpdate variant: A message upsert observed in this session's transcript, sent to or
 // received from another session.
+//
+// Agents MUST only send this update when the Client advertised
+// the `subagents` Client capability.
+//
+// See protocol docs: [Session-directed messages](https://agentclientprotocol.com/protocol/v1/draft/prompt-turn#session-directed-messages)
 func SessionMessageSessionUpdate(messageID MessageId) SessionUpdate {
 	return SessionUpdate{
 		SessionUpdate: SessionUpdateTypeSessionMessage,
@@ -10699,11 +11595,12 @@ func SessionMessageSessionUpdate(messageID MessageId) SessionUpdate {
 	}
 }
 
-// SessionMessageChunkSessionUpdate creates an SessionUpdate variant: **UNSTABLE**
+// SessionMessageChunkSessionUpdate creates an SessionUpdate variant: One content block appended to a sent or received session message.
 //
-// This capability is not part of the spec yet, and may be removed or changed at any point.
+// Agents MUST only send this update when the Client advertised
+// the `subagents` Client capability.
 //
-// One content block appended to a sent or received session message.
+// See protocol docs: [Session-directed messages](https://agentclientprotocol.com/protocol/v1/draft/prompt-turn#session-directed-messages)
 func SessionMessageChunkSessionUpdate(messageID MessageId, content ContentBlock) SessionUpdate {
 	return SessionUpdate{
 		SessionUpdate: SessionUpdateTypeSessionMessageChunk,
@@ -10717,35 +11614,37 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 	type alias SessionUpdate
 	type wire struct {
 		*alias
-		Content               *any                          `json:"content,omitempty"`
-		Title                 **string                      `json:"title,omitempty"`
-		ToolCallID            *ToolCallId                   `json:"toolCallId,omitempty"`
-		Entries               *[]PlanEntry                  `json:"entries,omitempty"`
-		Plan                  *PlanUpdateContent            `json:"plan,omitempty"`
-		PlanID                *PlanId                       `json:"planId,omitempty"`
-		AvailableCommands     *[]AvailableCommand           `json:"availableCommands,omitempty"`
-		CurrentModeID         *SessionModeId                `json:"currentModeId,omitempty"`
-		ConfigOptions         *[]SessionConfigOption        `json:"configOptions,omitempty"`
-		Size                  *uint64                       `json:"size,omitempty"`
-		Used                  *uint64                       `json:"used,omitempty"`
-		Severity              *NoticeSeverity               `json:"severity,omitempty"`
-		CompactionID          *CompactionId                 `json:"compactionId,omitempty"`
-		Status                **ToolCallStatus              `json:"status,omitempty"`
-		SessionID             *SessionId                    `json:"sessionId,omitempty"`
-		MessageID             **MessageId                   `json:"messageId,omitempty"`
-		Meta                  *Meta                         `json:"_meta,omitempty"`
-		AdditionalDirectories **[]string                    `json:"additionalDirectories,omitempty"`
-		Capabilities          **SubagentSessionCapabilities `json:"capabilities,omitempty"`
-		Cwd                   **string                      `json:"cwd,omitempty"`
-		Description           **string                      `json:"description,omitempty"`
-		Error                 **string                      `json:"error,omitempty"`
-		RecipientMessageID    **MessageId                   `json:"recipientMessageId,omitempty"`
-		RecipientSessionID    **SessionId                   `json:"recipientSessionId,omitempty"`
-		SenderMessageID       **MessageId                   `json:"senderMessageId,omitempty"`
-		SenderSessionID       **SessionId                   `json:"senderSessionId,omitempty"`
-		State                 **StateUpdate                 `json:"state,omitempty"`
-		Summary               **[]ContentBlock              `json:"summary,omitempty"`
-		UpdatedAt             **string                      `json:"updatedAt,omitempty"`
+		Content               *any                   `json:"content,omitempty"`
+		Title                 **string               `json:"title,omitempty"`
+		ToolCallID            *ToolCallId            `json:"toolCallId,omitempty"`
+		Entries               *[]PlanEntry           `json:"entries,omitempty"`
+		Plan                  *PlanUpdateContent     `json:"plan,omitempty"`
+		PlanID                *PlanId                `json:"planId,omitempty"`
+		AvailableCommands     *[]AvailableCommand    `json:"availableCommands,omitempty"`
+		CurrentModeID         *SessionModeId         `json:"currentModeId,omitempty"`
+		ConfigOptions         *[]SessionConfigOption `json:"configOptions,omitempty"`
+		Size                  *uint64                `json:"size,omitempty"`
+		Used                  *uint64                `json:"used,omitempty"`
+		Severity              *NoticeSeverity        `json:"severity,omitempty"`
+		CompactionID          *CompactionId          `json:"compactionId,omitempty"`
+		Status                **ToolCallStatus       `json:"status,omitempty"`
+		Suggestions           *[]PromptSuggestion    `json:"suggestions,omitempty"`
+		CursorID              *CursorId              `json:"cursorId,omitempty"`
+		SessionID             *SessionId             `json:"sessionId,omitempty"`
+		MessageID             **MessageId            `json:"messageId,omitempty"`
+		Meta                  *Meta                  `json:"_meta,omitempty"`
+		AdditionalDirectories **[]string             `json:"additionalDirectories,omitempty"`
+		Capabilities          *any                   `json:"capabilities,omitempty"`
+		Cwd                   **string               `json:"cwd,omitempty"`
+		Description           **string               `json:"description,omitempty"`
+		Error                 **string               `json:"error,omitempty"`
+		RecipientMessageID    **MessageId            `json:"recipientMessageId,omitempty"`
+		RecipientSessionID    **SessionId            `json:"recipientSessionId,omitempty"`
+		SenderMessageID       **MessageId            `json:"senderMessageId,omitempty"`
+		SenderSessionID       **SessionId            `json:"senderSessionId,omitempty"`
+		State                 **StateUpdate          `json:"state,omitempty"`
+		Summary               **[]ContentBlock       `json:"summary,omitempty"`
+		UpdatedAt             **string               `json:"updatedAt,omitempty"`
 	}
 	w := wire{alias: (*alias)(&u)}
 	if u.Content != nil {
@@ -10803,6 +11702,14 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 	if u.Status != nil {
 		Status := u.Status
 		w.Status = &Status
+	}
+	if len(u.Suggestions) > 0 {
+		Suggestions := u.Suggestions
+		w.Suggestions = &Suggestions
+	}
+	if !reflect.ValueOf(u.CursorID).IsZero() {
+		CursorID := u.CursorID
+		w.CursorID = &CursorID
 	}
 	if !reflect.ValueOf(u.SessionID).IsZero() {
 		SessionID := u.SessionID
@@ -10929,6 +11836,15 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 		w.CompactionID = &CompactionID
 		Content := u.Content
 		w.Content = &Content
+	case SessionUpdateTypePromptSuggestionsUpdate:
+		Suggestions := u.Suggestions
+		if Suggestions == nil {
+			Suggestions = []PromptSuggestion{}
+		}
+		w.Suggestions = &Suggestions
+	case SessionUpdateTypeCursorUpdate:
+		CursorID := u.CursorID
+		w.CursorID = &CursorID
 	case SessionUpdateTypeSubagentUpdate:
 		SessionID := u.SessionID
 		w.SessionID = &SessionID
@@ -10967,7 +11883,7 @@ func (u SessionUpdate) MarshalJSON() ([]byte, error) {
 			w.AdditionalDirectories = new(*[]string)
 		}
 		if slices.Contains(u.NullFields, "capabilities") {
-			w.Capabilities = new(*SubagentSessionCapabilities)
+			w.Capabilities = new(any)
 		}
 		if slices.Contains(u.NullFields, "cwd") {
 			w.Cwd = new(*string)
@@ -11012,6 +11928,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		SessionUpdate         json.RawMessage `json:"sessionUpdate"`
 		Meta                  json.RawMessage `json:"_meta"`
 		AdditionalDirectories json.RawMessage `json:"additionalDirectories"`
+		Anchor                json.RawMessage `json:"anchor"`
 		AvailableCommands     json.RawMessage `json:"availableCommands"`
 		Capabilities          json.RawMessage `json:"capabilities"`
 		CompactionID          json.RawMessage `json:"compactionId"`
@@ -11019,6 +11936,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		Content               json.RawMessage `json:"content"`
 		Cost                  json.RawMessage `json:"cost"`
 		CurrentModeID         json.RawMessage `json:"currentModeId"`
+		CursorID              json.RawMessage `json:"cursorId"`
 		Cwd                   json.RawMessage `json:"cwd"`
 		Description           json.RawMessage `json:"description"`
 		Entries               json.RawMessage `json:"entries"`
@@ -11040,6 +11958,7 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 		Size                  json.RawMessage `json:"size"`
 		State                 json.RawMessage `json:"state"`
 		Status                json.RawMessage `json:"status"`
+		Suggestions           json.RawMessage `json:"suggestions"`
 		Summary               json.RawMessage `json:"summary"`
 		Title                 json.RawMessage `json:"title"`
 		ToolCallID            json.RawMessage `json:"toolCallId"`
@@ -11743,6 +12662,76 @@ func (u *SessionUpdate) UnmarshalJSON(data []byte) error {
 			}
 			return nil
 		}()
+	case "prompt_suggestions_update":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "suggestions"}, []string{"sessionUpdate", "suggestions"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Suggestions) > 0 {
+				var values []json.RawMessage
+				if err := unmarshalJSON(raw.Suggestions, &values); err != nil {
+					return err
+				}
+				items := []PromptSuggestion{}
+				for _, rawItem := range values {
+					var item PromptSuggestion
+					if err := unmarshalJSON(rawItem, &item); err == nil && !isJSONNull(rawItem) {
+						items = append(items, item)
+					}
+				}
+				decoded.Suggestions = items
+			}
+			return nil
+		}()
+	case "cursor_update":
+		err = func() error {
+			decoded = alias{}
+			if tagErr != nil {
+				return tagErr
+			}
+			decoded.SessionUpdate = tag
+			if err := requireJSONProperties(data, []string{"sessionUpdate", "cursorId"}, []string{"cursorId", "sessionUpdate"}); err != nil {
+				return err
+			}
+			if len(raw.Meta) > 0 {
+				var value Meta
+				if err := unmarshalJSON(raw.Meta, &value); err == nil {
+					decoded.Meta = value
+				}
+			}
+			if len(raw.Anchor) > 0 {
+				var value *CursorAnchor
+				if err := unmarshalJSON(raw.Anchor, &value); err != nil {
+					return err
+				}
+				decoded.Anchor = value
+			}
+			if len(raw.Capabilities) > 0 {
+				var value *CursorCapabilities
+				if err := unmarshalJSON(raw.Capabilities, &value); err == nil {
+					decoded.Capabilities = value
+				}
+			}
+			if len(raw.CursorID) > 0 {
+				var value CursorId
+				if err := unmarshalJSON(raw.CursorID, &value); err != nil {
+					return err
+				}
+				decoded.CursorID = value
+			}
+			return nil
+		}()
 	case "subagent_update":
 		err = func() error {
 			decoded = alias{}
@@ -12408,11 +13397,7 @@ func (r *SetSessionTitleResponse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// StateUpdate: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Current foreground-work state of a reusable child session.
+// StateUpdate: Current foreground-work state of a reusable child session.
 //
 // Each update is a whole-object snapshot. Idle does not terminate the child.
 // The parent can message it again, transitioning it back to running.
@@ -12445,7 +13430,7 @@ func NewRunningStateUpdate() StateUpdate {
 	}
 }
 
-// NewIdleStateUpdate creates an StateUpdate variant: The child is ready to process another prompt.
+// NewIdleStateUpdate creates an StateUpdate variant: Foreground work is not in progress. The parent can give the child more work.
 func NewIdleStateUpdate() StateUpdate {
 	return StateUpdate{
 		State: StateUpdateTypeIdle,
@@ -12840,7 +13825,7 @@ const (
 	//
 	// This stop reason MUST be returned when the client sends a `session/cancel`
 	// notification, even if the cancellation causes exceptions in underlying operations.
-	// Agents should catch these exceptions and return this semantically meaningful
+	// Agents SHOULD catch these exceptions and return this semantically meaningful
 	// response to confirm successful cancellation.
 	StopReasonCancelled StopReason = "cancelled"
 )
@@ -12992,11 +13977,7 @@ func (s *StringPropertySchema) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SubagentCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Capability marker for exposing reusable child sessions as restricted ACP sessions.
+// SubagentCapabilities: Capability marker for exposing reusable child sessions as restricted ACP sessions.
 //
 // Supplying `{}` advertises support for child association and state updates,
 // session-directed messages, and restricted-session semantics. The client
@@ -13027,11 +14008,7 @@ func (c *SubagentCapabilities) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SubagentSessionCapabilities: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Client-initiated session mutations permitted for a specific subagent session.
+// SubagentSessionCapabilities: Client-initiated session mutations permitted for a specific subagent session.
 //
 // A mutation requires an explicit per-child capability. Support for the method
 // on ordinary sessions does not grant support on a child.
@@ -13068,11 +14045,7 @@ func (c *SubagentSessionCapabilities) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SubagentUpdate: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// Notification that the enclosing parent session created and owns a child session.
+// SubagentUpdate: Notification that the enclosing parent session created and owns a child session.
 //
 // Later updates modify the existing association's metadata, not its ownership.
 //
@@ -13181,7 +14154,7 @@ const (
 
 // Terminal: Embed a terminal created with `terminal/create` by its id.
 //
-// The terminal must be added before calling `terminal/release`.
+// The terminal MUST be added before calling `terminal/release`.
 //
 // See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/v1/draft/terminals)
 type Terminal struct {
@@ -13604,7 +14577,7 @@ func DiffToolCallContent(path string, newText string) ToolCallContent {
 
 // TerminalToolCallContent creates an ToolCallContent variant: Embed a terminal created with `terminal/create` by its id.
 //
-// The terminal must be added before calling `terminal/release`.
+// The terminal MUST be added before calling `terminal/release`.
 //
 // See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/v1/draft/terminals)
 func TerminalToolCallContent(terminalID TerminalId) ToolCallContent {
@@ -13614,11 +14587,12 @@ func TerminalToolCallContent(terminalID TerminalId) ToolCallContent {
 	}
 }
 
-// SessionToolCallContent creates an ToolCallContent variant: **UNSTABLE**
+// SessionToolCallContent creates an ToolCallContent variant: A display-only reference to another session, such as a subagent.
 //
-// This capability is not part of the spec yet, and may be removed or changed at any point.
+// Agents send it only when the Client advertised the `subagents` Client
+// capability.
 //
-// A display-only reference to another session, such as a subagent.
+// See protocol docs: [Sessions](https://agentclientprotocol.com/protocol/v1/draft/tool-calls#sessions)
 func SessionToolCallContent(sessionID SessionId) ToolCallContent {
 	return ToolCallContent{
 		Type:      ToolCallContentTypeSession,
@@ -14148,11 +15122,7 @@ func (r *UnarchiveSessionResponse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// UnknownStateUpdate: **UNSTABLE**
-//
-// This capability is not part of the spec yet, and may be removed or changed at any point.
-//
-// The Agent cannot currently determine foreground activity.
+// UnknownStateUpdate: The Agent cannot currently determine foreground activity.
 //
 // Report this when activity becomes unobservable, not merely because the child
 // has been quiet. The Client MUST stop presenting the previous state as confirmed
@@ -14160,7 +15130,10 @@ func (r *UnarchiveSessionResponse) UnmarshalJSON(data []byte) error {
 // snapshot normally.
 //
 // This is not a task outcome or session closure. It does not cancel work, resolve
-// pending requests, or revoke capabilities. Capabilities are updated separately.
+// pending requests, or revoke capabilities. If a control is no longer available,
+// the Agent updates the capabilities explicitly. Unfinished tool calls and
+// terminals stay as last reported. The Agent does not invent a final status
+// for them, and Clients do not present them as confirmed live activity.
 type UnknownStateUpdate struct {
 	Meta Meta `json:"_meta,omitzero"`
 }

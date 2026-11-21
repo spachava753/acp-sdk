@@ -134,7 +134,7 @@ const (
 	//
 	// This method is only available if the agent advertises the `sessionCapabilities.close` capability.
 	//
-	// The agent must cancel any ongoing work (as if `session/cancel` was called)
+	// The agent MUST cancel any ongoing work (as if `session/cancel` was called)
 	// and then free up any resources associated with the session.
 	MethodSessionClose = "session/close"
 	// MethodSessionDelete: Deletes an existing session from `session/list`.
@@ -232,7 +232,7 @@ const (
 	// Allows switching between different agent modes (e.g., "ask", "architect", "code")
 	// that affect system prompts, tool availability, and permission behaviors.
 	//
-	// The mode must be one of the modes advertised in `availableModes` during session
+	// The mode MUST be one of the modes advertised in `availableModes` during session
 	// creation or loading. Agents may also change modes autonomously and notify the
 	// client via `current_mode_update` notifications.
 	//
@@ -548,7 +548,7 @@ type SessionCloseHandler interface {
 	//
 	// This method is only available if the agent advertises the `sessionCapabilities.close` capability.
 	//
-	// The agent must cancel any ongoing work (as if `session/cancel` was called)
+	// The agent MUST cancel any ongoing work (as if `session/cancel` was called)
 	// and then free up any resources associated with the session.
 	SessionClose(context.Context, *CloseSessionRequest) (*CloseSessionResponse, error)
 }
@@ -690,7 +690,7 @@ type SessionSetModeHandler interface {
 	// Allows switching between different agent modes (e.g., "ask", "architect", "code")
 	// that affect system prompts, tool availability, and permission behaviors.
 	//
-	// The mode must be one of the modes advertised in `availableModes` during session
+	// The mode MUST be one of the modes advertised in `availableModes` during session
 	// creation or loading. Agents may also change modes autonomously and notify the
 	// client via `current_mode_update` notifications.
 	//
