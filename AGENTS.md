@@ -68,6 +68,7 @@ The project uses the standard Go toolchain.
 
 ### API And Implementation Design
 
+- This module is pre-1.0 (`v0.x`), so breaking API changes are acceptable when they yield a cleaner design or naming. Lead with the best solution and fix structural gaps at their source rather than working around them to preserve released signatures.
 - Keep the public API small and driven by concrete use cases. Do not expose dispatch methods or override interfaces solely for hypothetical customization. Extension handling currently uses `ExtensionMux` with private dispatch methods.
 - Prefer typed conveniences where they save callers repetitive decoding. Do not require pointers for outgoing parameters unless the implementation needs them; distinguish that from pointer parameters used in handler signatures.
 - Preserve existing nil-handler behavior when changing dispatch. An absent handler must still follow the appropriate unknown-request or ignored-notification behavior.
