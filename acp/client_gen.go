@@ -150,7 +150,7 @@ func (c *Client) SessionCancel(ctx context.Context, params *CancelNotification) 
 //
 // This method is only available if the agent advertises the `sessionCapabilities.close` capability.
 //
-// The agent must cancel any ongoing work (as if `session/cancel` was called)
+// The agent MUST cancel any ongoing work (as if `session/cancel` was called)
 // and then free up any resources associated with the session.
 func (c *Client) SessionClose(ctx context.Context, params *CloseSessionRequest) (*CloseSessionResponse, error) {
 	return call[CloseSessionResponse](ctx, c.rpc.conn, MethodSessionClose, params)
@@ -267,7 +267,7 @@ func (c *Client) SessionSetConfigOption(ctx context.Context, params *SetSessionC
 // Allows switching between different agent modes (e.g., "ask", "architect", "code")
 // that affect system prompts, tool availability, and permission behaviors.
 //
-// The mode must be one of the modes advertised in `availableModes` during session
+// The mode MUST be one of the modes advertised in `availableModes` during session
 // creation or loading. Agents may also change modes autonomously and notify the
 // client via `current_mode_update` notifications.
 //
